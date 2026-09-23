@@ -138,7 +138,9 @@ abstract class TransitProvider {
 
   /// Die ganze Fahrt einer Abfahrt ab dieser Haltestelle bis zur
   /// Endhaltestelle, als Verbindung mit einem Abschnitt. null, wenn unbekannt.
-  Future<Trip?> tripOfDeparture(Departure departure);
+  ///
+  /// [whole]: alle Halte des Fahrzeugs, auch vor der Abfahrt (Linienverlauf).
+  Future<Trip?> tripOfDeparture(Departure departure, {bool whole = false});
 
   /// Fahrtabschnitte (Index in `trip.legs`), auf die ein gesicherter
   /// Anschluss führt – der Anschluss wartet in der Regel. Leer, wenn unbekannt.

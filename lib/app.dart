@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
@@ -6,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'state/providers.dart';
+import 'state/location.dart';
 import 'ui/trip_status.dart';
 import 'ui/screens/walk_screen.dart';
 import 'ui/screens/trip_screen.dart';
@@ -19,6 +22,7 @@ import 'ui/screens/map_screen.dart';
 import 'ui/screens/messages_screen.dart';
 import 'ui/screens/more_screen.dart';
 import 'ui/theme.dart';
+import 'ui/widgets.dart' show buttonShape;
 
 /// Für Benachrichtigungen, die einen Screen öffnen.
 final navigatorKey = GlobalKey<NavigatorState>();
@@ -223,6 +227,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     super.initState();
     // Versionsabgleich beim Start anstoßen.
     Future.microtask(() => ref.read(updateProvider));
+    // Erster Start: erklären, wofür der Standort gebraucht wird – bevor
+    // Android fragt (Standortabfragen warten so lange).
+    LocationService.introGate = Completer<void>();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _locationIntro());
     _life = AppLifecycleListener(
       onResume: () {
         ref.read(lastTripProvider.notifier).resume();
@@ -230,6 +238,30 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       },
       onHide: () => ref.read(lastTripProvider.notifier).pause(),
     );
+  }
+
+  Future<void> _locationIntro() async {
+    final gate = LocationService.introGate!;
+    try {
+      final repo = ref.read(repositoryProvider);
+      if (await repo.setting('standortErklaert') != null) return;
+      if (await Geolocator.checkPermission() != LocationPermission.denied) {
+        await repo.setSetting('standortErklaert', '1');
+        return;
+      }
+      if (!mounted) return;
+      await showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        isDismissible: false,
+        builder: (context) => const LocationIntroSheet(),
+      );
+      await repo.setSetting('standortErklaert', '1');
+    } catch (_) {
+      // Ohne Standortdienst (z. B. in Tests): nichts zu erklären.
+    } finally {
+      if (!gate.isCompleted) gate.complete();
+    }
   }
 
   @override
@@ -395,6 +427,49 @@ class GlobalCompanionBar extends ConsumerWidget {
         onWalk: (step) => pushOnce(navigatorKey.currentState, 'weg:${step.where.stop.id}',
             (_) => WalkScreen(target: step.where.stop, platform: step.where.platform, departure: step.when)),
         onOpen: () => pushOnce(navigatorKey.currentState, 'fahrt', (_) => const TripScreen()),
+      ),
+    );
+  }
+}
+
+/// Erklärung zum Standort beim ersten Start.
+class LocationIntroSheet extends StatelessWidget {
+  const LocationIntroSheet({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    Widget point(IconData icon, String text) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Icon(icon, size: 22, color: c.accent),
+            const SizedBox(width: 12),
+            Expanded(child: Text(text, style: TextStyle(fontSize: 15, height: 1.35, color: c.ink))),
+          ]),
+        );
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text('Wofür Gleich.da deinen Standort braucht', style: context.t.screenTitle.copyWith(fontSize: 20)),
+          const SizedBox(height: 16),
+          point(Icons.near_me_outlined, '„Mein Standort“ als Start – ohne Adresse eintippen.'),
+          point(Icons.schedule, 'Abfahrten an den Haltestellen in deiner Nähe.'),
+          point(Icons.directions_walk, 'Der Weg zum Steig und unterwegs der nächste Halt.'),
+          point(Icons.lock_outline, 'Der Standort bleibt auf dem Gerät. Kein Konto, kein Tracking.'),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 48,
+            child: FilledButton(
+              style: FilledButton.styleFrom(shape: buttonShape(context)),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Weiter', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text('Danach fragt Android, ob die App den Standort nutzen darf. Ohne ihn geht alles über die Suche.',
+              textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: c.muted)),
+        ]),
       ),
     );
   }

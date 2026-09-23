@@ -405,7 +405,7 @@ class DepartureRowState extends ConsumerState<DepartureRow> {
         duration: const Duration(milliseconds: 150),
         opacity: _busy ? 0.5 : 1,
         child: SizedBox(
-        height: 56,
+        height: 56 * textGrowth(context),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(children: [
@@ -423,7 +423,7 @@ class DepartureRowState extends ConsumerState<DepartureRow> {
               ]),
             ),
             SizedBox(
-              width: 76,
+              width: 76 * textGrowth(context),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
                 FadeText(hm(d.time.best),
                     align: TextAlign.right,

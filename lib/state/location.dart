@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -39,6 +41,10 @@ class LocationException implements Exception {
 class LocationService {
   LocationService(this.ref);
 
+  /// Beim ersten Start: erst die Erklärung, dann die Systemabfrage. Solange
+  /// sie offen ist, wartet jede Standortabfrage hier.
+  static Completer<void>? introGate;
+
   final Ref ref;
   LatLon? _last;
   DateTime? _at;
@@ -59,6 +65,13 @@ class LocationService {
         throw const LocationException(LocationProblem.disabled);
       }
       p = await Geolocator.checkPermission();
+      if (p == LocationPermission.denied) {
+        final gate = introGate;
+        if (gate != null && !gate.isCompleted) {
+          await gate.future;
+          p = await Geolocator.checkPermission();
+        }
+      }
       if (p == LocationPermission.denied) p = await Geolocator.requestPermission();
     } on LocationException {
       rethrow;

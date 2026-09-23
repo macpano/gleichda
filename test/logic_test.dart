@@ -16,6 +16,7 @@ import 'package:gleichda/domain/models.dart';
 import 'package:gleichda/domain/settings.dart';
 import 'package:gleichda/state/alarm_planner.dart';
 import 'package:gleichda/data/trias/trias_provider.dart' show withEndpoints;
+import 'package:gleichda/ui/trip_status.dart' show isReplacement, sevStopHint;
 import 'package:gleichda/state/providers.dart' show MessagesState, arrivedLongAgo, tripEnd, walkEnds;
 import 'package:gleichda/ui/connection_views.dart';
 import 'package:gleichda/ui/screens/connections_screen.dart' show mergeTrips, dropStarted;
@@ -43,6 +44,31 @@ Leg ride(String from, EventTime dep, String to, EventTime arr, {List<StopTime> v
     );
 
 void main() {
+  group('Ersatzverkehr', () {
+    Trip sev({List<Message> messages = const []}) => Trip(id: 's', messages: messages, legs: [
+          Leg(
+            type: LegType.ride,
+            from: StopTime(stop: const Location(id: 'x', providerId: 't', name: 'Wuppertal Oberbarmen Bf'), departure: at(14, 0)),
+            to: StopTime(stop: stop('B'), arrival: at(14, 20)),
+            line: const Line(id: 'ddb:SEV', name: 'SEV S8', mode: TransportMode.replacementBus),
+            messageIds: const ['m1'],
+          ),
+        ]);
+
+    test('Satz zur Ersatzhaltestelle am Einstieg', () {
+      final t = sev(messages: const [
+        Message(id: 'm1', title: 'S8: Bauarbeiten', text: 'Zwischen Wuppertal und Hagen fahren Busse. '
+            'Die Ersatzhaltestelle in Oberbarmen befindet sich in der Berliner Straße vor dem Bahnhof. Bitte Zeit einplanen.'),
+      ]);
+      expect(isReplacement(t.legs.first), isTrue);
+      expect(sevStopHint(t, t.legs.first), 'Die Ersatzhaltestelle in Oberbarmen befindet sich in der Berliner Straße vor dem Bahnhof.');
+    });
+
+    test('ohne Angabe: null (ehrlicher Hinweis in der Ansicht)', () {
+      expect(sevStopHint(sev(), sev().legs.first), isNull);
+    });
+  });
+
   group('Zu Fuß zum Ziel', () {
     const home = Location(id: 'addr', providerId: 't', name: 'Zuhause', type: LocationType.address, lat: 51.2600, lon: 7.1500);
     const exit = Location(id: 'B', providerId: 't', name: 'B', type: LocationType.stop, lat: 51.2600, lon: 7.1400);

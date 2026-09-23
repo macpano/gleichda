@@ -967,3 +967,7 @@ class _PositionDotPainter extends CustomPainter {
   @override
   bool shouldRepaint(_PositionDotPainter old) => old.t != t || old.color != color;
 }
+
+/// Faktor der Systemschrift (1,0–1,8): feste Zeilenhöhen wachsen damit mit,
+/// damit große Schrift nicht abgeschnitten wird.
+double textGrowth(BuildContext context) => (MediaQuery.textScalerOf(context).scale(16) / 16).clamp(1.0, 1.8);

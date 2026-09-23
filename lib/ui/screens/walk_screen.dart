@@ -376,15 +376,27 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
                           if (p != null)
                             Marker(
                               point: LatLng(p.latitude, p.longitude),
-                              width: 22,
-                              height: 22,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF1D5FD1),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 3),
-                                ),
-                              ),
+                              width: 34,
+                              height: 34,
+                              // Beim Gehen ein Pfeil in Laufrichtung (GPS-Kurs,
+                              // Karte ist genordet), im Stand ein Punkt.
+                              child: p.speed > 0.6 && p.heading > 0
+                                  ? Transform.rotate(
+                                      angle: p.heading * math.pi / 180,
+                                      child: const Icon(Icons.navigation, size: 30, color: Color(0xFF1D5FD1),
+                                          shadows: [Shadow(color: Colors.white, blurRadius: 3)]),
+                                    )
+                                  : Center(
+                                      child: Container(
+                                        width: 22,
+                                        height: 22,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF1D5FD1),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: Colors.white, width: 3),
+                                        ),
+                                      ),
+                                    ),
                             ),
                         ]),
                         const MapCredit(),

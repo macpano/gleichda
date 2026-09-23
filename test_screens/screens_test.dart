@@ -95,7 +95,7 @@ class FakeProvider implements TransitProvider {
   Future<List<List<GeoPoint>?>> legPaths(Trip trip) async => List.filled(trip.legs.length, null);
 
   @override
-  Future<Trip?> tripOfDeparture(Departure departure) async => null;
+  Future<Trip?> tripOfDeparture(Departure departure, {bool whole = false}) async => null;
 
   @override
   Future<List<Line>> linesNear(GeoPoint near) async => const [];
@@ -182,7 +182,10 @@ void main() {
       Future<void> Function(WidgetTester)? act,
       List<Override> overrides = const [],
       List<Trip>? planned,
+      double textScale = 1,
       bool offline = false}) async {
+    tester.platformDispatcher.textScaleFactorTestValue = textScale;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     tabBarHeight.value = 0; // Reiterleiste eines vorigen Tests vergessen
     tester.view.physicalSize = const Size(390 * 3, 844 * 3);
     tester.view.devicePixelRatio = 3;
@@ -263,7 +266,28 @@ void main() {
     return shot(t, 'verbindungen_fussweg',
         const ConnectionsScreen(from: here, to: home, time: null, arriveBy: false), planned: [walk]);
   });
+  testWidgets('Standort beim ersten Start', (t) => shot(t, 'standort_erklaerung',
+      const Scaffold(body: Align(alignment: Alignment.bottomCenter, child: Material(child: LocationIntroSheet())))));
+  testWidgets('Große Schrift: Start', (t) => shot(t, 'gross_start', const HomeShell(), seed: seedHome, textScale: 1.5));
+  testWidgets('Große Schrift: Verbindungen', (t) => shot(t, 'gross_verbindungen',
+      ConnectionsScreen(from: trips.first.origin, to: trips.first.destination, time: null, arriveBy: false),
+      textScale: 1.5));
+  testWidgets('Große Schrift: Fahrt', (t) => shot(t, 'gross_fahrt', const TripScreen(), seed: seedHome, textScale: 1.5));
+  testWidgets('Große Schrift: Abfahrten',
+      (t) => shot(t, 'gross_abfahrten', Scaffold(body: DeparturesScreen(initialStop: hbf)), textScale: 1.5));
   testWidgets('Fahrt', (t) => shot(t, 'fahrt', const TripScreen(), seed: seedHome));
+  testWidgets('Fahrt mit Ersatzverkehr', (t) {
+    final base = trips.first;
+    final i = base.legs.indexWhere((l) => l.type == LegType.ride);
+    final legs = [...base.legs];
+    legs[i] = legs[i].copyWith(
+        line: const Line(id: 'ddb:SEV', name: 'SEV S9', mode: TransportMode.replacementBus), messageIds: const ['sev']);
+    final sev = base.copyWith(legs: legs, messages: [
+      const Message(id: 'sev', title: 'S9: Ersatzverkehr', text: 'Zwischen Wuppertal und Essen fahren Busse. '
+          'Die Ersatzhaltestelle befindet sich in der Straße vor dem Haupteingang.'),
+    ]);
+    return shot(t, 'fahrt_sev', const TripScreen(), seed: (r) => r.saveLastTrip(sev));
+  });
   testWidgets('Fahrt dunkel',
       (t) => shot(t, 'fahrt_dunkel', const TripScreen(), brightness: Brightness.dark, seed: seedHome));
   testWidgets('Abfahrten', (t) => shot(t, 'abfahrten', Scaffold(body: DeparturesScreen(initialStop: hbf))));

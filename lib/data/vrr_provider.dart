@@ -299,7 +299,7 @@ class VrrProvider implements TransitProvider {
   /// Fahrtverlauf per XML_TRIPSTOPTIMES_REQUEST, ab der Haltestelle der
   /// Abfahrt bis zur Endhaltestelle.
   @override
-  Future<Trip?> tripOfDeparture(Departure d) async {
+  Future<Trip?> tripOfDeparture(Departure d, {bool whole = false}) async {
     final ref = d.journeyRef;
     if (ref == null) return null;
     final dep = d.time.planned;
@@ -311,9 +311,10 @@ class VrrProvider implements TransitProvider {
     var i = stops.indexWhere((s) => stopAreaId(s.stop.id) == area && s.departure?.planned == dep);
     if (i < 0) i = stops.indexWhere((s) => stopAreaId(s.stop.id) == area);
     if (i < 0 || i >= stops.length - 1) return null;
+    if (whole) i = 0;
     final last = stops.length - 1;
     return Trip(
-      id: 'abfahrt:$ref:${dep.toIso8601String()}',
+      id: '${whole ? 'linie' : 'abfahrt'}:$ref:${dep.toIso8601String()}',
       legs: [
         Leg(
           type: LegType.ride,

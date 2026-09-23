@@ -136,7 +136,7 @@ class _SearchCard extends ConsumerWidget {
     Widget field(String label, Location? value, String hint, bool isFrom) => InkWell(
           onTap: () => _pick(context, ref, isFrom),
           child: SizedBox(
-            height: 56,
+            height: 56 * textGrowth(context),
             width: double.infinity,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

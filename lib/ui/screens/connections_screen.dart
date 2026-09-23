@@ -422,8 +422,10 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
               ),
               const SizedBox(height: 12),
               // Eine Zeile: Sortierung (Menü, sofort), barrierefrei (neue Suche)
-              // und – bei angepasstem Profil – Profil an/aus.
-              Row(
+              // und – bei angepasstem Profil – Profil an/aus. Bei großer
+              // Schrift bricht sie um, statt über den Rand zu ragen.
+              Wrap(
+                runSpacing: 8,
                 children: [
                   MenuAnchor(
                     builder: (context, menu, _) => ChoiceChipX(
@@ -457,7 +459,8 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
                   ),
                   if (!settings.isDefault) ...[
                     const SizedBox(width: 8),
-                    Flexible(
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 160),
                       child: ChoiceChipX(
                         label: _personal ? 'Profil an' : 'Profil aus',
                         selected: _personal,
