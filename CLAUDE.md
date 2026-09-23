@@ -89,7 +89,7 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 - Signiert mit demselben Schlüssel wie Linienlog (`android/key.properties`, nicht im Repo).
   Ohne diesen Schlüssel lassen sich Updates nicht über die installierte App spielen.
 
-## Stand (v0.3.1, 23.09.2026)
+## Stand (v0.3.4, 23.09.2026)
 
 - Umgesetzt sind die Schritte 1–15 in Grundform; was fehlt, steht in `docs/abgleich.md`.
 - Der geteilte Chat liegt nur lokal als `docs/chat-verlauf.txt` (in .gitignore, persönliche Angaben – nie einchecken).
@@ -115,9 +115,12 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 - Linienwege: EFA `XML_TRIP_REQUEST2` liefert je Abschnitt `coords` (dicht, entlang Straße/Gleis);
   Zuordnung über Linie + Fahrtnummer wie bei der Echtzeit (`VrrProvider.legPaths`).
 - Abfahrt → ganze Fahrt: `tripOfDeparture` über `XML_TRIPSTOPTIMES_REQUEST`.
-- Liniensuche: `XML_SERVINGLINES_REQUEST mode=line` sucht deutschlandweit; begrenzt auf WSW,
-  „Wuppertal“ in der Beschreibung und DB-Züge im NRW-Bereich (Kennung `9xE..`), dazu alle Linien an
-  Hbf, Vohwinkel, Oberbarmen. `XML_LINELIST_REQUEST` liefert auf dem Testserver nichts.
+- Liniensuche: `XML_SERVINGLINES_REQUEST mode=line` deutschlandweit (bricht bei kurzen Nummern nach
+  ~160 Treffern ab), sortiert nach Standort: Linien an den 4 nächsten Haltestellen, dann gleicher
+  Betrieb (bei `ddb` die Region, 3. Zeichen der Kennung), dann Rest. `XML_LINELIST_REQUEST` liefert nichts.
+- Meldungen: `XML_ADDINFO_REQUEST` ohne `filterOMC` liefert >1000 Meldungen (4 MB) – deshalb Gebiet aus
+  der nächsten Haltestelle (`de:05111:…` → OMC 5111000), gemerkt in Einstellung `messagesRegion`.
+- Haltestellennamen immer mit Ort (`fullStopName`, EFA `name` statt `disassembledName`).
 - Unterwegs per GPS (`locateOnLeg` in `lib/domain/companion.dart`): Position auf die Haltestellenfolge
   gelegt, ≤ 250 m sonst Uhrzeit. Fahrzeugpositionen der Betriebe sind nicht offen – das Fahrzeug ist die
   eigene Position.

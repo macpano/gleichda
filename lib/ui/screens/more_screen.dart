@@ -38,7 +38,7 @@ class MoreScreen extends ConsumerWidget {
         Text('Mehr', style: context.t.screenTitle),
         const SizedBox(height: 16),
         ListGroup(children: [
-          _Row(label: 'Fahrtenwecker', value: active == 0 ? (alarms.isEmpty ? '' : 'aus') : '$active aktiv',
+          _Row(label: 'Fahrtenwecker', value: active == 0 ? (alarms.isEmpty ? '' : 'Aus') : '$active aktiv',
               onTap: () => push(const AlarmsScreen())),
           _Row(label: 'Meine Orte', value: places.map((p) => p.name).take(2).join(', '),
               onTap: () => push(const PlacesScreen())),
@@ -47,7 +47,7 @@ class MoreScreen extends ConsumerWidget {
         const SizedBox(height: 16),
         const SectionTitle('Allgemein', small: true),
         ListGroup(children: [
-          _Row(label: 'Profil', value: s.isDefault ? 'Standard' : 'angepasst', onTap: () => push(const ProfileScreen())),
+          _Row(label: 'Profil', value: s.isDefault ? 'Standard' : 'Angepasst', onTap: () => push(const ProfileScreen())),
           _Row(label: 'Linienabos', value: subs.map((x) => x.lineName).take(3).join(', '),
               onTap: () => push(const SubscriptionsScreen())),
           _Row(

@@ -23,6 +23,14 @@ class WalkStep {
   /// Punkt des Wegs, an dem das Manöver liegt.
   final int index;
 
+  /// Abbiegen oder Ankunft – nicht bloß ein neuer Straßenname oder
+  /// „geradeaus weiter“.
+  bool get isManeuver {
+    if (type == 'arrive') return true;
+    if (type == 'depart' || type == 'new name') return false;
+    return modifier != null && modifier != 'straight';
+  }
+
   /// Hinweis in Worten, z. B. „Links abbiegen in Alter Markt“.
   String get text {
     final into = name.isEmpty ? '' : ' in $name';
@@ -54,10 +62,12 @@ class WalkRoute {
   double get meters => cumulative.isEmpty ? 0 : cumulative.last;
 
   /// Lage einer Position auf dem Weg: nächster Wegpunkt und Abstand in Metern.
-  ({int index, double off}) locate(GeoPoint p) {
+  /// Mit [from] wird nur ab diesem Punkt (und wenige Punkte davor) gesucht –
+  /// führt der Weg zurück, springt die Lage sonst auf das falsche Stück.
+  ({int index, double off}) locate(GeoPoint p, {int from = 0}) {
     var best = 0;
     var bestD = double.infinity;
-    for (var i = 0; i < points.length; i++) {
+    for (var i = (from - 3).clamp(0, points.length - 1); i < points.length; i++) {
       final d = metersBetween(points[i], p);
       if (d < bestD) {
         bestD = d;
@@ -70,10 +80,16 @@ class WalkRoute {
   /// Restweg ab Wegpunkt [index].
   double remainingFrom(int index) => meters - cumulative[index];
 
-  /// Nächstes Manöver nach Wegpunkt [index] und die Meter bis dorthin.
+  /// Nächstes echtes Manöver nach Wegpunkt [index] und die Meter bis dorthin.
+  /// Straßennamenwechsel und „geradeaus weiter“ zählen nicht; eine Kehrtwende
+  /// kurz vor dem Ziel (der Router hängt sie an, wenn das Ziel auf der anderen
+  /// Wegseite liegt) auch nicht.
   ({WalkStep step, double meters})? nextStep(int index) {
     for (final s in steps) {
-      if (s.index > index) return (step: s, meters: cumulative[s.index] - cumulative[index]);
+      if (s.index <= index) continue;
+      if (!s.isManeuver) continue;
+      if (s.modifier == 'uturn' && meters - cumulative[s.index] < 30) continue;
+      return (step: s, meters: cumulative[s.index] - cumulative[index]);
     }
     return null;
   }
@@ -102,10 +118,12 @@ WalkRoute? parseWalkRoute(Map<String, dynamic> json) {
   for (var i = 1; i < points.length; i++) {
     cum.add(cum.last + metersBetween(points[i - 1], points[i]));
   }
+  // Manöver folgen dem Weg: jeweils ab dem vorigen suchen.
+  var from = 0;
   int nearest(GeoPoint p) {
-    var best = 0;
+    var best = from;
     var bestD = double.infinity;
-    for (var i = 0; i < points.length; i++) {
+    for (var i = from; i < points.length; i++) {
       final d = metersBetween(points[i], p);
       if (d < bestD) {
         bestD = d;
@@ -125,7 +143,7 @@ WalkRoute? parseWalkRoute(Map<String, dynamic> json) {
         type: m['type'] as String? ?? '',
         modifier: m['modifier'] as String?,
         name: (s['name'] as String?) ?? '',
-        index: nearest((lat: (loc[1] as num).toDouble(), lon: (loc[0] as num).toDouble())),
+        index: from = nearest((lat: (loc[1] as num).toDouble(), lon: (loc[0] as num).toDouble())),
       ));
     }
   }

@@ -169,6 +169,18 @@ class _TripMapState extends ConsumerState<TripMap> {
             ),
         ]),
         const MapCredit(),
+        if (widget.interactive && _me != null)
+          Align(
+            alignment: Alignment.topRight,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: MapButton(
+                icon: Icons.my_location,
+                tooltip: 'Auf mich zentrieren',
+                onTap: () => _map.move(_me!, _map.camera.zoom < 15 ? 16 : _map.camera.zoom),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -219,6 +231,35 @@ class MapCredit extends StatelessWidget {
         ),
         child: Text('© OpenStreetMap-Mitwirkende',
             textScaler: TextScaler.noScaling, style: TextStyle(fontSize: 9, color: c.muted)),
+      ),
+    );
+  }
+}
+
+/// Runder Knopf auf der Karte (z. B. „Auf mich zentrieren“).
+class MapButton extends StatelessWidget {
+  const MapButton({super.key, required this.icon, required this.onTap, this.tooltip, this.active = false});
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final String? tooltip;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Material(
+      color: c.surface,
+      shape: CircleBorder(side: BorderSide(color: c.hair, width: 0.5)),
+      elevation: 1,
+      shadowColor: Colors.black26,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Tooltip(
+          message: tooltip ?? '',
+          child: SizedBox(width: 42, height: 42, child: Icon(icon, size: 21, color: active ? c.accent : c.ink)),
+        ),
       ),
     );
   }

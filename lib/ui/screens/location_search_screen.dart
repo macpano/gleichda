@@ -179,7 +179,7 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
                   _Row(
                     icon: Icons.my_location,
                     name: 'Mein Standort',
-                    sub: _here != null ? 'Standort gefunden' : (_locationError ?? 'wird ermittelt'),
+                    sub: _here != null ? 'Standort gefunden' : (_locationError ?? 'Wird ermittelt'),
                     subColor: _locationError != null ? c.orange : null,
                     onTap: () => _pick(myLocation),
                   ),

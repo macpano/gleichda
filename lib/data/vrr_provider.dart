@@ -1,7 +1,7 @@
 import '../domain/models.dart';
 import 'efa/efa_client.dart';
 import 'transit_provider.dart';
-import 'trias/trias_parser.dart' show stopAreaId;
+import 'trias/trias_parser.dart' show distanceBetween, stopAreaId;
 import 'trias/trias_provider.dart';
 
 /// VRR: TRIAS für alles, EFA nur für die Neuabfrage einer bekannten Fahrt
@@ -21,6 +21,18 @@ class VrrProvider implements TransitProvider {
           {({double lat, double lon})? near, int limit = 10, int radiusMeters = 1000}) =>
       trias.searchLocations(query, near: near, limit: limit, radiusMeters: radiusMeters);
 
+  /// Ohne bekannten Ort: Wuppertal (Gemeindeschlüssel 05124 → OMC 5124000).
+  static const defaultRegion = '5124000';
+
+  /// Gemeindeschlüssel aus der Kennung der nächsten Haltestelle:
+  /// „de:05111:18235“ → Kreis 05111 → OMC „5111000“. Ohne Gebietsfilter
+  /// liefert die EFA über 1000 Meldungen (4 MB, gemessen 23.09.2026).
+  @override
+  Future<String?> regionOf(GeoPoint near) async {
+    final stops = await trias.searchLocations('', near: near, limit: 1, radiusMeters: 3000);
+    return stops.isEmpty ? null : regionFromStopId(stops.first.id);
+  }
+
   @override
   Future<DepartureBoard> departures(Location stop,
           {DateTime? time, int limit = 20}) =>
@@ -32,8 +44,8 @@ class VrrProvider implements TransitProvider {
   /// Meldungsliste aus der EFA (XML_ADDINFO_REQUEST), weil TRIAS Meldungen
   /// nur im Zusammenhang einer Abfahrt oder Verbindung liefert.
   @override
-  Future<List<Message>> messages({List<String> lineIds = const []}) async {
-    final all = await efa.messages();
+  Future<List<Message>> messages({List<String> lineIds = const [], String? region}) async {
+    final all = await efa.messages(omc: region ?? defaultRegion);
     if (lineIds.isEmpty) return all;
     final keys = lineIds.map(lineKey).toSet();
     return all.where((m) => m.lineIds.any(keys.contains)).toList();
@@ -138,46 +150,70 @@ class VrrProvider implements TransitProvider {
     );
   }
 
-  /// Linien in Wuppertal: alle Linien an den großen Knoten (Hbf, Vohwinkel,
-  /// Oberbarmen) plus die EFA-Liniensuche. Die sucht deutschlandweit und
-  /// wird deshalb auf die Region begrenzt: WSW, Linien mit „Wuppertal“ in der
-  /// Beschreibung und Züge aus dem NRW-Bereich der DB (Kennung „9xE..“).
+  /// Liniensuche deutschlandweit (EFA `XML_SERVINGLINES_REQUEST mode=line`),
+  /// nach Standort sortiert: zuerst Linien, die an Haltestellen in der Nähe
+  /// halten, dann Linien derselben Verkehrsbetriebe bzw. DB-Region, dann der
+  /// Rest. Linien in der Nähe erscheinen auch, wenn die Suche sie nicht
+  /// liefert (bei kurzen Nummern wie „60“ bricht sie nach etwa 160 Treffern ab).
   @override
-  Future<List<Line>> searchLines(String query) async {
+  Future<List<Line>> searchLines(String query, {GeoPoint? near}) async {
     String norm(String s) => s.toUpperCase().replaceAll(' ', '');
     final q = norm(query);
     if (q.isEmpty) return const [];
-    _local ??= Future.wait(_hubs.map((h) => efa.linesAt(h).catchError((Object _) => <Line>[])))
-        .then((l) => l.expand((x) => x).toList());
-    final local = (await _local!).where((l) => norm(l.name).contains(q));
+    final nearby = near == null ? const <Line>[] : await _linesNear(near);
     List<Line> remote;
     try {
-      remote = (await efa.searchLines(query.trim())).where(_inRegion).toList();
+      remote = await efa.searchLines(query.trim());
     } on ProviderException {
+      if (nearby.isEmpty) rethrow;
       remote = const [];
     }
+    final nearKeys = {for (final l in nearby) lineKey(l.id)};
+    final nearNets = {for (final l in nearby) _network(l.id)};
     final out = <String, Line>{};
-    for (final l in [...local, ...remote]) {
+    for (final l in [...nearby.where((l) => norm(l.name).contains(q)), ...remote]) {
       out.putIfAbsent(lineKey(l.id), () => l);
     }
-    final list = out.values.toList()
+    int tier(Line l) => nearKeys.contains(lineKey(l.id)) ? 0 : (nearNets.contains(_network(l.id)) ? 1 : 2);
+    int match(Line l) => norm(l.name) == q ? 0 : (norm(l.name).startsWith(q) ? 1 : 2);
+    return out.values.toList()
       ..sort((a, b) {
-        int rank(Line l) => norm(l.name) == q ? 0 : (norm(l.name).startsWith(q) ? 1 : 2);
-        final r = rank(a).compareTo(rank(b));
-        return r != 0 ? r : a.name.compareTo(b.name);
+        for (final c in [tier(a).compareTo(tier(b)), match(a).compareTo(match(b))]) {
+          if (c != 0) return c;
+        }
+        return a.name.compareTo(b.name);
       });
-    return list;
   }
 
-  Future<List<Line>>? _local;
+  /// Verkehrsbetrieb einer Linie; bei der DB (bundesweit „ddb“) die Region
+  /// aus der Kennung („ddb:92E08“ → „ddb:E“, NRW).
+  static String _network(String id) {
+    final parts = id.split(':');
+    if (parts.first == 'ddb' && parts.length > 1 && parts[1].length > 2) return 'ddb:${parts[1][2]}';
+    return parts.first;
+  }
 
-  static const _hubs = ['de:05124:11376', 'de:05124:11302', 'de:05124:11602'];
+  GeoPoint? _nearAt;
+  Future<List<Line>>? _near;
 
-  static bool _inRegion(Line l) {
-    final parts = l.id.split(':');
-    if (parts.first == 'wsw') return true;
-    if ((l.longName ?? '').contains('Wuppertal')) return true;
-    return parts.first == 'ddb' && parts.length > 1 && parts[1].length > 2 && parts[1][2] == 'E';
+  /// Linien an den vier nächsten Haltestellen (Umkreis 1,5 km), je Standort
+  /// einmal abgefragt; neu erst nach mehr als 1 km Ortswechsel.
+  Future<List<Line>> _linesNear(GeoPoint p) {
+    final last = _nearAt;
+    if (_near == null || last == null || distanceBetween(Location(id: '', providerId: '', name: '', lat: last.lat, lon: last.lon), p)! > 1000) {
+      _nearAt = p;
+      _near = () async {
+        try {
+          final stops = await trias.searchLocations('', near: p, limit: 4, radiusMeters: 1500);
+          final lists = await Future.wait(
+              stops.map((s) => efa.linesAt(stopAreaId(s.id)).catchError((Object _) => <Line>[])));
+          return lists.expand((l) => l).toList();
+        } on ProviderException {
+          return <Line>[];
+        }
+      }();
+    }
+    return _near!;
   }
 }
 
@@ -230,4 +266,10 @@ Leg? mergeLeg(Leg leg, List<StopTime> stops) {
     to: take(leg.to, stops[to]).copyWith(departure: null),
     intermediates: stops.sublist(from + 1, to),
   );
+}
+
+/// „de:05111:18235“ → „5111000“; null bei anderen Kennungen.
+String? regionFromStopId(String id) {
+  final m = RegExp(r'^de:0?(\d{4,5}):').firstMatch(id);
+  return m == null ? null : '${int.parse(m[1]!)}000';
 }

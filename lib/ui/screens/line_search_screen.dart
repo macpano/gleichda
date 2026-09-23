@@ -7,6 +7,7 @@ import '../../data/efa/efa_client.dart' show lineKey;
 import '../../data/transit_provider.dart';
 import '../../domain/models.dart';
 import '../../domain/product.dart';
+import '../../state/location.dart';
 import '../../state/providers.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -27,6 +28,16 @@ class _LineSearchScreenState extends ConsumerState<LineSearchScreen> {
   String? _error;
   bool _loading = false;
   int _query = 0;
+  GeoPoint? _here;
+
+  @override
+  void initState() {
+    super.initState();
+    // Standort nur zum Sortieren; ohne ihn sucht die App trotzdem.
+    ref.read(locationServiceProvider).current(preferRecent: true).then((p) {
+      if (mounted) _here = (lat: p.lat, lon: p.lon);
+    }, onError: (Object _) {});
+  }
 
   @override
   void dispose() {
@@ -51,7 +62,7 @@ class _LineSearchScreenState extends ConsumerState<LineSearchScreen> {
     }
     setState(() => _loading = true);
     try {
-      final list = await ref.read(transitProvider).searchLines(q);
+      final list = await ref.read(transitProvider).searchLines(q, near: _here);
       if (!mounted || n != _query) return;
       setState(() {
         _results = list;
@@ -83,7 +94,7 @@ class _LineSearchScreenState extends ConsumerState<LineSearchScreen> {
             textInputAction: TextInputAction.search,
             onSubmitted: _search,
             decoration: InputDecoration(
-              hintText: 'Liniennummer, z. B. 604, CE64, S8',
+              hintText: 'Liniennummer, z. B. 604, U79, S8, RE1',
               prefixIcon: Icon(Icons.search, color: c.muted, size: 20),
               suffixIcon: _loading
                   ? Padding(
@@ -99,7 +110,8 @@ class _LineSearchScreenState extends ConsumerState<LineSearchScreen> {
             Notice(_error!)
           else if (results == null)
             Text(
-              'Abonnierte Linien melden sich, sobald es neue Störungen oder Umleitungen gibt.',
+              'Gesucht wird deutschlandweit; Linien in deiner Nähe stehen oben. Abonnierte Linien melden sich, '
+              'sobald es neue Störungen oder Umleitungen gibt.',
               style: context.t.secondary.copyWith(color: c.muted, height: 1.4),
             )
           else if (results.isEmpty && !_loading)
@@ -133,7 +145,13 @@ class _LineRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final product = productOf(line).label;
-    final sub = [product, if (line.longName != null && line.longName!.isNotEmpty) line.longName!].join(' · ');
+    final sub = [
+      product,
+      if (line.longName != null && line.longName!.isNotEmpty)
+        line.longName!
+      else if (line.operator != null)
+        line.operator!,
+    ].join(' · ');
     return SizedBox(
       height: 56,
       child: Padding(
@@ -143,15 +161,23 @@ class _LineRow extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(child: OneLine(sub, style: TextStyle(fontSize: 14, color: c.ink2))),
           const SizedBox(width: 8),
+          // Umschalter: abonniert = gefüllt mit Haken, ein Tipp bestellt ab.
           SizedBox(
-            width: 112,
+            width: 120,
+            height: 34,
             child: TextButton(
-              style: TextButton.styleFrom(foregroundColor: subscribed ? c.muted : c.accent),
+              style: TextButton.styleFrom(
+                foregroundColor: subscribed ? c.onAccent : c.accent,
+                backgroundColor: subscribed ? c.accent : Colors.transparent,
+                side: subscribed ? null : BorderSide(color: c.accent.withValues(alpha: 0.5)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17)),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+              ),
               onPressed: () => onToggle(!subscribed),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(subscribed ? Icons.check : Icons.add, size: 16),
                 const SizedBox(width: 4),
-                Text(subscribed ? 'Abonniert' : 'Abonnieren', style: const TextStyle(fontSize: 14)),
+                Text(subscribed ? 'Abonniert' : 'Abonnieren', style: const TextStyle(fontSize: 13.5)),
               ]),
             ),
           ),

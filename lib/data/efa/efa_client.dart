@@ -189,7 +189,8 @@ List<StopTime>? parseTripStopTimes(Map<String, dynamic> json) {
     final locality = (parent?['parent'] as Map?)?['name'] as String?;
     final coord = raw['coord'] as List?;
     final status = (raw['realtimeStatus'] as List?)?.cast<String>() ?? const [];
-    final name = (parent?['disassembledName'] ?? raw['disassembledName'] ?? raw['name']) as String;
+    // Voller Name mit Ort („Wuppertal Hauptbahnhof“), nicht der Kurzname.
+    final name = (parent?['name'] ?? raw['name'] ?? parent?['disassembledName']) as String;
     out.add(StopTime(
       stop: Location(
         id: raw['id'] as String,

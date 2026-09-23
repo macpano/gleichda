@@ -131,7 +131,7 @@ class TriasProvider implements TransitProvider {
   Future<Trip?> tripOfDeparture(Departure departure) async => null;
 
   @override
-  Future<List<Line>> searchLines(String query) async => const [];
+  Future<List<Line>> searchLines(String query, {GeoPoint? near}) async => const [];
 
   /// TRIAS kennt über die Suche nur die Haltestelle selbst, keine Steige.
   @override
@@ -146,7 +146,10 @@ class TriasProvider implements TransitProvider {
   }
 
   @override
-  Future<List<Message>> messages({List<String> lineIds = const []}) async {
+  Future<String?> regionOf(GeoPoint near) async => null;
+
+  @override
+  Future<List<Message>> messages({List<String> lineIds = const [], String? region}) async {
     // TODO: Meldungsliste (Schritt 12) – TRIAS liefert Meldungen nur im
     // Kontext von Abfahrten und Verbindungen, die EFA über XML_ADDINFO_REQUEST.
     return const [];

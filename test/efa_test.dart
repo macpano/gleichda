@@ -78,4 +78,19 @@ void main() {
     final re = paths.firstWhere((p) => p.lineName == 'RE4');
     expect(re.points.length, greaterThan(100), reason: 'Zugweg entlang der Gleise');
   });
+
+  test('Gebiet für Meldungen aus der Haltestellenkennung', () {
+    expect(regionFromStopId('de:05124:11376'), '5124000'); // Wuppertal
+    expect(regionFromStopId('de:05111:18235:0:1'), '5111000'); // Düsseldorf
+    expect(regionFromStopId('de:11000:900100001'), '11000000'); // Berlin
+    expect(regionFromStopId('coord:51.2:7.1'), isNull);
+  });
+
+  test('Haltestellennamen behalten den Ort', () {
+    expect(fullStopName('Wuppertal, Alter Markt'), 'Wuppertal Alter Markt');
+    expect(fullStopName('Wuppertal Hbf'), 'Wuppertal Hbf');
+    final stops = parseTripStopTimes(
+        jsonDecode(File('test/fixtures/efa_tripstoptimes.json').readAsStringSync()) as Map<String, dynamic>)!;
+    expect(stops.first.stop.name, startsWith('Wuppertal '));
+  });
 }

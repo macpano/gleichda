@@ -76,7 +76,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
           ]),
           const SizedBox(height: 16),
           Segmented<_Filter>(
-            options: const [(_Filter.all, 'Alle'), (_Filter.myLines, 'Meine Linien'), (_Filter.myStops, 'Meine Halte')],
+            options: const [(_Filter.all, 'Alle'), (_Filter.myLines, 'Meine Linien'), (_Filter.myStops, 'Meine Haltestellen')],
             value: _filter,
             onChanged: (f) => setState(() => _filter = f),
           ),
@@ -93,7 +93,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                     const Text('Benachrichtigungen', style: TextStyle(fontSize: 16)),
                     const Spacer(),
                     if (subs.isEmpty)
-                      Text('keine Linien', style: TextStyle(fontSize: 15, color: c.muted))
+                      Text('Keine Linien', style: TextStyle(fontSize: 15, color: c.muted))
                     else
                       for (final s in subs.take(4))
                         Padding(

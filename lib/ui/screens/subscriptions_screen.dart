@@ -78,7 +78,11 @@ class SubscriptionsScreen extends ConsumerWidget {
                           LineBadge(Line(id: s.lineId, name: s.lineName, mode: guessProduct(s.lineName).mode)),
                           const SizedBox(width: 12),
                           Expanded(child: OneLine(windowLabel(s.window), style: TextStyle(fontSize: 15, color: c.muted))),
-                          Icon(Icons.chevron_right, size: 18, color: c.chevron),
+                          IconButton(
+                            tooltip: 'Linie ${s.lineName} abbestellen',
+                            icon: Icon(Icons.notifications_off_outlined, size: 20, color: c.muted),
+                            onPressed: () => ref.read(repositoryProvider).unsubscribe(s.lineId),
+                          ),
                         ]),
                       ),
                     ),
@@ -113,6 +117,13 @@ class SubscriptionsScreen extends ConsumerWidget {
               trailing: w.$2 == s.window ? Icon(Icons.check, color: ctx.c.accent) : null,
               onTap: () => Navigator.pop(ctx, w),
             ),
+          ListTile(
+            title: Text('Abo beenden', style: TextStyle(color: ctx.c.red)),
+            onTap: () {
+              ref.read(repositoryProvider).unsubscribe(s.lineId);
+              Navigator.pop(ctx);
+            },
+          ),
         ]),
       ),
     );

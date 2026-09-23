@@ -102,3 +102,12 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 ## v0.3.3 (23.09.2026)
 - ✅ Unterwegs als feste Leiste am unteren Rand mit „Beenden“ und Fortschrittsstrich (statt Karte oben, die
   den Verlauf verschob und wegscrollte); Inhalt mittig ausgerichtet
+
+## v0.3.4 (23.09.2026)
+- ✅ Liniensuche deutschlandweit, nach Standort sortiert (Linien an Haltestellen in der Nähe, dann gleicher Betrieb bzw. DB-Region)
+- ✅ Meldungen für den eigenen Ort (Gemeindeschlüssel der nächsten Haltestelle), zuletzt genutzter Ort auch im Hintergrund
+- ✅ Volle Haltestellennamen mit Ort im Fahrtverlauf („Wuppertal Hbf“ statt „Hbf“)
+- ✅ „Meine Haltestellen“ ausgeschrieben, Einstellungswerte einheitlich groß
+- ✅ Linienabos sichtbar abbestellbar (Symbol je Zeile, „Abo beenden“, Umschalter in der Suche)
+- ✅ Fußnavigation: Lage nur vorwärts, nur echte Abbiegungen, Kehrtwende am Ziel übersprungen; Zentrieren-Knopf mit Mitführen
+- ✅ Beenden über die Benachrichtigung doppelt abgesichert (Dienst stoppt selbst, App erkennt fehlende Benachrichtigung)
