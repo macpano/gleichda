@@ -198,6 +198,9 @@ abstract class Message with _$Message {
     required String title,
     String? text,
     @Default(<String>[]) List<String> lineIds,
+
+    /// Liniennummern passend zu [lineIds], für die Anzeige als Plaketten.
+    @Default(<String>[]) List<String> lineNames,
     @Default(<String>[]) List<String> stopIds,
     DateTime? validFrom,
     DateTime? validTo,
@@ -276,4 +279,29 @@ abstract class SavedPlace with _$SavedPlace {
 
   factory SavedPlace.fromJson(Map<String, dynamic> json) =>
       _$SavedPlaceFromJson(json);
+}
+
+/// Steig einer Haltestelle mit genauer Position.
+class Platform {
+  const Platform({
+    required this.id,
+    required this.stopId,
+    required this.lat,
+    required this.lon,
+    this.name,
+    this.direction,
+    this.isReplacement = false,
+  });
+
+  final String id;
+  final String stopId;
+
+  /// Bezeichnung, z. B. „2“.
+  final String? name;
+
+  /// Fahrtrichtung, z. B. „Vohwinkel“, falls bekannt.
+  final String? direction;
+  final double lat;
+  final double lon;
+  final bool isReplacement;
 }

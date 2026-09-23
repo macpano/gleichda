@@ -29,9 +29,27 @@ class VrrProvider implements TransitProvider {
   @override
   Future<List<Trip>> planTrip(TripQuery query) => trias.planTrip(query);
 
+  /// Meldungsliste aus der EFA (XML_ADDINFO_REQUEST), weil TRIAS Meldungen
+  /// nur im Zusammenhang einer Abfahrt oder Verbindung liefert.
   @override
-  Future<List<Message>> messages({List<String> lineIds = const []}) =>
-      trias.messages(lineIds: lineIds);
+  Future<List<Message>> messages({List<String> lineIds = const []}) async {
+    final all = await efa.messages();
+    if (lineIds.isEmpty) return all;
+    final keys = lineIds.map(lineKey).toSet();
+    return all.where((m) => m.lineIds.any(keys.contains)).toList();
+  }
+
+  /// Steige mit Koordinaten aus der EFA, sonst die Haltestelle aus TRIAS.
+  @override
+  Future<List<Platform>> platforms(Location stop) async {
+    try {
+      final list = await efa.platforms(stopAreaId(stop.id));
+      if (list.isNotEmpty) return list;
+    } on ProviderException {
+      // weiter mit TRIAS
+    }
+    return trias.platforms(stop);
+  }
 
   /// Zuerst jeden Fahrtabschnitt einzeln über die EFA; gelingt das für einen
   /// Abschnitt nicht, die ganze Verbindung per Suche nach Linie und Zeiten.
@@ -92,6 +110,7 @@ Leg? mergeLeg(Leg leg, List<StopTime> stops) {
   }
   if (to < 0) return null;
   StopTime take(StopTime old, StopTime fresh) => old.copyWith(
+        stop: old.stop.copyWith(lat: fresh.stop.lat ?? old.stop.lat, lon: fresh.stop.lon ?? old.stop.lon),
         arrival: fresh.arrival ?? old.arrival,
         departure: fresh.departure ?? old.departure,
         platform: fresh.platform ?? old.platform,

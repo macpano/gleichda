@@ -3,6 +3,7 @@
 // per XML_TRIPSTOPTIMES_REQUEST, den der TRIAS-Testserver (TripInfoRequest)
 // nicht beantwortet.
 import 'package:dio/dio.dart';
+import 'package:html/parser.dart' show parseFragment;
 
 import '../../domain/models.dart';
 import '../transit_provider.dart';
@@ -88,6 +89,28 @@ class EfaClient {
     }
   }
 
+  /// Steige einer Haltestelle mit Koordinaten.
+  Future<List<Platform>> platforms(String stopId) async {
+    final json = await _get('XML_DM_REQUEST', {
+      'type_dm': 'any',
+      'name_dm': stopId,
+      'mode': 'direct',
+      'limit': '40',
+    });
+    return parsePlatforms(json, stopId);
+  }
+
+  /// Aktuelle Störungsmeldungen im Gebiet [omc] (Gemeindeschlüssel,
+  /// Wuppertal 5124000).
+  Future<List<Message>> messages({String omc = '5124000'}) async {
+    final json = await _get('XML_ADDINFO_REQUEST', {
+      'filterPublicationStatus': 'current',
+      'filterValidDay': '1',
+      'filterOMC': omc,
+    });
+    return parseAddInfo(json);
+  }
+
   /// Alle Halte eines Fahrtabschnitts mit Plan- und Echtzeit. null, wenn die
   /// EFA die Fahrt nicht kennt.
   Future<List<StopTime>?> tripStopTimes(EfaTripKey key) async {
@@ -153,4 +176,86 @@ List<StopTime>? parseTripStopTimes(Map<String, dynamic> json) {
     ));
   }
   return out;
+}
+
+/// Steige aus den Abfahrten einer Haltestelle (XML_DM_REQUEST): Die EFA
+/// liefert je Abfahrt den Steig mit Koordinate.
+List<Platform> parsePlatforms(Map<String, dynamic> json, String stopId) {
+  final events = json['stopEvents'];
+  if (events is! List) return const [];
+  final out = <String, Platform>{};
+  for (final e in events) {
+    if (e is! Map) continue;
+    final l = e['location'];
+    if (l is! Map) continue;
+    final coord = l['coord'];
+    final id = l['id'] as String?;
+    if (id == null || coord is! List || coord.length != 2) continue;
+    final props = (l['properties'] as Map?) ?? const {};
+    final dest = ((e['transportation'] as Map?)?['destination'] as Map?)?['name'] as String?;
+    out.putIfAbsent(
+      id,
+      () => Platform(
+        id: id,
+        stopId: stopId,
+        name: (props['platformName'] ?? props['platform']) as String?,
+        direction: dest,
+        lat: (coord[0] as num).toDouble(),
+        lon: (coord[1] as num).toDouble(),
+      ),
+    );
+  }
+  return out.values.toList();
+}
+
+/// Linienkennung ohne Richtung und Fahrplanperiode: „wsw:66620::H“ und
+/// „wsw:66620: :H:“ werden beide zu „wsw:66620“. So passen TRIAS- und
+/// EFA-Linien zusammen, etwa für Linienabos.
+String lineKey(String id) {
+  final parts = id.split(':');
+  return parts.length >= 2 ? '${parts[0]}:${parts[1]}' : id;
+}
+
+/// Störungsmeldungen aus XML_ADDINFO_REQUEST.
+List<Message> parseAddInfo(Map<String, dynamic> json) {
+  final current = (json['infos'] as Map?)?['current'];
+  if (current is! List) return const [];
+  final out = <Message>[];
+  for (final raw in current) {
+    if (raw is! Map) continue;
+    final link = (raw['infoLinks'] as List?)?.whereType<Map>().firstOrNull;
+    final title = (link?['title'] ?? link?['subtitle'] ?? link?['urlText']) as String?;
+    if (title == null || title.trim().isEmpty) continue;
+    final affected = (raw['affected'] as Map?) ?? const {};
+    final lines = ((affected['lines'] as List?) ?? const []).whereType<Map>().toList();
+    final stops = ((affected['stops'] as List?) ?? const []).whereType<Map>().toList();
+    final validity = ((raw['timestamps'] as Map?)?['validity'] as List?)?.whereType<Map>().toList() ?? const [];
+    final source = ((raw['properties'] as Map?)?['source'] as Map?)?['name'] as String?;
+    out.add(Message(
+      id: raw['id'] as String,
+      title: title.trim(),
+      text: htmlToText(link?['content'] as String?),
+      lineIds: [for (final l in lines) lineKey(l['id'] as String? ?? '')],
+      lineNames: [for (final l in lines) (l['number'] ?? l['name'] ?? '') as String],
+      stopIds: [for (final s in stops) if (s['id'] is String) s['id'] as String],
+      validFrom: validity.isEmpty ? null : DateTime.tryParse(validity.first['from'] as String? ?? ''),
+      validTo: validity.isEmpty ? null : DateTime.tryParse(validity.last['to'] as String? ?? ''),
+      source: source == null ? null : (source.startsWith('VRR') ? 'VRR' : source),
+    ));
+  }
+  return out;
+}
+
+/// Klartext aus dem HTML der Meldung: Absätze als Zeilen, Entities aufgelöst.
+String? htmlToText(String? html) {
+  if (html == null || html.trim().isEmpty) return null;
+  final doc = parseFragment(html
+      .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+      .replaceAll(RegExp(r'</p>|</li>|</div>', caseSensitive: false), '\n'));
+  final text = doc.text ?? '';
+  return text
+      .split('\n')
+      .map((l) => l.replaceAll(RegExp(r'\s+'), ' ').trim())
+      .where((l) => l.isNotEmpty)
+      .join('\n');
 }

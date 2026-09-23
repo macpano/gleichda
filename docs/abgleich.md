@@ -1,0 +1,58 @@
+# Abgleich Chat-Verlauf ↔ App (Stand 23.09.2026, v0.2.0)
+
+Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.md`.
+✅ = in der App, ◐ = teilweise, ☐ = offen.
+
+## Suchen
+- ✅ Startseite mit Logo, Von/Nach untereinander mit Mini-Verlaufslinie
+- ✅ App-Icon (Konvoi auf Petrol, adaptiv) und Startbild hell/dunkel
+- ✅ „Von“ mit „Mein Standort“ vorbelegt, Suche ab Koordinate
+- ✅ Leere Suche: Mein Standort, Meine Orte, Haltestellen in der Nähe mit Entfernung, zuletzt gesucht
+- ✅ Gleichnamige Haltestellen nach Trefferqualität und Entfernung, mit Ort und Entfernung
+- ✅ Zeit einstellen: Abfahrt/Ankunft, Heute/Morgen/Datum, Schnellwahl, Uhrzeit-Rad in 5-min-Schritten, Klartextzeile
+- ✅ Suchoptionen: Zwischenhalt, Profil, Verkehrsmittel, barrierefreie Wege
+- ✅ Zuletzt angesehene Fahrt: sofort aus dem Speicher, 30 s live (EFA TripStopTimes)
+- ✅ Favoriten und Zuletzt gesucht, Wischen: links löschen, rechts Favorit
+- ☐ Live-Abfahrten direkt an Favoriten, gelernte Gewohnheiten
+
+## Verbindungen
+- ✅ Liste mit Zeitleisten-Balken, Echtzeit farbig, „nur Fahrplan“
+- ✅ Suchprofile als Chips (Alle = drei Profile parallel, zusammengeführt), Profil an/aus je Suche
+- ✅ Etiketten „schnellste“, „ohne Umstieg“, „wenigste Umstiege“
+- ✅ Früher und Später
+- ✅ Zeitraster wie in Öffi, Umschalter Liste/Zeitraster, Wahl dauerhaft gespeichert
+- ✅ Anschlussprüfung: sicher/knapp/nicht erreichbar, nicht erreichbare ausgegraut am Ende mit Hinweis
+- ☐ Endloses Scrollen statt Knöpfen
+
+## Fahren
+- ✅ Fahrtverlauf: Plan/Ist, Steig und Steigwechsel, Zwischenhalte einklappbar, entfällt/Umleitung
+- ✅ Passierte Halte grau, aktuelle Position mit Fahrzeugsymbol
+- ✅ Anschlussprüfung je Umstieg im Verlauf
+- ✅ Abweichungs-Banner mit „Alternativen anzeigen“; Alternativen-Screen (nächste Fahrt derselben Linie, schneller/gleich schnell, etwas später, Zeitdifferenz)
+- ✅ Losfahren → Unterwegs-Modus: nächster Schritt groß, laufende Benachrichtigung (Linie und Ziel, wo aussteigen, in min + Uhrzeit, Fortschritt mit Fahrzeugsymbol, „Beenden“), Vordergrunddienst
+- ✅ Weg zum Steig: Karte (OSM/FOSSGIS), Standort, Ziel-Steig aus der EFA, andere Steige grau, Richtung und Entfernung, „Loslaufen in n min“, Übergabe an Karten-App
+- ◐ SEV violett in Abfahrten; eigene SEV-Halte-Darstellung mit Meldungstext am Halt fehlt
+- ☐ Abbiegehinweise (Stufe 2), Kompass, Tap auf Linie zeigt ganzen Linienverlauf
+
+## Informieren
+- ✅ Abfahrten in der Nähe: bis zu vier Haltestellen nach Entfernung mit Gehzeit, „Alle Abfahrten“, Zeitwahl, Verkehrsmittel-Filter, Ausfall mit nächster Fahrt
+- ✅ Meldungen: Liste aus EFA XML_ADDINFO_REQUEST (Wuppertal), Filter Meine Linien/Meine Halte/Alle, Detail mit ganzem Text
+- ✅ Linienabos: aus Meldung oder Abfahrt, Zeitfenster, Hintergrundprüfung (WorkManager ≈ 15 min) mit Benachrichtigung
+- ☐ Serverloser Push-Dienst (Cloudflare Worker + FCM)
+
+## Meine Fahrten
+- ✅ Fahrtenwecker: Liste mit Schalter, Wochentagen, nächstem Weckzeitpunkt und Status; Neuer Wecker (Name, Von/Nach, Ankommen/Losfahren um, Wochentage, Vorlauf, bei Störung früher, Unterwegs-Modus starten)
+- ✅ Meine Orte: Zuhause, Arbeit, weitere; oben in der Suche, in Weckern vorbelegt
+
+## Mehr
+- ✅ Fahrtenwecker, Meine Orte, Favoriten und Verlauf, Profil, Linienabos, Erscheinungsbild,
+  Umsteigezeit, Gehgeschwindigkeit, barrierefreie Wege, Standort, Verlauf löschen,
+  Datenquellen, Datenschutz, Impressum (Angaben folgen), Pflichtangabe
+
+## Zustände
+- ✅ Laden als Platzhalter, Fehler mit „Erneut versuchen“ und letztem Stand, „Daten nicht aktuell“ nach 2 min
+- ☐ Eigener Offline-Zustand mit grauen Zeiten
+
+## Später (laut Chat)
+- Erster Start mit Standort-Erklärung, Haltestellen-Detail, Widget, große Schrift prüfen,
+  Englisch, iOS (Live Activity, Dynamic Island).

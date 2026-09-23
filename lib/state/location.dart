@@ -1,0 +1,110 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+
+import '../domain/models.dart';
+import 'providers.dart';
+
+/// Pseudo-Ort „Mein Standort“. Die Koordinate wird erst bei der Suche
+/// ermittelt.
+const hereId = 'here';
+const myLocation = Location(
+  id: hereId,
+  providerId: 'device',
+  name: 'Mein Standort',
+  type: LocationType.coordinate,
+);
+
+bool isHere(Location? l) => l?.id == hereId;
+
+typedef LatLon = ({double lat, double lon});
+
+enum LocationProblem { disabled, denied, deniedForever, timeout, off }
+
+class LocationException implements Exception {
+  const LocationException(this.problem);
+
+  final LocationProblem problem;
+
+  String get message => switch (problem) {
+        LocationProblem.disabled => 'Standortdienste sind ausgeschaltet.',
+        LocationProblem.denied => 'Standort nicht freigegeben.',
+        LocationProblem.deniedForever =>
+          'Standort dauerhaft abgelehnt. Freigabe in den Android-Einstellungen möglich.',
+        LocationProblem.timeout => 'Standort nicht rechtzeitig ermittelt.',
+        LocationProblem.off => 'Standort ist in Gleichda ausgeschaltet (Mehr → Standort).',
+      };
+}
+
+/// Standort nur bei Nutzung, mit kurzem Zwischenspeicher.
+class LocationService {
+  LocationService(this.ref);
+
+  final Ref ref;
+  LatLon? _last;
+  DateTime? _at;
+
+  LatLon? get last => _last;
+
+  Future<LatLon> current({Duration maxAge = const Duration(seconds: 30)}) async {
+    final settings = ref.read(settingsProvider).value;
+    if (settings != null && !settings.useLocation) {
+      throw const LocationException(LocationProblem.off);
+    }
+    if (_last != null && _at != null && DateTime.now().difference(_at!) < maxAge) {
+      return _last!;
+    }
+    LocationPermission p;
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        throw const LocationException(LocationProblem.disabled);
+      }
+      p = await Geolocator.checkPermission();
+      if (p == LocationPermission.denied) p = await Geolocator.requestPermission();
+    } on LocationException {
+      rethrow;
+    } catch (_) {
+      // Plattform ohne Standortdienst (z. B. Tests).
+      throw const LocationException(LocationProblem.disabled);
+    }
+    if (p == LocationPermission.denied) throw const LocationException(LocationProblem.denied);
+    if (p == LocationPermission.deniedForever) {
+      throw const LocationException(LocationProblem.deniedForever);
+    }
+    try {
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 12),
+        ),
+      );
+      _remember(pos);
+    } catch (_) {
+      final known = await Geolocator.getLastKnownPosition();
+      if (known == null) throw const LocationException(LocationProblem.timeout);
+      _remember(known);
+    }
+    return _last!;
+  }
+
+  void _remember(Position p) {
+    _last = (lat: p.latitude, lon: p.longitude);
+    _at = DateTime.now();
+  }
+
+  /// Laufende Positionen, z. B. für „Weg zum Steig“.
+  Stream<Position> watch() => Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.best,
+          distanceFilter: 3,
+        ),
+      );
+
+  /// „Mein Standort“ mit aktueller Koordinate.
+  Future<Location> resolve(Location l) async {
+    if (!isHere(l)) return l;
+    final p = await current();
+    return l.copyWith(lat: p.lat, lon: p.lon);
+  }
+}
+
+final locationServiceProvider = Provider((ref) => LocationService(ref));

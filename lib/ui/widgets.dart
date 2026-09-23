@@ -471,3 +471,133 @@ EdgeInsets pagePadding(BuildContext context, {double bottom = 24}) {
   final top = MediaQuery.of(context).padding.top;
   return EdgeInsets.fromLTRB(Space.page, top + 8, Space.page, bottom);
 }
+
+/// Start und Ziel untereinander mit kleiner Verlaufslinie (Ring → Punkt).
+class RouteSummary extends StatelessWidget {
+  const RouteSummary({super.key, required this.from, required this.to, this.when});
+
+  final String from;
+  final String to;
+  final String? when;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    const name = TextStyle(fontSize: 17, fontWeight: FontWeight.w600, height: 1.3);
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          SizedBox(width: 10, height: 46, child: CustomPaint(painter: MiniRoutePainter(c.muted, c.ink))),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              OneLine(from, style: name),
+              OneLine(to, style: name),
+            ]),
+          ),
+        ]),
+        if (when != null) ...[
+          const SizedBox(height: 2),
+          OneLine(when!, style: context.t.number(14).copyWith(color: c.muted)),
+        ],
+      ]),
+    );
+  }
+}
+
+class MiniRoutePainter extends CustomPainter {
+  MiniRoutePainter(this.muted, this.ink);
+
+  final Color muted;
+  final Color ink;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final x = size.width / 2;
+    final top = size.height * 0.24, bottom = size.height * 0.76;
+    canvas.drawCircle(Offset(x, top), 3.8,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..color = muted);
+    final p = Paint()
+      ..color = muted
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    for (var y = top + 6; y <= bottom - 6; y += 5) {
+      canvas.drawLine(Offset(x, y), Offset(x, y + 0.5), p);
+    }
+    canvas.drawCircle(Offset(x, bottom), 4.2, Paint()..color = ink);
+  }
+
+  @override
+  bool shouldRepaint(MiniRoutePainter old) => old.muted != muted || old.ink != ink;
+}
+
+/// Auswahl-Chip: gewählt dunkel gefüllt, sonst Fläche `fill`.
+class ChoiceChipX extends StatelessWidget {
+  const ChoiceChipX({super.key, required this.label, required this.selected, required this.onTap, this.icon});
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final fg = selected ? c.bg : c.ink;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: selected ? c.ink : c.fill,
+        borderRadius: BorderRadius.circular(17),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(17),
+          onTap: onTap,
+          child: Container(
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            alignment: Alignment.center,
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              if (icon != null) ...[Icon(icon, size: 16, color: fg), const SizedBox(width: 6)],
+              Flexible(
+                child: Text(label,
+                    maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 14, color: fg)),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Fahrzeugsymbol im Stil des Logos (assets/glyphs), Körper in [color].
+class VehicleGlyph extends StatelessWidget {
+  const VehicleGlyph(this.mode, {super.key, required this.color, this.width = 30});
+
+  final TransportMode? mode;
+  final Color color;
+  final double width;
+
+  static String assetFor(TransportMode? m) => switch (m) {
+        TransportMode.tram => 'assets/glyphs/tram.svg',
+        TransportMode.subway => 'assets/glyphs/ubahn.svg',
+        TransportMode.suspension => 'assets/glyphs/schwebebahn.svg',
+        TransportMode.rail || TransportMode.suburbanRail => 'assets/glyphs/zug.svg',
+        TransportMode.ferry => 'assets/glyphs/faehre.svg',
+        _ => 'assets/glyphs/bus.svg',
+      };
+
+  @override
+  Widget build(BuildContext context) => SvgPicture.asset(
+        assetFor(mode),
+        width: width,
+        height: width * 36 / 62,
+        theme: SvgTheme(currentColor: color),
+      );
+}

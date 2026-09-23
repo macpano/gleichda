@@ -46,6 +46,15 @@ dependencies:
   intl: ^0.20.3
   flutter_localizations:
     sdk: flutter
+  geolocator: ^14.0.3
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
+  flutter_local_notifications: ^22.3.1
+  workmanager: ^0.10.10
+  timezone: ^0.11.1
+  flutter_timezone: ^5.1.0
+  html: ^0.15.7
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
@@ -61,6 +70,8 @@ dev_dependencies:
   freezed: ^4.0.2
   json_serializable: ^6.14.1
   drift_dev: ^2.35.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -76,3 +87,25 @@ flutter:
       fonts:
         - asset: assets/fonts/Rubik-Italic.ttf
           style: italic
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/icon/icon.png
+  remove_alpha_ios: true
+  adaptive_icon_background: "#0B6E66"
+  adaptive_icon_foreground: assets/icon/foreground.png
+  min_sdk_android: 21
+
+flutter_native_splash:
+  color: "#F4F5F6"
+  color_dark: "#0E1012"
+  image: assets/icon/splash.png
+  image_dark: assets/icon/splash-dark.png
+  android_12:
+    color: "#F4F5F6"
+    color_dark: "#0E1012"
+    image: assets/icon/foreground.png
+    image_dark: assets/icon/foreground.png
+    icon_background_color: "#0B6E66"
+    icon_background_color_dark: "#1C2024"

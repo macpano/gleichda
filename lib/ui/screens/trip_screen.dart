@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/connections.dart';
 import '../../domain/models.dart';
+import '../../domain/settings.dart';
+import '../../state/companion.dart';
 import '../../state/providers.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../trip_status.dart';
 import '../widgets.dart';
+import 'alternatives_screen.dart';
+import 'companion_screen.dart';
+import 'walk_screen.dart';
 
 /// Fahrtdetail der zuletzt geöffneten Fahrt, mit Fahrtverlauf nach
 /// Öffi-Vorbild. Aktualisiert sich alle 30 s.
-// TODO: Alternativen, Anschlussprüfung (Schritt 10), Losfahren (Schritt 14).
 class TripScreen extends ConsumerStatefulWidget {
   const TripScreen({super.key});
 
@@ -26,6 +31,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     final c = context.c;
     final s = ref.watch(lastTripProvider).value;
     final now = ref.watch(clockProvider).value ?? DateTime.now();
+    final settings = ref.watch(settingsProvider).value ?? const AppSettings();
     if (s == null) {
       return Scaffold(
         body: Padding(
@@ -36,7 +42,11 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     }
     final trip = s.trip;
     final issue = tripIssue(trip, lost: s.lost);
+    final checks = checkTransfers(trip, transferMinutes: settings.transferPace.transferMinutes);
+    final missed = checks.where((x) => x.state == TransferState.missed).toList();
     final fav = ref.watch(_isFavorite((trip.origin, trip.destination))).value ?? false;
+    final companion = ref.watch(companionProvider);
+    final arrived = trip.arrival.best.isBefore(now);
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: () => ref.read(lastTripProvider.notifier).refresh(),
@@ -52,35 +62,41 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                 icon: Icon(fav ? Icons.star : Icons.star_border, color: fav ? c.accent : c.ink),
               ),
             ),
+            RouteSummary(from: trip.origin.name, to: trip.destination.name),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                OneLine(trip.origin.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, height: 1.3)),
-                OneLine(trip.destination.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, height: 1.3)),
-                const SizedBox(height: 2),
-                Row(children: [
-                  Expanded(
-                    child: OneLine(
-                      '${hm(trip.departure.best)} – ${hm(trip.arrival.best)} · ${durationText(trip.duration)} · ${interchangesText(trip.interchanges)}',
-                      style: context.t.number(14).copyWith(color: c.muted),
-                    ),
+              padding: const EdgeInsets.only(left: 4),
+              child: Row(children: [
+                Expanded(
+                  child: OneLine(
+                    '${hm(trip.departure.best)} – ${hm(trip.arrival.best)} · ${durationText(trip.duration)} · ${interchangesText(trip.interchanges)}',
+                    style: context.t.number(14).copyWith(color: c.muted),
                   ),
-                  FreshnessStamp(
-                    updatedAt: s.updatedAt,
-                    now: now,
-                    refreshing: s.refreshing,
-                    failed: s.failed,
-                    realtime: s.hasRealtime,
-                  ),
-                ]),
+                ),
+                FreshnessStamp(
+                  updatedAt: s.updatedAt,
+                  now: now,
+                  refreshing: s.refreshing,
+                  failed: s.failed,
+                  realtime: s.hasRealtime,
+                ),
               ]),
             ),
             const SizedBox(height: 14),
-            if (issue != null) ...[_IssueBanner(issue), const SizedBox(height: 14)],
+            if (issue != null) ...[
+              IssueBanner(issue, onAlternatives: () => openAlternatives(context, trip)),
+              const SizedBox(height: 14),
+            ] else if (missed.isNotEmpty) ...[
+              IssueBanner(
+                TripIssue(IssueLevel.cancelled, 'Anschluss in ${missed.first.at.name} nicht erreichbar',
+                    'Mit der aktuellen Verspätung reicht die Zeit zum Umsteigen nicht.'),
+                onAlternatives: () => openAlternatives(context, trip),
+              ),
+              const SizedBox(height: 14),
+            ],
             Container(
               decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(Radii.card)),
               padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
-              child: Column(children: _rows(context, trip)),
+              child: Column(children: _rows(context, trip, checks, now)),
             ),
             if (trip.messages.isNotEmpty) ...[
               const SizedBox(height: 24),
@@ -102,12 +118,64 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           ],
         ),
       ),
+      bottomNavigationBar: arrived
+          ? null
+          : Container(
+              decoration: BoxDecoration(color: c.bar, border: Border(top: BorderSide(color: c.hair))),
+              padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + MediaQuery.of(context).padding.bottom),
+              child: SizedBox(
+                height: 50,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: c.accent,
+                    foregroundColor: c.onAccent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.card)),
+                  ),
+                  onPressed: () async {
+                    if (!companion.active) await ref.read(companionProvider.notifier).start();
+                    if (context.mounted) {
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CompanionScreen()));
+                    }
+                  },
+                  child: Text(companion.active ? 'Unterwegs anzeigen' : 'Losfahren',
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ),
     );
   }
 
-  List<Widget> _rows(BuildContext context, Trip trip) {
+  List<Widget> _rows(BuildContext context, Trip trip, List<TransferCheck> checks, DateTime now) {
     final c = context.c;
+    final walkColor = c.walkText.withValues(alpha: 0.5);
     final rows = <Widget>[];
+    var transfer = 0;
+
+    Widget walkRow(String text, {TransferCheck? check, Location? target, String? platform}) {
+      final (String state, Color color) = switch (check?.state) {
+        TransferState.safe => ('Anschluss sicher', c.green),
+        TransferState.tight => ('Anschluss knapp', c.orange),
+        TransferState.missed => ('Anschluss nicht erreichbar', c.red),
+        null => ('', c.muted),
+      };
+      return _Row(
+        height: 40,
+        rail: _Rail(color: walkColor, dotted: true),
+        child: Row(children: [
+          Expanded(
+            child: OneLine(state.isEmpty ? text : '$text · $state',
+                style: TextStyle(fontSize: 14, color: state.isEmpty ? c.muted : color)),
+          ),
+          if (target != null)
+            GestureDetector(
+              onTap: () => Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => WalkScreen(target: target, platform: platform))),
+              child: Text('Weg zeigen', style: TextStyle(fontSize: 14, color: c.accent)),
+            ),
+        ]),
+      );
+    }
+
     for (var i = 0; i < trip.legs.length; i++) {
       final l = trip.legs[i];
       if (l.type != LegType.ride) {
@@ -116,32 +184,31 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                     ?.difference((l.from.departure ?? l.from.arrival)!.best)
                     .inMinutes ??
                 0);
-        rows.add(_Row(
-          height: 40,
-          rail: _Rail(color: c.walkText.withValues(alpha: 0.5), dotted: true),
-          child: OneLine(
-            l.type == LegType.walk
-                ? '$m min Fußweg${i == trip.legs.length - 1 ? ' zum Ziel' : ''}'
-                : '$m min Umstieg',
-            style: TextStyle(fontSize: 14, color: c.muted),
-          ),
-        ));
+        final isFirst = i == 0;
+        final isLast = i == trip.legs.length - 1;
+        if (isFirst) {
+          final next = i + 1 < trip.legs.length ? trip.legs[i + 1].from : null;
+          rows.add(walkRow('$m min Fußweg', target: next?.stop, platform: next?.platform));
+        } else if (isLast) {
+          rows.add(walkRow('$m min Fußweg zum Ziel'));
+        } else {
+          rows.add(walkRow(l.type == LegType.walk ? '$m min Fußweg' : '$m min Umstieg',
+              check: transfer < checks.length ? checks[transfer] : null));
+          transfer++;
+        }
         continue;
       }
-      // Umstieg am selben Halt ohne eigenen Fußweg-Abschnitt: Wartezeit zeigen.
       if (i > 0 && trip.legs[i - 1].type == LegType.ride) {
         final arr = trip.legs[i - 1].to.arrival?.best;
         final dep = l.from.departure?.best;
         final m = (arr != null && dep != null) ? dep.difference(arr).inMinutes : 0;
-        rows.add(_Row(
-          height: 40,
-          rail: _Rail(color: c.walkText.withValues(alpha: 0.5), dotted: true),
-          child: OneLine('$m min Umstieg', style: TextStyle(fontSize: 14, color: c.muted)),
-        ));
+        rows.add(walkRow('$m min Umstieg', check: transfer < checks.length ? checks[transfer] : null));
+        transfer++;
       }
       final color = lineColor(context, l.line);
       final open = _expanded.contains(i);
-      rows.add(_stopRow(context, l.from, color, departure: true, first: true));
+      rows.add(_stopRow(context, l.from, color, now,
+          departure: true, first: true, walkLink: i == 0 ? l.from.stop : null));
       final dep = l.from.departure;
       final (tag, tagColor) = !(dep?.hasRealtime ?? false)
           ? ('nur Fahrplan', c.muted)
@@ -171,24 +238,52 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           ]),
         ),
       ));
-      final hidden = l.intermediates.where((s) => s.status != StopStatus.normal);
-      for (final s in open ? l.intermediates : hidden) {
-        rows.add(_stopRow(context, s, color));
+
+      // Aktuelle Position: Fahrzeug nach dem letzten passierten Halt.
+      final stops = [l.from, ...l.intermediates, l.to];
+      final onBoard = isPassed(l.from, now) && !isPassed(l.to, now);
+      var lastPassed = -1;
+      for (var k = 0; k < stops.length; k++) {
+        if (isPassed(stops[k], now)) lastPassed = k;
       }
-      rows.add(_stopRow(context, l.to, color, departure: false, last: true));
+      Widget position(StopTime next) => _Row(
+            height: 32,
+            rail: _Rail(color: color),
+            marker: VehicleGlyph(l.line?.mode, color: color, width: 22),
+            child: OneLine('nächster Halt ${next.stop.name}', style: TextStyle(fontSize: 13, color: c.muted)),
+          );
+      final shown = open
+          ? l.intermediates
+          : l.intermediates.where((s) => s.status != StopStatus.normal).toList();
+      var placed = false;
+      if (onBoard && (lastPassed == 0 || !open)) {
+        rows.add(position(stops[lastPassed + 1]));
+        placed = true;
+      }
+      for (final s in shown) {
+        rows.add(_stopRow(context, s, color, now));
+        final k = stops.indexOf(s);
+        if (onBoard && !placed && k == lastPassed) {
+          rows.add(position(stops[k + 1]));
+          placed = true;
+        }
+      }
+      rows.add(_stopRow(context, l.to, color, now, departure: false, last: true));
     }
     return rows;
   }
 
-  Widget _stopRow(BuildContext context, StopTime s, Color color,
-      {bool? departure, bool first = false, bool last = false}) {
+  Widget _stopRow(BuildContext context, StopTime s, Color color, DateTime now,
+      {bool? departure, bool first = false, bool last = false, Location? walkLink}) {
     final c = context.c;
     final main = first || last;
     final t = (departure ?? true) ? (s.departure ?? s.arrival) : (s.arrival ?? s.departure);
     final cancelled = s.status == StopStatus.cancelled;
     final diverted = s.status == StopStatus.diversion;
-    final tColor = timeColor(context, t, status: s.status, neutral: main ? c.ink : c.ink2);
+    final passed = isPassed(s, now);
+    final tColor = passed ? c.muted : timeColor(context, t, status: s.status, neutral: main ? c.ink : c.ink2);
     final delayed = (t?.delayMinutes ?? 0) > 0;
+    final platformChanged = s.plannedPlatform != null && s.platform != s.plannedPlatform;
     return _Row(
       height: main ? 52 : 40,
       rail: _Rail(
@@ -222,7 +317,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                 style: TextStyle(
                   fontSize: main ? 16 : 15,
                   fontWeight: main ? FontWeight.w600 : FontWeight.w400,
-                  color: cancelled ? c.muted : c.ink,
+                  color: cancelled || passed ? c.muted : c.ink,
                   decoration: cancelled ? TextDecoration.lineThrough : null,
                   height: 22 / 16,
                 )),
@@ -233,26 +328,39 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                 style: TextStyle(fontSize: 13, color: cancelled ? c.red : c.orange)),
           ],
         ]),
-        if (main && s.platform != null)
-          OneLine(
-              s.plannedPlatform != null && s.platform != s.plannedPlatform
-                  ? 'Steig ${s.platform} statt ${s.plannedPlatform}'
-                  : 'Steig ${s.platform}',
-              style: TextStyle(
-                  fontSize: 13,
-                  color: s.plannedPlatform != null && s.platform != s.plannedPlatform ? c.orange : c.muted)),
+        if (main && (s.platform != null || walkLink != null))
+          Row(children: [
+            if (s.platform != null)
+              Flexible(
+                child: OneLine(platformChanged ? 'Steig ${s.platform} statt ${s.plannedPlatform}' : 'Steig ${s.platform}',
+                    style: TextStyle(fontSize: 13, color: platformChanged ? c.orange : c.muted)),
+              ),
+            if (walkLink != null && !passed) ...[
+              if (s.platform != null) Text(' · ', style: TextStyle(fontSize: 13, color: c.muted)),
+              GestureDetector(
+                onTap: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => WalkScreen(target: walkLink, platform: s.platform))),
+                child: Text('Weg zum Steig', style: TextStyle(fontSize: 13, color: c.accent)),
+              ),
+            ],
+          ]),
       ]),
     );
   }
 }
 
+void openAlternatives(BuildContext context, Trip trip) =>
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => AlternativesScreen(trip: trip)));
+
 final _isFavorite = StreamProvider.autoDispose.family<bool, (Location, Location)>(
     (ref, r) => ref.watch(repositoryProvider).watchIsFavoriteRoute(r.$1, r.$2));
 
-class _IssueBanner extends StatelessWidget {
-  const _IssueBanner(this.issue);
+/// Abweichung in Klartext, oben in der Fahrt. Mit „Alternativen anzeigen“.
+class IssueBanner extends StatelessWidget {
+  const IssueBanner(this.issue, {super.key, this.onAlternatives});
 
   final TripIssue issue;
+  final VoidCallback? onAlternatives;
 
   @override
   Widget build(BuildContext context) {
@@ -264,13 +372,23 @@ class _IssueBanner extends StatelessWidget {
         color: red ? c.redTint : c.orangeTint,
         borderRadius: BorderRadius.circular(Radii.card),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      padding: EdgeInsets.fromLTRB(16, 14, 16, onAlternatives == null ? 14 : 4),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         OneLine(issue.title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: fg)),
         if (issue.detail != null) ...[
           const SizedBox(height: 6),
           Text(issue.detail!, style: TextStyle(fontSize: 15, height: 1.4, color: fg)),
         ],
+        if (onAlternatives != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              style: TextButton.styleFrom(padding: EdgeInsets.zero, foregroundColor: fg),
+              onPressed: onAlternatives,
+              child: const Text('Alternativen anzeigen',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            ),
+          ),
       ]),
     );
   }
@@ -300,12 +418,15 @@ class _Rail {
 
 /// Zeile im Fahrtverlauf: 52 px Zeit | 24 px Linie | Inhalt. Feste Höhe.
 class _Row extends StatelessWidget {
-  const _Row({required this.height, required this.rail, required this.child, this.time});
+  const _Row({required this.height, required this.rail, required this.child, this.time, this.marker});
 
   final double height;
   final _Rail rail;
   final Widget child;
   final Widget? time;
+
+  /// Symbol auf der Linie, z. B. das Fahrzeug an der aktuellen Position.
+  final Widget? marker;
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -318,10 +439,25 @@ class _Row extends StatelessWidget {
               child: Align(alignment: Alignment.topRight, child: time),
             ),
           ),
-          SizedBox(width: 24, child: CustomPaint(painter: _RailPainter(rail))),
+          SizedBox(
+            width: 24,
+            child: Stack(clipBehavior: Clip.none, children: [
+              Positioned.fill(child: CustomPaint(painter: _RailPainter(rail))),
+              if (marker != null)
+                Positioned(
+                  left: 0,
+                  top: height / 2 - 8,
+                  child: Container(
+                    color: context.c.surface,
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: marker,
+                  ),
+                ),
+            ]),
+          ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(left: 8, top: 9),
+              padding: EdgeInsets.only(left: 8, top: marker != null ? 8 : 9),
               child: Align(alignment: Alignment.topLeft, child: child),
             ),
           ),

@@ -57,3 +57,13 @@ String distanceText(double meters) {
   if (meters < 1000) return '${(meters / 10).round() * 10} m';
   return '${(meters / 1000).toStringAsFixed(1).replaceAll('.', ',')} km';
 }
+
+/// „Heute“, „Morgen“ oder der Wochentag.
+String relativeDay(DateTime t, DateTime now) {
+  final a = DateTime(t.year, t.month, t.day);
+  final b = DateTime(now.year, now.month, now.day);
+  final diff = a.difference(b).inDays;
+  if (diff == 0) return 'Heute';
+  if (diff == 1) return 'Morgen';
+  return DateFormat('EEEE', 'de').format(t);
+}

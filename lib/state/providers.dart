@@ -11,6 +11,8 @@ import '../data/transit_provider.dart';
 import '../data/trias/trias_provider.dart';
 import '../data/vrr_provider.dart';
 import '../domain/models.dart';
+import '../domain/settings.dart';
+import 'location.dart';
 
 /// Wird in main() überschrieben.
 final databaseProvider = Provider<AppDatabase>((ref) => throw UnimplementedError());
@@ -44,6 +46,17 @@ final themeModeProvider = StreamProvider<ThemeMode>((ref) => ref
     .watch(repositoryProvider)
     .watchSetting('themeMode')
     .map((v) => ThemeMode.values.firstWhere((m) => m.name == v, orElse: () => ThemeMode.system)));
+
+/// Profil und Einstellungen (nur auf dem Gerät).
+final settingsProvider = StreamProvider<AppSettings>((ref) => ref
+    .watch(repositoryProvider)
+    .watchSetting('settings')
+    .map(AppSettings.decode));
+
+Future<void> updateSettings(WidgetRef ref, AppSettings Function(AppSettings) change) async {
+  final cur = ref.read(settingsProvider).value ?? const AppSettings();
+  await ref.read(repositoryProvider).setSetting('settings', change(cur).encode());
+}
 
 final historyProvider =
     StreamProvider<List<HistoryItem>>((ref) => ref.watch(repositoryProvider).watchHistory());
@@ -148,8 +161,13 @@ class LastTripController extends AsyncNotifier<LastTripState?> {
     }
   }
 
-  /// App im Hintergrund: keine Abfragen.
-  void pause() => _timer?.cancel();
+  /// Im Unterwegs-Modus läuft die Aktualisierung auch im Hintergrund weiter.
+  bool keepAlive = false;
+
+  /// App im Hintergrund: keine Abfragen (außer im Unterwegs-Modus).
+  void pause() {
+    if (!keepAlive) _timer?.cancel();
+  }
 
   /// App wieder sichtbar: sofort aktualisieren, dann im Takt.
   void resume() {
@@ -189,19 +207,62 @@ final searchTimeProvider =
 
 /// Start und Ziel auf der Startseite. Bleiben erhalten, wenn man zurückgeht.
 class RouteSelection {
-  const RouteSelection({this.from, this.to});
+  const RouteSelection({this.from, this.to, this.via});
 
   final Location? from;
   final Location? to;
+
+  /// Zwischenhalt aus den Suchoptionen.
+  final Location? via;
 }
 
 class RouteController extends Notifier<RouteSelection> {
   @override
-  RouteSelection build() => const RouteSelection();
+  RouteSelection build() => const RouteSelection(from: myLocation);
 
-  void setFrom(Location l) => state = RouteSelection(from: l, to: state.to);
-  void setTo(Location l) => state = RouteSelection(from: state.from, to: l);
-  void swap() => state = RouteSelection(from: state.to, to: state.from);
+  void setFrom(Location l) => state = RouteSelection(from: l, to: state.to, via: state.via);
+  void setTo(Location l) => state = RouteSelection(from: state.from, to: l, via: state.via);
+  void setVia(Location? l) => state = RouteSelection(from: state.from, to: state.to, via: l);
+  void swap() => state = RouteSelection(from: state.to, to: state.from, via: state.via);
 }
 
 final routeProvider = NotifierProvider<RouteController, RouteSelection>(RouteController.new);
+
+final subscriptionsProvider =
+    StreamProvider<List<Subscription>>((ref) => ref.watch(repositoryProvider).watchSubscriptions());
+
+final placesProvider = StreamProvider<List<SavedPlace>>((ref) => ref.watch(repositoryProvider).watchPlaces());
+
+final alarmsProvider = StreamProvider<List<Alarm>>((ref) => ref.watch(repositoryProvider).watchAlarms());
+
+/// Meldungsliste mit Zeitpunkt des Abrufs.
+class MessagesState {
+  const MessagesState(this.messages, this.at, {this.failed = false, this.error});
+
+  final List<Message> messages;
+  final DateTime at;
+  final bool failed;
+  final String? error;
+}
+
+class MessagesController extends AsyncNotifier<MessagesState> {
+  @override
+  Future<MessagesState> build() async {
+    final list = await ref.read(transitProvider).messages();
+    return MessagesState(list, DateTime.now());
+  }
+
+  Future<void> refresh() async {
+    final old = state.value;
+    try {
+      final list = await ref.read(transitProvider).messages();
+      state = AsyncData(MessagesState(list, DateTime.now()));
+    } on ProviderException catch (e) {
+      state = old == null
+          ? AsyncError(e, StackTrace.current)
+          : AsyncData(MessagesState(old.messages, old.at, failed: true, error: e.message));
+    }
+  }
+}
+
+final messagesProvider = AsyncNotifierProvider<MessagesController, MessagesState>(MessagesController.new);
