@@ -292,6 +292,14 @@ void main() {
   testWidgets('Große Schrift: Abfahrten',
       (t) => shot(t, 'gross_abfahrten', Scaffold(body: DeparturesScreen(initialStop: hbf)), textScale: 1.5));
   testWidgets('Fahrt', (t) => shot(t, 'fahrt', const TripScreen(), seed: seedHome));
+  testWidgets('Zwischenhalte klappen auf (mittendrin)', (t) => shot(t, 'zwischenhalte_auf', const TripScreen(),
+      seed: seedHome,
+      act: (t) async {
+        await t.tap(find.textContaining('Zwischenhalte').last);
+        await t.pump();
+        await t.pump(const Duration(milliseconds: 90));
+      },
+      settle: false));
   testWidgets('Fahrt mit Ersatzverkehr', (t) {
     final base = trips.first;
     final i = base.legs.indexWhere((l) => l.type == LegType.ride);
