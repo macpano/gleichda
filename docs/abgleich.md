@@ -234,3 +234,13 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Fußweg zum Ziel mit Laufsymbol (Weg zum Ziel auf der Karte)
 - ✅ Startseite: Die Fahrt bleibt bis zur Ankunft an der Zieladresse – `tripEnd` = letzte Fahrt mit Echtzeit + Fußweg
   (vorher Planzeit des Fußwegs, bei Verspätung zu früh weg)
+
+## 0.4.11-vorab.11 (23.09.2026)
+- ✅ „Erneut versuchen“ zeigt eine Ladeanzeige (`Notice` wartet auf die Aktion); vorher suchte der Knopf neu, änderte
+  aber sichtbar nichts, wenn die Liste schon leer war – wirkte tot. Unerwartete Fehler in der Verbindungssuche enden
+  jetzt mit Hinweis statt endlosem Laden
+- ✅ Eine Fahrt wird nicht weggeräumt, solange ihre Ansicht offen ist (`tripViewers`). Vom Standort zur eigenen
+  Adresse liefert die Auskunft nah am Ziel nur einen Fußweg von 0–6 min (live, `test_live/nah_am_ziel_live_test.dart`);
+  zwei Minuten danach stand mitten in der Ansicht „Keine Fahrt geöffnet“
+- Geprüft: Die Auskunft liefert bei gleicher Anfrage stabil Ergebnisse (27/27), eine leere Liste ließ sich nicht
+  nachstellen (`test_live/verbindungen_wiederholt_live_test.dart`)

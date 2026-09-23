@@ -1,3 +1,5 @@
+import 'dart:async';
+
 // Gemeinsame Bausteine der Oberfläche.
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -327,24 +329,61 @@ class SkeletonBlock extends StatelessWidget {
 }
 
 /// Hinweis im Inhalt, z. B. bei Fehlern oder leeren Ergebnissen.
-class Notice extends StatelessWidget {
+class Notice extends StatefulWidget {
   const Notice(this.text, {super.key, this.action, this.onAction, this.color});
 
   final String text;
   final String? action;
-  final VoidCallback? onAction;
+
+  /// Darf eine Future liefern: Solange sie läuft, zeigt der Knopf eine
+  /// Ladeanzeige. Vorher sah „Erneut versuchen“ wie tot aus, wenn die Liste
+  /// schon leer war – gesucht wurde, aber nichts änderte sich sichtbar.
+  final FutureOr<void> Function()? onAction;
   final Color? color;
+
+  @override
+  State<Notice> createState() => _NoticeState();
+}
+
+class _NoticeState extends State<Notice> {
+  bool _busy = false;
+
+  Future<void> _run() async {
+    final f = widget.onAction;
+    if (f == null || _busy) return;
+    setState(() => _busy = true);
+    try {
+      await f();
+    } catch (_) {
+      // Fehler zeigt die Seite selbst.
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
         child: Column(
           children: [
-            Text(text,
+            Text(widget.text,
                 textAlign: TextAlign.center,
-                style: context.t.secondary.copyWith(color: color ?? context.c.muted)),
-            if (action != null)
-              TextButton(onPressed: onAction, child: Text(action!)),
+                style: context.t.secondary.copyWith(color: widget.color ?? context.c.muted)),
+            if (widget.action != null)
+              TextButton(
+                onPressed: _busy ? null : _run,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  // Platz für die Ladeanzeige ist immer reserviert – nichts springt.
+                  SizedBox(
+                    width: 22,
+                    child: _busy
+                        ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                        : null,
+                  ),
+                  Text(widget.action!),
+                  const SizedBox(width: 22),
+                ]),
+              ),
           ],
         ),
       );

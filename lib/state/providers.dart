@@ -125,6 +125,12 @@ DateTime tripEnd(Trip trip) {
   return end;
 }
 
+/// Wie viele Fahrtansichten gerade offen sind. Solange man eine Fahrt
+/// ansieht, wird sie nicht als „angekommen“ weggeräumt – sonst stand etwa
+/// bei einem reinen Fußweg nach Hause nach zwei Minuten „Keine Fahrt
+/// geöffnet“ mitten in der Ansicht.
+int tripViewers = 0;
+
 class LastTripController extends AsyncNotifier<LastTripState?> {
   Timer? _timer;
   bool _busy = false;
@@ -171,7 +177,7 @@ class LastTripController extends AsyncNotifier<LastTripState?> {
   /// die App die ganze Zeit offen war.
   Future<bool> _dropIfArrived() async {
     final cur = state.value;
-    if (cur == null || _openedPast || !arrivedLongAgo(cur.trip, DateTime.now())) return false;
+    if (cur == null || _openedPast || tripViewers > 0 || !arrivedLongAgo(cur.trip, DateTime.now())) return false;
     _timer?.cancel();
     state = const AsyncData(null);
     await ref.read(repositoryProvider).clearLastTrip();
