@@ -78,16 +78,28 @@ class _OptionsSheet extends ConsumerWidget {
                           : {...x.excludedModes, g},
                     )),
                 child: SizedBox(
-                  height: 46,
+                  height: 48,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: EdgeInsets.only(left: 16, right: context.isIOS ? 16 : 8),
                     child: Row(children: [
                       Expanded(child: Text(g.label, style: const TextStyle(fontSize: 16))),
-                      AnimatedOpacity(
-                        duration: const Duration(milliseconds: 150),
-                        opacity: s.excludedModes.contains(g) ? 0 : 1,
-                        child: Icon(Icons.check, size: 22, color: c.accent),
-                      ),
+                      // Android: Kontrollkästchen; iPhone: Haken.
+                      if (context.isIOS)
+                        AnimatedOpacity(
+                          duration: const Duration(milliseconds: 150),
+                          opacity: s.excludedModes.contains(g) ? 0 : 1,
+                          child: Icon(Icons.check, size: 22, color: c.accent),
+                        )
+                      else
+                        Checkbox(
+                          value: !s.excludedModes.contains(g),
+                          activeColor: c.accent,
+                          onChanged: (_) => updateSettings(ref, (x) => x.copyWith(
+                                excludedModes: x.excludedModes.contains(g)
+                                    ? ({...x.excludedModes}..remove(g))
+                                    : {...x.excludedModes, g},
+                              )),
+                        ),
                     ]),
                   ),
                 ),

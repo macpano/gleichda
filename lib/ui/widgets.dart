@@ -277,7 +277,8 @@ class ListGroup extends StatelessWidget {
   }
 }
 
-/// Abschnittsüberschrift über einer Gruppe.
+/// Abschnittsüberschrift über einer Gruppe. Android: in Akzentfarbe wie in
+/// Material-Einstellungen; iPhone: klein und grau.
 class SectionTitle extends StatelessWidget {
   const SectionTitle(this.text, {super.key, this.trailing, this.small = false});
 
@@ -286,21 +287,24 @@ class SectionTitle extends StatelessWidget {
   final bool small;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: OneLine(text,
-                  style: small
-                      ? context.t.label.copyWith(color: context.c.muted)
-                      : context.t.section),
-            ),
-            ?trailing,
-          ],
-        ),
-      );
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final style = !small
+        ? context.t.section
+        : context.isIOS
+            ? context.t.label.copyWith(color: c.muted)
+            : TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.accent);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(small && !context.isIOS ? 16 : 4, 0, 4, 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(child: OneLine(text, style: style)),
+          ?trailing,
+        ],
+      ),
+    );
+  }
 }
 
 /// Platzhalterblock in der späteren Größe (kein Spinner im Inhalt).
@@ -520,7 +524,8 @@ class MiniRoutePainter extends CustomPainter {
   bool shouldRepaint(MiniRoutePainter old) => old.muted != muted || old.ink != ink;
 }
 
-/// Auswahl-Chip: gewählt dunkel gefüllt, sonst Fläche `fill`.
+/// Auswahl-Chip für Filter und Profile. Android: Material-Filterchip
+/// (umrandet, gewählt gefüllt mit Haken); iPhone: Kapsel, gewählt schwarz.
 class ChoiceChipX extends StatelessWidget {
   const ChoiceChipX({super.key, required this.label, required this.selected, required this.onTap, this.icon});
 
@@ -532,26 +537,32 @@ class ChoiceChipX extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final fg = selected ? c.bg : c.ink;
+    final ios = context.isIOS;
+    final fg = ios ? (selected ? c.bg : c.ink) : (selected ? c.accent : c.ink2);
+    final radius = BorderRadius.circular(ios ? 17 : 8);
+    final lead = icon ?? (!ios && selected ? Icons.check : null);
     return Semantics(
       button: true,
       selected: selected,
       child: Material(
-        color: selected ? c.ink : c.fill,
-        borderRadius: BorderRadius.circular(17),
+        color: ios ? (selected ? c.ink : c.fill) : (selected ? c.indicator : Colors.transparent),
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: ios || selected ? BorderSide.none : BorderSide(color: c.hair, width: 1),
+        ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(17),
+          borderRadius: radius,
           onTap: onTap,
           child: Container(
-            height: 34,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            height: ios ? 34 : 32,
+            padding: EdgeInsets.symmetric(horizontal: lead != null ? 10 : 12),
             alignment: Alignment.center,
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              if (icon != null) ...[Icon(icon, size: 16, color: fg), const SizedBox(width: 6)],
+              if (lead != null) ...[Icon(lead, size: 16, color: fg), const SizedBox(width: 6)],
               Flexible(
                 child: Text(label,
                     maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 14, color: fg)),
+                    style: TextStyle(fontSize: 14, color: fg, fontWeight: !ios && selected ? FontWeight.w600 : FontWeight.w400)),
               ),
             ]),
           ),
@@ -587,7 +598,9 @@ class VehicleGlyph extends StatelessWidget {
       );
 }
 
-/// Umschalter wie im Canvas: Fläche `fill`, gewählte Option weiß abgehoben.
+/// Umschalter mit wenigen Optionen. Android: Material-Segmentknopf
+/// (umrandete Kapsel, gewählt gefüllt mit Haken); iPhone: graue Fläche,
+/// gewählte Option weiß abgehoben.
 class Segmented<T> extends StatelessWidget {
   const Segmented({super.key, required this.options, required this.value, required this.onChanged, this.height = 36});
 
@@ -600,6 +613,51 @@ class Segmented<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final fast = MediaQuery.of(context).disableAnimations ? Duration.zero : const Duration(milliseconds: 150);
+    if (!context.isIOS) {
+      final h = height < 40 ? 40.0 : height;
+      return Container(
+        height: h,
+        decoration: ShapeDecoration(shape: StadiumBorder(side: BorderSide(color: c.hair, width: 1))),
+        clipBehavior: Clip.antiAlias,
+        child: Row(children: [
+          for (var i = 0; i < options.length; i++) ...[
+            if (i > 0) VerticalDivider(width: 1, thickness: 1, color: c.hair),
+            Expanded(
+              child: Semantics(
+                button: true,
+                selected: options[i].$1 == value,
+                child: InkWell(
+                  onTap: () => onChanged(options[i].$1),
+                  child: AnimatedContainer(
+                    duration: fast,
+                    color: options[i].$1 == value ? c.indicator : Colors.transparent,
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      // Haken nur, wenn Platz ist (bis drei Optionen).
+                      if (options[i].$1 == value && options.length <= 3) ...[
+                        Icon(Icons.check, size: 16, color: c.accent),
+                        const SizedBox(width: 4),
+                      ],
+                      Flexible(
+                        child: Text(options[i].$2,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 14,
+                                color: options[i].$1 == value ? c.accent : c.ink2,
+                                fontWeight: options[i].$1 == value ? FontWeight.w600 : FontWeight.w500)),
+                      ),
+                    ]),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ]),
+      );
+    }
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(color: c.fill, borderRadius: BorderRadius.circular(Radii.input)),
@@ -613,7 +671,7 @@ class Segmented<T> extends StatelessWidget {
                 behavior: HitTestBehavior.opaque,
                 onTap: () => onChanged(v),
                 child: AnimatedContainer(
-                  duration: MediaQuery.of(context).disableAnimations ? Duration.zero : const Duration(milliseconds: 150),
+                  duration: fast,
                   height: height,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
@@ -634,7 +692,8 @@ class Segmented<T> extends StatelessWidget {
   }
 }
 
-/// Wahlknopf in fester Größe (Tag, Schnellwahl): gewählt gefüllt.
+/// Schnellwahl (Tag, „in 30 min“). Android: wie ein Material-Chip; iPhone:
+/// graue Fläche, gewählt schwarz bzw. Petrol.
 class PickButton extends StatelessWidget {
   const PickButton({super.key, required this.label, required this.selected, required this.onTap, this.accent = false});
 
@@ -648,13 +707,18 @@ class PickButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final bg = selected ? (accent ? c.accent : c.ink) : c.fill;
-    final fg = selected ? (accent ? c.onAccent : c.bg) : c.ink;
+    final ios = context.isIOS;
+    final bg = ios ? (selected ? (accent ? c.accent : c.ink) : c.fill) : (selected ? c.indicator : Colors.transparent);
+    final fg = ios ? (selected ? (accent ? c.onAccent : c.bg) : c.ink) : (selected ? c.accent : c.ink2);
+    final radius = BorderRadius.circular(ios ? Radii.input : 8);
     return Material(
       color: bg,
-      borderRadius: BorderRadius.circular(Radii.input),
+      shape: RoundedRectangleBorder(
+        borderRadius: radius,
+        side: ios || selected ? BorderSide.none : BorderSide(color: c.hair, width: 1),
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(Radii.input),
+        borderRadius: radius,
         onTap: onTap,
         child: Container(
           height: 40,
@@ -664,14 +728,16 @@ class PickButton extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: context.t.number(14).copyWith(
-                  color: fg, fontWeight: selected && accent ? FontWeight.w600 : FontWeight.w400, fontSize: accent ? 15 : 14)),
+                  color: fg,
+                  fontWeight: selected && (accent || !ios) ? FontWeight.w600 : FontWeight.w400,
+                  fontSize: accent ? 15 : 14)),
         ),
       ),
     );
   }
 }
 
-/// Kopf eines Fensters von unten: Titel links, „Fertig“ rechts.
+/// Kopf eines Fensters von unten: Titel und „Fertig“.
 class SheetHeader extends StatelessWidget {
   const SheetHeader(this.title, {super.key, this.done = 'Fertig', this.onDone});
 
@@ -683,18 +749,33 @@ class SheetHeader extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(
         height: 44,
         child: Row(children: [
-          Expanded(child: OneLine(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
-          GestureDetector(
-            onTap: onDone ?? () => Navigator.pop(context),
-            child: Text(done, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: context.c.accent)),
+          Expanded(
+            child: OneLine(title,
+                style: TextStyle(fontSize: context.isIOS ? 16 : 18, fontWeight: context.isIOS ? FontWeight.w600 : FontWeight.w500)),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: context.c.accent, padding: const EdgeInsets.symmetric(horizontal: 8)),
+            onPressed: onDone ?? () => Navigator.pop(context),
+            child: Text(done, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           ),
         ]),
       );
 }
 
-/// Zeile in Einstellungsgruppen: Beschriftung links, Wert rechts, feste Höhe.
+/// Einstellungszeile. Android (Material): optional Symbol links, Titel und
+/// darunter der Wert, kein Pfeil. iPhone: Wert rechts, Pfeil.
 class ValueRow extends StatelessWidget {
-  const ValueRow({super.key, required this.label, this.value, this.onTap, this.trailing, this.labelColor, this.chevron = true, this.valueColor});
+  const ValueRow({
+    super.key,
+    required this.label,
+    this.value,
+    this.onTap,
+    this.trailing,
+    this.labelColor,
+    this.chevron = true,
+    this.valueColor,
+    this.icon,
+  });
 
   final String label;
   final String? value;
@@ -704,9 +785,38 @@ class ValueRow extends StatelessWidget {
   final Color? valueColor;
   final bool chevron;
 
+  /// Symbol links (nur Android).
+  final IconData? icon;
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    final hasValue = value != null && value!.isNotEmpty;
+    if (!context.isIOS) {
+      return InkWell(
+        onTap: onTap,
+        child: Container(
+          constraints: BoxConstraints(minHeight: hasValue ? 64 : 52),
+          padding: EdgeInsets.only(left: 16, right: trailing != null ? 8 : 16, top: 8, bottom: 8),
+          child: Row(children: [
+            if (icon != null) ...[
+              Icon(icon, size: 22, color: labelColor ?? c.ink2),
+              const SizedBox(width: 16),
+            ],
+            Expanded(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                OneLine(label, style: TextStyle(fontSize: 16, color: labelColor ?? c.ink)),
+                if (hasValue) ...[
+                  const SizedBox(height: 2),
+                  OneLine(value!, style: TextStyle(fontSize: 14, color: valueColor ?? c.muted)),
+                ],
+              ]),
+            ),
+            ?trailing,
+          ]),
+        ),
+      );
+    }
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -716,7 +826,7 @@ class ValueRow extends StatelessWidget {
           OneLine(label, style: TextStyle(fontSize: 16, color: labelColor ?? c.ink)),
           const SizedBox(width: 12),
           Expanded(
-            child: value == null
+            child: !hasValue
                 ? const SizedBox.shrink()
                 : Text(value!,
                     maxLines: 1,
@@ -727,13 +837,28 @@ class ValueRow extends StatelessWidget {
           ?trailing,
           if (trailing == null && chevron && onTap != null) ...[
             const SizedBox(width: 8),
-            Icon(Icons.chevron_right, size: 18, color: c.chevron),
+            const RowChevron(),
           ],
         ]),
       ),
     );
   }
 }
+
+/// Pfeil nach rechts nur auf dem iPhone; Android-Listen zeigen keinen.
+class RowChevron extends StatelessWidget {
+  const RowChevron({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      context.isIOS ? Icon(Icons.chevron_right, size: 18, color: context.c.chevron) : const SizedBox.shrink();
+}
+
+/// Form der großen Knöpfe: Android Kapsel (Material), iPhone abgerundetes
+/// Rechteck.
+OutlinedBorder buttonShape(BuildContext context) => context.isIOS
+    ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.card))
+    : const StadiumBorder();
 
 /// Aktuelle Position (Haltestellenverlauf und Karte): Punkt in Linienfarbe mit weißem Rand und
 /// ruhigem Puls (still bei „Bewegung reduzieren“).

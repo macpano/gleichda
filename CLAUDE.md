@@ -60,8 +60,15 @@ Diese vier werden am häufigsten verletzt, deshalb hier noch einmal:
 2. **Gleich breite Ziffern** für alle Zeiten und Zahlen.
 3. **Namen einzeilig kürzen** mit `…`, nie umbrechen.
 4. **iPhone und Android haben dieselben Screens**, gleiche Anzahl, gleicher
-   Inhalt. Unterschiede nur bei Schrift, Zurück-Pfeil, unterer Navigation und
-   den Rändern.
+   Inhalt. **Android sieht nach Android aus** (Nutzervorgabe 23.09.2026):
+   Material-Bausteine – Einstellungszeilen mit Symbol und Wert darunter ohne
+   Pfeil, Abschnittstitel in Akzentfarbe, umrandete Filterchips mit Haken,
+   Segmentknopf, Material-Schalter, Kontrollkästchen, Kapselknöpfe, Uhrzeit
+   über die Material-Uhr. iPhone behält Gruppen mit Wert rechts und Pfeil.
+   Die Unterschiede stecken **nur** in den gemeinsamen Bausteinen
+   (`ValueRow`, `SectionTitle`, `ChoiceChipX`, `Segmented`, `PickButton`,
+   `buttonShape`, Theme) – Seiten bauen keine eigenen Zeilen oder Knöpfe,
+   damit die Gestaltung einheitlich bleibt.
 
 Farbe hat immer Bedeutung: Petrol = Aktion, grün = pünktlich, orange =
 verspätet oder Umleitung, rot = Ausfall, violett = SEV, grau = nur Fahrplan,
@@ -89,7 +96,7 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 - Signiert mit demselben Schlüssel wie Linienlog (`android/key.properties`, nicht im Repo).
   Ohne diesen Schlüssel lassen sich Updates nicht über die installierte App spielen.
 
-## Stand (v0.3.4, 23.09.2026)
+## Stand (v0.4.0, 23.09.2026)
 
 - Umgesetzt sind die Schritte 1–15 in Grundform; was fehlt, steht in `docs/abgleich.md`.
 - Der geteilte Chat liegt nur lokal als `docs/chat-verlauf.txt` (in .gitignore, persönliche Angaben – nie einchecken).

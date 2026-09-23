@@ -166,7 +166,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                       style: FilledButton.styleFrom(
                         backgroundColor: c.accent,
                         foregroundColor: c.onAccent,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.card)),
+                        shape: buttonShape(context),
                       ),
                       // Startet die Begleitung in der Benachrichtigung; die
                       // Fahrt bleibt offen, unten steht dann der nächste Schritt.

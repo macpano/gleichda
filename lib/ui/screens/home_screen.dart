@@ -150,7 +150,7 @@ class _SearchCard extends ConsumerWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: c.accent,
                 foregroundColor: c.onAccent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.input)),
+                shape: buttonShape(context),
               ),
               onPressed: () => _search(context, ref),
               child: const Text('Suchen', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
@@ -221,11 +221,15 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    // Android: Material-Chip (umrandet); iPhone: graue Fläche.
+    final ios = context.isIOS;
+    final radius = BorderRadius.circular(ios ? Radii.input : 8);
     return Material(
-      color: c.fill,
-      borderRadius: BorderRadius.circular(Radii.input),
+      color: ios ? c.fill : Colors.transparent,
+      shape: RoundedRectangleBorder(
+          borderRadius: radius, side: ios ? BorderSide.none : BorderSide(color: c.hair, width: 1)),
       child: InkWell(
-        borderRadius: BorderRadius.circular(Radii.input),
+        borderRadius: radius,
         onTap: onTap,
         child: Container(
           height: 44,

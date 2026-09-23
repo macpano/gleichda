@@ -46,7 +46,7 @@ class PlacesScreen extends ConsumerWidget {
                       style: TextStyle(fontSize: 13, color: p == null ? c.accent : c.muted)),
                 ]),
               ),
-              Icon(Icons.chevron_right, size: 18, color: c.chevron),
+              const RowChevron(),
             ]),
           ),
         );

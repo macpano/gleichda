@@ -133,7 +133,7 @@ class UpdateScreen extends ConsumerWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: c.accent,
                 foregroundColor: c.onAccent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.card)),
+                shape: buttonShape(context),
               ),
               onPressed: u.phase == UpdatePhase.checking || u.phase == UpdatePhase.downloading
                   ? null
