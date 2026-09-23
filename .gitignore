@@ -49,3 +49,4 @@ app.*.map.json
 
 # Geteilter Chat: nur lokal, enthält persönliche Angaben
 docs/chat-verlauf.txt
+docs/anschreiben-vrr-opendata.md
