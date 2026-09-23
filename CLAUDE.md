@@ -91,7 +91,7 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 ## Stand (v0.2.0, 23.09.2026)
 
 - Umgesetzt sind die Schritte 1–15 in Grundform; was fehlt, steht in `docs/abgleich.md`.
-- Der geteilte Chat liegt als `docs/chat-verlauf.txt` vor (Quelle für Anforderungen neben `konzept.md`).
+- Der geteilte Chat liegt nur lokal als `docs/chat-verlauf.txt` (in .gitignore, persönliche Angaben – nie einchecken).
 - Bildschirmfotos ohne Handy: `flutter test test_screens --update-goldens` → `test_screens/out/*.png`.
   In Widget-Tests die Drift-Datenbank nicht schließen (wartet sonst auf Abfragen aus der Testzone).
 - Hintergrund: `lib/background.dart` (WorkManager ≈ 15 min: Linienabos, Wecker nachplanen).
