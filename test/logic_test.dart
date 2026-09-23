@@ -61,6 +61,12 @@ void main() {
       expect(checkTransfers(trip(delay: 5)).single.state, TransferState.missed); // 0 min am selben Halt
     });
 
+    test('gesicherter Anschluss wartet, auch wenn die Zeit nicht reicht', () {
+      expect(checkTransfers(trip(delay: 5), guaranteed: {1}).single.state, TransferState.guaranteed);
+      expect(checkTransfers(trip(walk: 6), guaranteed: {2}).single.state, TransferState.guaranteed);
+      expect(checkTransfers(trip(delay: 5), guaranteed: {0}).single.state, TransferState.missed);
+    });
+
     test('mit Umsteigeweg zählt die Gehzeit statt der persönlichen Umsteigezeit', () {
       expect(checkTransfers(trip(walk: 4)).single.state, TransferState.tight); // 5 − 4 = 1
       expect(checkTransfers(trip(walk: 6)).single.state, TransferState.missed);

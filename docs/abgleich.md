@@ -190,3 +190,13 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   Tipp zeigt nur dessen Abfahrten
 - ✅ Reiter unten verschieben sich nie: Auf der Startseite steht die Unterwegs-Leiste über den Reitern, in
   Unterseiten ganz unten
+
+## 0.4.11-vorab.5 (23.09.2026, nach Rückmeldungen von Timo)
+- ✅ Gesicherte Anschlüsse: „Anschluss wartet in der Regel“ im Fahrtverlauf statt „knapp“/„nicht erreichbar“.
+  TRIAS meldet sie nur als Fußweg (`InterchangeMode walk`); die EFA führt einen eigenen Abschnitt mit Produktklasse 98
+  „gesicherter Anschluss“. Beim Öffnen einer Fahrt wird dieselbe Verbindung bei der EFA gesucht (alle Fahrten gleich).
+  Live geprüft: Oberbarmen Bf → Hannoverstraße, 602 → 632 an der Weiherstraße (`test_live/gesichert_live_test.dart`)
+- ✅ Fehler behoben: Über „Früher“ geladene, schon angekommene Fahrten zeigten beim Öffnen „Keine Fahrt geöffnet“ –
+  die erste Aktualisierung räumte sie als „angekommen“ weg. Jetzt bleiben sie, solange man sie ansieht
+- Geprüft: Die Meldung zur 511 (Hagen Stadtmitte/Volme Galerie) steht seit vorab.4 wieder in der Liste (Abschnitt VER),
+  in Hagen-Boele, Hagen-Vorhalle und Herdecke (`test_live/meldungen_live_test.dart`)

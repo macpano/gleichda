@@ -63,7 +63,9 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     }
     final trip = s.trip;
     final issue = tripIssue(trip, lost: s.lost);
-    final checks = checkTransfers(trip, transferMinutes: settings.transferPace.transferMinutes);
+    final guaranteed = ref.watch(guaranteedProvider(TripPathKey(trip))).value ?? const <int>{};
+    final checks =
+        checkTransfers(trip, transferMinutes: settings.transferPace.transferMinutes, guaranteed: guaranteed);
     final missed = checks.where((x) => x.state == TransferState.missed).toList();
     final fav = ref.watch(_isFavorite((trip.origin, trip.destination))).value ?? false;
     final companion = ref.watch(companionProvider);
@@ -232,6 +234,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
         TransferState.tight => ('Anschluss knapp', c.orange),
         TransferState.missed => ('Anschluss nicht erreichbar', c.red),
         TransferState.staySeated => ('', c.muted),
+        TransferState.guaranteed => ('Anschluss wartet in der Regel', c.green),
         null => ('', c.muted),
       };
       return _Row(

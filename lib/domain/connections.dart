@@ -1,7 +1,7 @@
 import 'models.dart';
 
 /// Ergebnis der Anschlussprüfung je Umstieg.
-enum TransferState { safe, tight, missed, staySeated }
+enum TransferState { safe, tight, missed, staySeated, guaranteed }
 
 class TransferCheck {
   const TransferCheck(this.state, this.slackMinutes, this.at);
@@ -17,7 +17,10 @@ class TransferCheck {
 
 /// Prüft jeden Umstieg: erwartete Ankunft plus Umsteigeweg (bzw. die
 /// persönliche Umsteigezeit am selben Halt) gegen die erwartete Abfahrt.
-List<TransferCheck> checkTransfers(Trip trip, {int transferMinutes = 3}) {
+///
+/// [guaranteed]: Indizes der Fahrtabschnitte, auf die ein gesicherter
+/// Anschluss führt – dort wartet der Anschluss in der Regel.
+List<TransferCheck> checkTransfers(Trip trip, {int transferMinutes = 3, Set<int> guaranteed = const {}}) {
   final out = <TransferCheck>[];
   final legs = trip.legs;
   for (var i = 0; i < legs.length; i++) {
@@ -49,7 +52,9 @@ List<TransferCheck> checkTransfers(Trip trip, {int transferMinutes = 3}) {
     final slack = buffer - (walk > 0 ? walk : 0);
     final cancelled = legs[j].from.status == StopStatus.cancelled;
     out.add(TransferCheck(
-      cancelled || buffer < need
+      !cancelled && guaranteed.contains(j)
+          ? TransferState.guaranteed
+          : cancelled || buffer < need
           ? TransferState.missed
           : slack < transferMinutes
               ? TransferState.tight

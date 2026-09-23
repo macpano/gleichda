@@ -25,6 +25,21 @@ void main() {
         '${l.hour.toString().padLeft(2, '0')}${l.minute.toString().padLeft(2, '0')}');
   });
 
+  test('Gesicherter Anschluss: EFA-Abschnitt der Klasse 98 vor dem Anschluss', () {
+    // Oberbarmen Bf → Hannoverstraße: 602 bis Weiherstraße, dort gesichert in die 632.
+    final journeys = parseRides(json('efa_trip_gesicherter_anschluss.json'));
+    final both = journeys.where((j) => j.length == 2).toList();
+    expect(both, isNotEmpty);
+    for (final j in both) {
+      expect(j.map((r) => r.lineName), ['602', '632']);
+      expect(j[0].guaranteedBefore, isFalse);
+      expect(j[1].guaranteedBefore, isTrue);
+      expect(j[1].tripCode, isNotNull);
+    }
+    // Direktfahrten ohne Umstieg tragen keine Markierung.
+    expect(journeys.where((j) => j.length == 1).every((j) => !j.single.guaranteedBefore), isTrue);
+  });
+
   test('TripStopTimes: alle Halte mit Plan- und Echtzeit', () {
     final stops = parseTripStopTimes(json('efa_tripstoptimes.json'))!;
     expect(stops.length, greaterThan(5));

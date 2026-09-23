@@ -153,4 +153,7 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 - Karte: Steige mit genauer Lage über EFA `XML_COORD_REQUEST` `type_1=BUS_POINT` (Kennung `de:05124:11376:91:2`,
   Nummer = letzter Teil, `parent.id` = Haltestelle). Die TRIAS-Koordinate ist die Haltestellenmitte, an großen
   Haltestellen bis 120 m daneben. Unterwegs-Leiste: auf der Startseite über den Reitern (`homeOnTop`), sonst unten.
+- Gesicherte Anschlüsse: TRIAS liefert sie nur als `InterchangeMode walk`; die EFA (`XML_TRIP_REQUEST2`) als eigenen
+  Abschnitt mit `product.class` 98 „gesicherter Anschluss“ (`parseRides`, `VrrProvider.guaranteedConnections`).
+- Live-Prüfungen (nicht Teil von `flutter test`): `flutter test test_live/<datei>`.
 - Kartenkacheln vorläufig FOSSGIS (`tile.openstreetmap.de`), offene Entscheidung im Konzept.
