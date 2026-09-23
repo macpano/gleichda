@@ -22,6 +22,15 @@ String countdown(DateTime t, DateTime now) {
   return m > -60 ? 'vor ${-m} min' : hm(t);
 }
 
+/// Enthält der Countdown die Uhrzeit schon („um 02:56“ ab einer Stunde
+/// Vorlauf, sonst die bloße Uhrzeit)? Dann nicht noch einmal anhängen –
+/// vorher stand „um 02:56 · 02:56“ (Nutzerbefund 24.09.2026).
+bool countdownHasTime(DateTime t, DateTime now) => countdown(t, now).contains(hm(t));
+
+/// „in 5 min · 14:32“, aber „um 02:56“ ohne doppelte Uhrzeit.
+String countdownWithTime(DateTime t, DateTime now) =>
+    countdownHasTime(t, now) ? countdown(t, now) : '${countdown(t, now)} · ${hm(t)}';
+
 /// „vor 12 s“, „vor 3 min“
 String ageText(Duration d) {
   if (d.inSeconds < 60) return 'vor ${d.inSeconds.clamp(0, 59)} s';

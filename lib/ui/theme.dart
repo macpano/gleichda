@@ -347,13 +347,13 @@ ThemeData buildTheme(Brightness brightness, TargetPlatform platform) {
 /// kleinere Übergänge (Einblenden, Aufklappen) sind kürzer.
 abstract final class Motion {
   /// Seitenwechsel; die Unterwegs-Leiste läuft exakt mit.
-  static const page = Duration(milliseconds: 320);
+  static const page = Duration(milliseconds: 250);
 
   /// Einblenden von Inhalten, Aufklappen, Leiste erscheint.
-  static const medium = Duration(milliseconds: 220);
+  static const medium = Duration(milliseconds: 170);
 
   /// Zustandswechsel (Farbe, Deckkraft).
-  static const short = Duration(milliseconds: 150);
+  static const short = Duration(milliseconds: 120);
 
   /// Ausklingend: schnell los, weich an.
   static const curve = Curves.easeOutCubic;

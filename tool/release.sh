@@ -52,3 +52,21 @@ ID=$(curl -sf -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.gith
 curl -sf -o /dev/null -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/vnd.android.package-archive" \
   --data-binary @"$APK" "https://uploads.github.com/repos/$REPO/releases/$ID/assets?name=$(basename "$APK")"
 echo "Veröffentlicht: https://github.com/$REPO/releases/tag/v$VERSION"
+
+# Aufräumen nach einem regulären Release: Vorabversionen und alle regulären
+# Versionen außer den zwei neuesten löschen – samt Kennzeichen. Die App fragt
+# nur die neueste Version ab; der Rest wäre nur Unordnung auf GitHub.
+if [ -z "${VORAB:-}" ]; then
+  GH="gh"; command -v gh >/dev/null 2>&1 || GH="/c/Program Files/GitHub CLI/gh.exe"
+  if "$GH" --version >/dev/null 2>&1; then
+    "$GH" release list -R "$REPO" --limit 200 --json tagName,isPrerelease \
+      -q '[.[] | select(.isPrerelease)] | .[].tagName' | while read -r t; do
+      "$GH" release delete "$t" -R "$REPO" --yes --cleanup-tag >/dev/null 2>&1 && git tag -d "$t" >/dev/null 2>&1
+    done
+    "$GH" release list -R "$REPO" --limit 200 --json tagName,isPrerelease \
+      -q '[.[] | select(.isPrerelease | not)] | .[2:] | .[].tagName' | while read -r t; do
+      "$GH" release delete "$t" -R "$REPO" --yes --cleanup-tag >/dev/null 2>&1 && git tag -d "$t" >/dev/null 2>&1
+    done
+    echo "Aufgeräumt: nur die zwei neuesten Versionen bleiben."
+  fi
+fi

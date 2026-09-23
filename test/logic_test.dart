@@ -22,6 +22,7 @@ import 'package:gleichda/data/trias/trias_provider.dart' show withEndpoints;
 import 'package:gleichda/ui/trip_status.dart' show isReplacement, sevStopHint;
 import 'package:gleichda/state/providers.dart' show MessagesState, arrivedLongAgo, tripEnd, walkEnds;
 import 'package:gleichda/ui/connection_views.dart';
+import 'package:gleichda/ui/format.dart' show countdownWithTime;
 import 'package:gleichda/ui/screens/connections_screen.dart' show mergeTrips, dropStarted;
 
 String fixture(String n) => File('test/fixtures/$n').readAsStringSync();
@@ -70,6 +71,12 @@ void main() {
     expect(subscriptionCovers(wsw, m2), isFalse);
     expect(subscriptionCovers(line, m1), isFalse);
     expect(subscriptionCovers(line, const Message(id: '3', title: 'x', lineIds: ['wsw:66604'])), isTrue);
+  });
+
+  test('Countdown: Uhrzeit nicht doppelt', () {
+    final now = DateTime(2026, 9, 24, 1, 48);
+    expect(countdownWithTime(DateTime(2026, 9, 24, 2, 56), now), 'um 02:56');
+    expect(countdownWithTime(DateTime(2026, 9, 24, 1, 53), now), 'in 5 min · 01:53');
   });
 
   group('Ersatzverkehr', () {
