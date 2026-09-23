@@ -12,6 +12,7 @@ import '../connection_views.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'time_sheet.dart';
 import 'trip_screen.dart';
 
 Set<TransportMode> modesOf(Set<ModeGroup> groups) => {
@@ -115,6 +116,10 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
   bool _loadingMore = false;
   ConnectionSort _sort = ConnectionSort.arrival;
 
+  /// Gesuchte Zeit (null = jetzt); in der Liste über „Heute ab …“ änderbar.
+  late DateTime? _time = widget.time;
+  late bool _arriveBy = widget.arriveBy;
+
   /// Nur stufenlose Wege – braucht eine neue Anfrage.
   bool _accessible = false;
   bool _personal = true;
@@ -133,7 +138,7 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
   }
 
   Future<void> _start() async {
-    if (widget.time == null && widget.via == null) {
+    if (_time == null && widget.via == null) {
       final h = await ref.read(repositoryProvider).history(widget.from, widget.to);
       final now = DateTime.now();
       final cached = h?.cached
@@ -148,9 +153,32 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
       }
     }
     await _load();
-    if (widget.time == null) {
+    _scheduleRefresh();
+  }
+
+  /// „Jetzt“ läuft alle 30 s mit; eine feste Zeit nicht.
+  void _scheduleRefresh() {
+    _timer?.cancel();
+    if (_time == null) {
       _timer = Timer.periodic(const Duration(seconds: 30), (_) => _load(quiet: true));
     }
+  }
+
+  /// Tipp auf die Zeitzeile: dasselbe Zeitfenster wie auf der Startseite,
+  /// danach sucht die Liste sofort neu.
+  Future<void> _pickTime() async {
+    ref.read(searchTimeProvider.notifier).set(SearchTime(time: _time, arriveBy: _arriveBy));
+    await showTimeSheet(context, ref);
+    if (!mounted) return;
+    final t = ref.read(searchTimeProvider);
+    if (t.time == _time && t.arriveBy == _arriveBy) return;
+    setState(() {
+      _time = t.time;
+      _arriveBy = t.arriveBy;
+      _trips = null;
+    });
+    await _load();
+    _scheduleRefresh();
   }
 
   Future<List<Trip>> _query(DateTime time, {bool arriveBy = false}) async {
@@ -210,9 +238,9 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
       if (!quiet) _error = null;
     });
     try {
-      final at = widget.time ?? DateTime.now();
-      final found = await _query(at, arriveBy: widget.arriveBy);
-      final trips = widget.arriveBy ? found : dropStarted(found, at);
+      final at = _time ?? DateTime.now();
+      final found = await _query(at, arriveBy: _arriveBy);
+      final trips = _arriveBy ? found : dropStarted(found, at);
       if (!mounted || seq != _seq) return;
       setState(() {
         _trips = trips;
@@ -297,16 +325,34 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
             const SizedBox(height: 4),
             Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
               Expanded(
-                child: RouteSummary(
-                  from: widget.from.label,
-                  to: widget.to.label,
-                  when: [
-                    if (widget.via != null) 'über ${widget.via!.label}',
-                    widget.time == null
-                        ? 'Heute ab ${hm(now)}'
-                        : '${widget.arriveBy ? 'Ankunft bis' : 'Ab'} ${dayText(widget.time!, now)} ${hm(widget.time!)}',
-                  ].join(' · '),
-                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  RouteSummary(
+                    from: widget.from.label,
+                    to: widget.to.label,
+                    when: widget.via == null ? null : 'über ${widget.via!.label}',
+                  ),
+                  // Zeit antippbar: öffnet das Zeitfenster, danach neue Suche.
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: _pickTime,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.schedule, size: 16, color: c.accent),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: OneLine(
+                            _time == null
+                                ? 'Heute ab ${hm(now)}'
+                                : '${_arriveBy ? 'Ankunft bis' : 'Ab'} ${dayText(_time!, now)} ${hm(_time!)}',
+                            style: context.t.number(14).copyWith(color: c.accent),
+                          ),
+                        ),
+                        Icon(Icons.arrow_drop_down, size: 20, color: c.accent),
+                      ]),
+                    ),
+                  ),
+                ]),
               ),
               _ViewToggle(
                 grid: grid,
