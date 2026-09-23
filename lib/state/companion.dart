@@ -136,7 +136,7 @@ class CompanionController extends Notifier<CompanionState> {
     final text = companionTexts(s.trip, step, now);
     final issue = tripIssue(s.trip, lost: s.lost);
     final percent = (step.progress * 100).round();
-    final key = '${text.where}|${text.when}|$percent|${issue?.title}';
+    final key = '${text.where}|${text.when}|$percent|${issue?.title}|${step.boarding}';
     if (key == _lastKey) return;
     _lastKey = key;
     await Notifications.showCompanion(
@@ -144,6 +144,7 @@ class CompanionController extends Notifier<CompanionState> {
       where: text.where,
       when: text.when,
       progress: percent,
+      boarding: step.boarding,
       alertColor: issue == null
           ? ((step.when?.delayMinutes ?? 0) > 0 ? AppColors.light.orange : null)
           : (issue.level == IssueLevel.cancelled ? AppColors.light.red : AppColors.light.orange),

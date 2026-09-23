@@ -113,7 +113,7 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
   String? _error;
   Timer? _timer;
   bool _loadingMore = false;
-  ConnectionSort _sort = ConnectionSort.departure;
+  ConnectionSort _sort = ConnectionSort.fastest;
 
   /// Nur stufenlose Wege – braucht eine neue Anfrage.
   bool _accessible = false;
@@ -321,7 +321,7 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
                 builder: (context, menu, _) => ChoiceChipX(
                   icon: Icons.swap_vert,
                   label: _sort.label,
-                  selected: _sort != ConnectionSort.departure,
+                  selected: _sort != ConnectionSort.fastest,
                   dropdown: true,
                   onTap: () => menu.isOpen ? menu.close() : menu.open(),
                 ),

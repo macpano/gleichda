@@ -198,7 +198,8 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     final rows = <Widget>[];
     var transfer = 0;
 
-    Widget walkRow(String text, {TransferCheck? check, Location? target, String? platform}) {
+    Widget walkRow(String text,
+        {TransferCheck? check, Location? target, String? platform, EventTime? departure}) {
       final (String state, Color color) = switch (check?.state) {
         TransferState.safe => ('Anschluss sicher', c.green),
         TransferState.tight => ('Anschluss knapp', c.orange),
@@ -214,11 +215,19 @@ class _TripScreenState extends ConsumerState<TripScreen> {
             child: OneLine(state.isEmpty ? text : '$text · $state',
                 style: TextStyle(fontSize: 14, color: state.isEmpty ? c.muted : color)),
           ),
+          // Weg zum Steig – dasselbe Symbol wie in der Unterwegs-Leiste.
           if (target != null)
-            GestureDetector(
-              onTap: () => Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => WalkScreen(target: target, platform: platform))),
-              child: Text('Weg zeigen', style: TextStyle(fontSize: 14, color: c.accent)),
+            InkResponse(
+              radius: 20,
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => WalkScreen(target: target, platform: platform, departure: departure))),
+              child: Tooltip(
+                message: platform == null ? 'Weg zur Haltestelle' : 'Weg zu Steig $platform',
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: Icon(Icons.directions_walk, size: 20, color: c.accent),
+                ),
+              ),
             ),
         ]),
       );
@@ -236,7 +245,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
         final isLast = i == trip.legs.length - 1;
         if (isFirst) {
           final next = i + 1 < trip.legs.length ? trip.legs[i + 1].from : null;
-          rows.add(walkRow('$m min Fußweg', target: next?.stop, platform: next?.platform));
+          rows.add(walkRow('$m min Fußweg', target: next?.stop, platform: next?.platform, departure: next?.departure));
         } else if (isLast) {
           rows.add(walkRow('$m min Fußweg zum Ziel'));
         } else if (l.staySeated) {
@@ -256,8 +265,13 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           ));
           transfer++;
         } else {
+          // Umstieg: Weg zum Steig des Anschlusses.
+          final next = trip.legs.skip(i + 1).where((x) => x.type == LegType.ride).firstOrNull?.from;
           rows.add(walkRow(l.type == LegType.walk ? '$m min Fußweg' : '$m min Umstieg',
-              check: transfer < checks.length ? checks[transfer] : null));
+              check: transfer < checks.length ? checks[transfer] : null,
+              target: next?.stop,
+              platform: next?.platform,
+              departure: next?.departure));
           transfer++;
         }
         continue;
@@ -266,7 +280,11 @@ class _TripScreenState extends ConsumerState<TripScreen> {
         final arr = trip.legs[i - 1].to.arrival?.best;
         final dep = l.from.departure?.best;
         final m = (arr != null && dep != null) ? dep.difference(arr).inMinutes : 0;
-        rows.add(walkRow('$m min Umstieg', check: transfer < checks.length ? checks[transfer] : null));
+        rows.add(walkRow('$m min Umstieg',
+            check: transfer < checks.length ? checks[transfer] : null,
+            target: l.from.stop,
+            platform: l.from.platform,
+            departure: l.from.departure));
         transfer++;
       }
       final color = lineColor(context, l.line);

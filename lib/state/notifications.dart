@@ -88,6 +88,7 @@ class Notifications {
     required String where,
     required String when,
     required int progress,
+    bool boarding = false,
     Color? alertColor,
     String? reason,
   }) async {
@@ -117,9 +118,11 @@ class Notifications {
       showProgress: true,
       maxProgress: 100,
       progress: progress,
-      actions: const [
+      actions: [
+        // Vor dem Einsteigen und beim Umsteigen: Navigation zum Steig.
+        if (boarding) const AndroidNotificationAction('walk', 'Weg zum Steig', showsUserInterface: true),
         // Ohne die App zu öffnen: läuft in notificationActionInBackground.
-        AndroidNotificationAction('stop', 'Beenden', showsUserInterface: false, cancelNotification: true),
+        const AndroidNotificationAction('stop', 'Beenden', showsUserInterface: false, cancelNotification: true),
       ],
     );
     final body = reason == null ? when : '$when · $reason';
