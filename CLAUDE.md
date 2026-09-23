@@ -89,7 +89,7 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 - Repository: https://github.com/macpano/gleich.da (öffentlich seit 23.09.2026; bis v0.2.2 hieß es
   `gleichda`, GitHub leitet die alte Adresse weiter).
   Die App prüft bei jedem Öffnen das neueste Release, lädt die APK im Hintergrund und bietet
-  „Installieren“ an – Obtainium ist dafür nicht nötig (seit 23.09.2026 nicht mehr erwähnt).
+  „Installieren“ an. Kein App-Store und kein weiteres Werkzeug nötig.
 - Commits nur mit der anonymen Adresse 325691885+macpano@users.noreply.github.com
   (in der Repo-Konfiguration gesetzt) – keine private E-Mail im öffentlichen Verlauf.
 - Neue Version: `bash tool/release.sh <Version> "<Neuerungen>"` – erhöht die
