@@ -302,3 +302,8 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   (`test_live/transitous_live_test.dart`)
 - ✅ Namensnennung unter Mehr → Datenquellen und in der Fußzeile (transitous.org/sources); User-Agent mit Repo-Adresse
 - Grenzen: Meldungen, Steigpläne und gesicherte Anschlüsse nur im VRR
+
+## 0.4.12-vorab.6 (24.09.2026)
+- ✅ Startseite: Suchen-Knopf wurde bei langer Zeitangabe („Morgen Ankunft 11:38“) zu einem Punkt zusammengedrückt. Die
+  Zeile wird jetzt ausgemessen: Suchen behält seine Breite, „Optionen“ zeigt dann nur das Symbol, Zeit kürzer
+  („Morgen an 11:38“)

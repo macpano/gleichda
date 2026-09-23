@@ -22,7 +22,7 @@ String timeChipLabel(SearchTime t) {
     _ =>
       '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}. ',
   };
-  return '$prefix${t.arriveBy ? 'Ankunft' : 'ab'} ${hm(d)}';
+  return '$prefix${t.arriveBy ? 'an' : 'ab'} ${hm(d)}';
 }
 
 DateTime _round5(DateTime d) {

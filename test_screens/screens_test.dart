@@ -245,6 +245,13 @@ void main() {
   }
 
   testWidgets('Start hell', (t) => shot(t, 'start_hell', const HomeShell(), seed: seedHome));
+  testWidgets('Start: Ankunft morgen', (t) => shot(t, 'start_morgen', const HomeShell(),
+      brightness: Brightness.dark,
+      act: (t) async {
+        final now = DateTime.now();
+        ProviderScope.containerOf(t.element(find.byType(HomeShell))).read(searchTimeProvider.notifier).set(
+            SearchTime(time: DateTime(now.year, now.month, now.day + 1, 11, 38), arriveBy: true));
+      }));
   testWidgets('Start dunkel',
       (t) => shot(t, 'start_dunkel', const HomeShell(), brightness: Brightness.dark, seed: seedHome));
   testWidgets('Verbindungen', (t) => shot(t, 'verbindungen',
