@@ -104,15 +104,23 @@ class ConnectionRow extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            // Abfahrt und Ankunft als Paar; die Verspätung steht rechts unten
+            // („+3 min“), die Abfahrt trägt nur die Farbe. So bleibt keine
+            // Lücke für eine Verspätung, die meist gar nicht da ist.
             Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
-              TimeWithDelay(first ?? trip.departure, size: 19, delaySize: 13, neutral: c.ink),
-              Text('– ${hm(trip.arrival.best)}', style: context.t.number(19).copyWith(color: c.ink2)),
+              FadeText(hm((first ?? trip.departure).best),
+                  style: context.t.time(20).copyWith(color: timeColor(context, first, neutral: c.ink))),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Text('–', style: context.t.number(20).copyWith(color: c.muted)),
+              ),
+              FadeText(hm(trip.arrival.best), style: context.t.time(20).copyWith(color: c.ink)),
               const Spacer(),
               if (diff != null)
                 Text(diff <= 0 ? '${diff == 0 ? '±0' : diff} min' : '+$diff min',
                     style: context.t.time(15).copyWith(color: diff <= 0 ? c.green : c.orange))
               else
-                Text(durationText(trip.duration), style: context.t.number(15).copyWith(color: c.ink2)),
+                Text(durationText(trip.duration), style: context.t.number(15).copyWith(color: c.muted)),
             ]),
             const SizedBox(height: 9),
             TripTimeline(trip: trip),
@@ -135,17 +143,29 @@ int walkMinutes(Trip trip) => trip.legs
     .where((l) => l.type != LegType.ride)
     .fold(0, (sum, l) => sum + (l.durationMinutes ?? 0));
 
-/// Balken je Abschnitt, Länge proportional zur Dauer. Fußwege grau, mit
-/// Gehsymbol und Minuten, soweit Platz ist.
+/// Balken je Abschnitt, Länge proportional zur Dauer. Jede Linie bekommt
+/// mindestens die Breite ihrer Nummer, Fußwege Platz für Gehsymbol und
+/// Minuten; den Rest teilen sich die Abschnitte nach Dauer.
 class TripTimeline extends StatelessWidget {
-  const TripTimeline({super.key, required this.trip});
+  const TripTimeline({super.key, required this.trip, this.height = 24});
 
   final Trip trip;
+  final double height;
+
+  static const _gap = 3.0;
 
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final segs = <Widget>[];
+    final badgeStyle = context.t.lineNumber.copyWith(fontSize: 13);
+    final walkStyle = context.t.number(12).copyWith(color: c.walkText, fontWeight: FontWeight.w600);
+    final scale = MediaQuery.textScalerOf(context);
+    double textWidth(String t, TextStyle st) =>
+        (TextPainter(text: TextSpan(text: t, style: st), textDirection: TextDirection.ltr, textScaler: scale)
+              ..layout())
+            .width;
+
+    final segs = <({Leg leg, int minutes, double min})>[];
     for (final l in trip.legs) {
       final start = (l.from.departure ?? l.from.arrival)?.best;
       final end = (l.to.arrival ?? l.to.departure)?.best;
@@ -153,37 +173,81 @@ class TripTimeline extends StatelessWidget {
       if (minutes <= 0) minutes = l.durationMinutes ?? 1;
       final ride = l.type == LegType.ride;
       if (!ride && minutes < 1) continue;
-      segs.add(Expanded(
-        flex: minutes.clamp(1, 600),
-        child: Container(
-          height: 22,
-          constraints: const BoxConstraints(minWidth: 14),
-          margin: const EdgeInsets.only(right: 2),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: ride ? lineColor(context, l.line) : c.walk,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: ride
-              ? Text(l.line?.name ?? '',
-                  maxLines: 1, overflow: TextOverflow.clip, style: context.t.lineNumber.copyWith(fontSize: 12))
-              : LayoutBuilder(builder: (context, box) {
-                  final label = Text('$minutes′',
-                      maxLines: 1,
-                      overflow: TextOverflow.clip,
-                      style: context.t.number(12).copyWith(color: c.walkText, fontWeight: FontWeight.w600));
-                  if (box.maxWidth >= 38) {
-                    return Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.directions_walk, size: 14, color: c.walkText),
-                      label,
-                    ]);
-                  }
-                  return box.maxWidth >= 20 ? label : const SizedBox.shrink();
-                }),
-        ),
-      ));
+      final min = ride
+          ? textWidth(l.line?.name ?? '', badgeStyle) + 12
+          : textWidth('$minutes′', walkStyle) + 22;
+      segs.add((leg: l, minutes: minutes, min: min));
     }
-    return SizedBox(height: 22, child: Row(children: segs));
+    if (segs.isEmpty) return SizedBox(height: height);
+
+    return SizedBox(
+      height: height,
+      child: LayoutBuilder(builder: (context, box) {
+        final widths = _fit(
+          [for (final s in segs) s.min],
+          [for (final s in segs) s.minutes.toDouble()],
+          box.maxWidth - _gap * (segs.length - 1),
+        );
+        return Row(children: [
+          for (var i = 0; i < segs.length; i++) ...[
+            if (i > 0) const SizedBox(width: _gap),
+            SizedBox(width: widths[i], child: _segment(context, segs[i].leg, segs[i].minutes, widths[i], badgeStyle, walkStyle)),
+          ],
+        ]);
+      }),
+    );
+  }
+
+  Widget _segment(BuildContext context, Leg l, int minutes, double width, TextStyle badge, TextStyle walk) {
+    final c = context.c;
+    final ride = l.type == LegType.ride;
+    Widget? child;
+    if (ride) {
+      child = Text(l.line?.name ?? '', maxLines: 1, overflow: TextOverflow.clip, softWrap: false, style: badge);
+    } else if (width >= 34) {
+      child = Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.directions_walk, size: 14, color: c.walkText),
+        Text('$minutes′', maxLines: 1, softWrap: false, style: walk),
+      ]);
+    } else if (width >= 20) {
+      child = Text('$minutes′', maxLines: 1, softWrap: false, style: walk);
+    }
+    return Container(
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: ride ? lineColor(context, l.line) : c.walk,
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: child,
+    );
+  }
+
+  /// Breiten nach Dauer, aber nie unter dem Mindestmaß. Reicht der Platz
+  /// nicht einmal für alle Mindestmaße, werden diese gleichmäßig gestaucht.
+  static List<double> _fit(List<double> min, List<double> weight, double total) {
+    final sumMin = min.fold(0.0, (a, b) => a + b);
+    if (sumMin >= total) return [for (final m in min) m * total / sumMin];
+    final fixed = List<bool>.filled(min.length, false);
+    while (true) {
+      var rest = total;
+      var free = 0.0;
+      for (var i = 0; i < min.length; i++) {
+        if (fixed[i]) {
+          rest -= min[i];
+        } else {
+          free += weight[i];
+        }
+      }
+      final k = free == 0 ? 0.0 : rest / free;
+      var changed = false;
+      for (var i = 0; i < min.length; i++) {
+        if (!fixed[i] && weight[i] * k < min[i]) {
+          fixed[i] = true;
+          changed = true;
+        }
+      }
+      if (!changed) return [for (var i = 0; i < min.length; i++) fixed[i] ? min[i] : weight[i] * k];
+    }
   }
 }
 

@@ -10,6 +10,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gleichda/app.dart';
 import 'package:gleichda/data/db/database.dart';
@@ -25,7 +26,7 @@ import 'package:gleichda/ui/screens/departures_screen.dart';
 import 'package:gleichda/ui/screens/design_demo_screen.dart';
 import 'package:gleichda/ui/screens/alarms_screen.dart';
 import 'package:gleichda/ui/screens/alternatives_screen.dart';
-import 'package:gleichda/ui/screens/companion_screen.dart';
+import 'package:gleichda/state/companion.dart';
 import 'package:gleichda/ui/screens/location_search_screen.dart';
 import 'package:gleichda/ui/screens/messages_screen.dart';
 import 'package:gleichda/ui/screens/more_screen.dart';
@@ -130,6 +131,7 @@ void main() {
       {Brightness brightness = Brightness.light,
       Future<void> Function(Repository)? seed,
       Future<void> Function(WidgetTester)? act,
+      List<Override> overrides = const [],
       bool offline = false}) async {
     tester.view.physicalSize = const Size(390 * 3, 844 * 3);
     tester.view.devicePixelRatio = 3;
@@ -144,6 +146,7 @@ void main() {
     final container = ProviderContainer(overrides: [
       databaseProvider.overrideWithValue(db),
       transitProvider.overrideWithValue(FakeProvider(trips, board, offline: offline)),
+      ...overrides,
     ]);
     await tester.pumpWidget(UncontrolledProviderScope(
       container: container,
@@ -195,10 +198,12 @@ void main() {
       seed: (r) => r.setSetting('settings', const AppSettings(connectionsGrid: true).encode())));
   testWidgets('Meldungen', (t) => shot(t, 'meldungen', const Scaffold(body: MessagesScreen())));
   testWidgets('Mehr', (t) => shot(t, 'mehr', const Scaffold(body: MoreScreen())));
-  testWidgets('Unterwegs', (t) => shot(t, 'unterwegs', const CompanionScreen(), seed: (r) async {
-        final onBoard = tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first;
-        await r.saveLastTrip(onBoard);
-      }));
+  testWidgets('Unterwegs', (t) {
+    final onBoard = tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first;
+    return shot(t, 'unterwegs', const TripScreen(),
+        seed: (r) => r.saveLastTrip(onBoard),
+        overrides: [companionProvider.overrideWith(() => _Following(onBoard.id))]);
+  });
   testWidgets('Fahrt unterwegs', (t) => shot(t, 'fahrt_unterwegs', const TripScreen(), seed: (r) async {
         final onBoard = tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first;
         await r.saveLastTrip(onBoard);
@@ -236,4 +241,14 @@ void main() {
   testWidgets('Weg zum Steig', (t) => shot(t, 'weg', WalkScreen(target: trips.first.origin, platform: '2')));
   testWidgets('Farben dunkel',
       (t) => shot(t, 'farben_dunkel', const DesignDemoScreen(), brightness: Brightness.dark));
+}
+
+/// Begleitung läuft, ohne echte Benachrichtigung.
+class _Following extends CompanionController {
+  _Following(this.tripId);
+
+  final String tripId;
+
+  @override
+  CompanionState build() => CompanionState(active: true, tripId: tripId);
 }

@@ -11,7 +11,7 @@ import 'state/alarm_planner.dart';
 import 'state/companion.dart';
 import 'state/notifications.dart';
 import 'state/providers.dart';
-import 'ui/screens/companion_screen.dart';
+import 'ui/screens/trip_screen.dart';
 import 'ui/screens/connections_screen.dart';
 import 'ui/screens/messages_screen.dart';
 
@@ -50,7 +50,7 @@ Future<void> handleNotification(ProviderContainer container, String? payload, St
       await container.read(companionProvider.notifier).stop();
       return;
     }
-    nav?.push(MaterialPageRoute(builder: (_) => const CompanionScreen()));
+    nav?.push(MaterialPageRoute(builder: (_) => const TripScreen()));
     return;
   }
   if (payload != null && payload.startsWith('alarm:')) {
@@ -69,7 +69,7 @@ Future<void> handleNotification(ProviderContainer container, String? payload, St
         if (trips.isNotEmpty) {
           await container.read(lastTripProvider.notifier).open(trips.first);
           await container.read(companionProvider.notifier).start();
-          nav?.push(MaterialPageRoute(builder: (_) => const CompanionScreen()));
+          nav?.push(MaterialPageRoute(builder: (_) => const TripScreen()));
           return;
         }
       } catch (_) {}
