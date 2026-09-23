@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart' show Geolocator;
 
+import '../data/auto_provider.dart';
 import '../data/db/database.dart';
+import '../data/motis/motis_provider.dart';
 import '../data/efa/efa_client.dart';
 import '../data/repository.dart';
 import '../data/transit_provider.dart';
@@ -26,7 +28,7 @@ final dioProvider = Provider((ref) {
   final dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 25),
-    headers: {'User-Agent': 'Gleich.da/0.1 (Android; Entwicklung)'},
+    headers: {'User-Agent': 'Gleich.da (+https://github.com/macpano/gleich.da)'},
   ));
   ref.onDispose(dio.close);
   return dio;
@@ -36,7 +38,8 @@ final dioProvider = Provider((ref) {
 /// nur hier eingehängt.
 final transitProvider = Provider<TransitProvider>((ref) {
   final dio = ref.watch(dioProvider);
-  return VrrProvider(TriasProvider(dio), EfaClient(dio));
+  // Im VRR-Land der VRR, sonst Transitous (lib/data/auto_provider.dart).
+  return AutoProvider(VrrProvider(TriasProvider(dio), EfaClient(dio)), MotisProvider(dio));
 });
 
 /// Sekundentakt für Countdown und „vor 12 s“.

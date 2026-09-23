@@ -290,3 +290,15 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Weitere Übergänge: Reiterwechsel überblendet (`_FadeTabs`), Platzhalter → Ergebnis überblendet (`FadeSwitch`,
   Verbindungen und Abfahrten), Zwischenhalte klappen weich auf (`AnimatedSize`), Fahrt auf der Karte schiebt sich von
   unten herein; alle Einzeldauern auf `Motion` vereinheitlicht
+
+## 0.4.12-vorab.5 (24.09.2026)
+- ✅ **Deutschlandweit über Transitous** (`lib/data/motis/motis_provider.dart`, MOTIS 2): Orte (`/geocode`, Haltestellen im
+  Umkreis über `/map/stops`), Abfahrten (`/stoptimes`), Verbindungen (`/plan` mit Linienweg, Zwischenhalten, Echtzeit,
+  Umsteigen im selben Fahrzeug), Aktualisieren (Neusuche, Abgleich über die Fahrten), Linienverlauf (`/trip`).
+  Verkehrsmittel nach GTFS-Routentyp (MOTIS führt die Münchner S-Bahn als METRO)
+- ✅ `AutoProvider` wählt je Anfrage: in NRW der VRR (Echtzeit, Steige, Meldungen, gesicherte Anschlüsse), außerhalb und
+  für Transitous-Orte Transitous; findet der VRR nichts, sucht Transitous. Live: München (U3, U6→U1→U3, Abfahrten,
+  Linienverlauf 21 Halte), Berlin Standort → Kurfürstendamm 21 (S7 + Fußweg bis zur Adresse), Wuppertal weiter VRR
+  (`test_live/transitous_live_test.dart`)
+- ✅ Namensnennung unter Mehr → Datenquellen und in der Fußzeile (transitous.org/sources); User-Agent mit Repo-Adresse
+- Grenzen: Meldungen, Steigpläne und gesicherte Anschlüsse nur im VRR
