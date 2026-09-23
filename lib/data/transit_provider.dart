@@ -144,6 +144,10 @@ abstract class TransitProvider {
   /// Anschluss führt – der Anschluss wartet in der Regel. Leer, wenn unbekannt.
   Future<Set<int>> guaranteedConnections(Trip trip);
 
+  /// Dasselbe für viele Verbindungen auf einmal (Verbindungsliste):
+  /// Fahrt-ID → Indizes. Unbekannte fehlen.
+  Future<Map<String, Set<int>>> guaranteedForTrips(List<Trip> trips);
+
   /// Steige mit genauer Lage im Umkreis (für die Karte). Leer, wenn unbekannt.
   Future<List<Platform>> platformsNear(GeoPoint near, {int radiusMeters = 800});
 

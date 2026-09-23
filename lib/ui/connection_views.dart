@@ -13,7 +13,8 @@ import 'widgets.dart';
 
 /// Eine Verbindung mit ihren Besonderheiten für die Anzeige.
 class ConnectionItem {
-  const ConnectionItem(this.trip, {this.labels = const [], this.reachable = true, this.tight = false});
+  const ConnectionItem(this.trip,
+      {this.labels = const [], this.reachable = true, this.tight = false, this.guaranteed = false});
 
   final Trip trip;
 
@@ -23,14 +24,20 @@ class ConnectionItem {
 
   /// Mindestens ein Umstieg ist knapp.
   final bool tight;
+
+  /// Mindestens ein Anschluss wartet (gesicherter Anschluss).
+  final bool guaranteed;
 }
 
 /// Bewertet und sortiert Verbindungen: nicht erreichbare ans Ende,
 /// Etiketten für die schnellste und die mit den wenigsten Umstiegen.
 List<ConnectionItem> rateConnections(List<Trip> trips,
-    {required int transferMinutes, bool labels = true}) {
+    {required int transferMinutes, bool labels = true, Map<String, Set<int>> guaranteed = const {}}) {
   if (trips.isEmpty) return const [];
-  final checks = {for (final t in trips) t: checkTransfers(t, transferMinutes: transferMinutes)};
+  final checks = {
+    for (final t in trips)
+      t: checkTransfers(t, transferMinutes: transferMinutes, guaranteed: guaranteed[t.id] ?? const {}),
+  };
   final reachable = trips.where((t) => !checks[t]!.any((c) => c.state == TransferState.missed)).toList();
   final minChanges = reachable.isEmpty ? 0 : reachable.map((t) => t.interchanges).reduce(math.min);
   final fewest = reachable.where((t) => t.interchanges == minChanges).toList();
@@ -42,6 +49,7 @@ List<ConnectionItem> rateConnections(List<Trip> trips,
       t,
       reachable: ok,
       tight: c.any((x) => x.state == TransferState.tight),
+      guaranteed: c.any((x) => x.state == TransferState.guaranteed),
       labels: !labels || !ok
           ? const []
           : [
@@ -114,6 +122,7 @@ class ConnectionRow extends StatelessWidget {
     final meta = [
       interchangesText(trip.interchanges),
       if (walkMinutes(trip) > 0) '${walkMinutes(trip)} min zu Fuß',
+      if (item.guaranteed) 'Anschluss wartet',
       ...item.labels,
     ].join(' · ');
     return InkWell(

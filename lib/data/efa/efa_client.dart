@@ -147,7 +147,7 @@ class EfaClient {
       'itdDate': '${l.year}${two(l.month)}${two(l.day)}',
       'itdTime': '${two(l.hour)}${two(l.minute)}',
       'itdTripDateTimeDepArr': 'dep',
-      'calcNumberOfTrips': '5',
+      'calcNumberOfTrips': '8',
     });
     return parseRides(json);
   }

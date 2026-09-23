@@ -39,6 +39,7 @@ class CompanionState {
 /// Echtzeit.
 class CompanionController extends Notifier<CompanionState> {
   Timer? _timer;
+  DateTime? _arrivedAt;
   String? _lastKey;
   StreamSubscription<Position>? _gpsSub;
   bool _shown = false;
@@ -124,7 +125,10 @@ class CompanionController extends Notifier<CompanionState> {
     final now = DateTime.now();
     final step = nextStep(s.trip, now, gps: state.freshGps(now));
     if (step.phase == CompanionPhase.arrived) {
-      if (now.difference(s.trip.arrival.best) > const Duration(minutes: 1)) {
+      // Eine Minute „Angekommen“ zeigen, dann beenden – gezählt ab dem
+      // Ankommen (per GPS an der Adresse oder nach Uhrzeit).
+      _arrivedAt ??= now;
+      if (now.difference(_arrivedAt!) > const Duration(minutes: 1)) {
         await stop();
         return;
       }
@@ -145,7 +149,8 @@ class CompanionController extends Notifier<CompanionState> {
     final text = companionTexts(s.trip, step, now);
     final issue = tripIssue(s.trip, lost: s.lost);
     final percent = (step.progress * 100).round();
-    final key = '${text.where}|${text.when}|$percent|${issue?.title}|${step.boarding}';
+    _arrivedAt = null;
+    final key = '${text.where}|${text.when}|$percent|${issue?.title}|${step.walking}';
     if (key == _lastKey) return;
     _lastKey = key;
     await Notifications.showCompanion(
@@ -153,7 +158,7 @@ class CompanionController extends Notifier<CompanionState> {
       where: text.where,
       when: text.when,
       progress: percent,
-      boarding: step.boarding,
+      boarding: step.walking,
       alertColor: issue == null
           ? ((step.when?.delayMinutes ?? 0) > 0 ? AppColors.light.orange : null)
           : (issue.level == IssueLevel.cancelled ? AppColors.light.red : AppColors.light.orange),
@@ -194,6 +199,13 @@ final companionProvider = NotifierProvider<CompanionController, CompanionState>(
         where: 'Einsteigen: ${step.where.stop.name}$platform',
         when: when,
         headline: '$lineText Richtung ${leg?.direction ?? ''}$platform, $mins',
+      );
+    case CompanionPhase.toDestination:
+      return (
+        header: 'Zu Fuß',
+        where: 'Zum Ziel: ${step.where.stop.name}',
+        when: when,
+        headline: 'Zu Fuß zum Ziel, $mins',
       );
     case CompanionPhase.arrived:
       return (header: header, where: 'Angekommen: ${step.where.stop.name}', when: '', headline: 'Angekommen');

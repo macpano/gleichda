@@ -58,7 +58,7 @@ Future<void> handleNotification(ProviderContainer container, String? payload, St
     if (action == 'walk' && trip != null) {
       final gps = container.read(companionProvider).freshGps(DateTime.now());
       final step = nextStep(trip, DateTime.now(), gps: gps);
-      if (step.boarding) {
+      if (step.walking) {
         pushOnce(nav, 'weg:${step.where.stop.id}',
             (_) => WalkScreen(target: step.where.stop, platform: step.where.platform, departure: step.when));
       }
