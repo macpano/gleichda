@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # Neue Version veröffentlichen (die App findet sie selbst über das neueste Release):
 #
-#   bash tool/release.sh 0.1.1 "Was neu ist"
+#   bash tool/release.sh 0.4.8 "Was neu ist"
+#
+# Zwischenstand als Vorabversion – bekommen nur Geräte mit „Vorabversionen
+# erhalten“, reguläre Updates löst sie nicht aus:
+#
+#   VORAB=1 bash tool/release.sh 0.4.9-vorab.1 "Was neu ist"
 #
 # Setzt die Version in pubspec.yaml (Build-Nummer +1), prüft, baut die
 # signierte APK, committet, taggt v<Version>, pusht und legt das
@@ -36,7 +41,8 @@ git tag "v$VERSION"
 git push origin main "v$VERSION"
 
 TOKEN=$(printf "protocol=https\nhost=github.com\n\n" | git credential fill | sed -n 's/^password=//p')
-BODY=$(python -c 'import json,sys; print(json.dumps({"tag_name":sys.argv[1],"name":"Gleich.da "+sys.argv[2],"body":sys.argv[3]}))' "v$VERSION" "$VERSION" "$NOTES")
+PRE=$([ -n "${VORAB:-}" ] && echo true || echo false)
+BODY=$(python -c 'import json,sys; print(json.dumps({"tag_name":sys.argv[1],"name":"Gleich.da "+sys.argv[2]+(" (Vorabversion)" if sys.argv[4]=="true" else ""),"body":sys.argv[3],"prerelease":sys.argv[4]=="true"}))' "v$VERSION" "$VERSION" "$NOTES" "$PRE")
 ID=$(curl -sf -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" \
   --data-binary "$BODY" "https://api.github.com/repos/$REPO/releases" \
   | python -c 'import json,sys; print(json.load(sys.stdin)["id"])')

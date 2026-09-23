@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../state/providers.dart';
 import '../../state/updates.dart';
 import '../format.dart';
 import '../theme.dart';
@@ -93,6 +94,7 @@ class UpdateScreen extends ConsumerWidget {
     final c = context.c;
     final u = ref.watch(updateProvider);
     final auto = ref.watch(updateAutoProvider).value ?? true;
+    final pre = ref.watch(updatePrereleaseProvider).value ?? false;
     final now = DateTime.now();
     final status = switch (u.phase) {
       UpdatePhase.checking => 'Wird geprüft …',
@@ -151,6 +153,15 @@ class UpdateScreen extends ConsumerWidget {
               subtitle: const Text('Bei jedem Öffnen prüfen, neue Version im Hintergrund laden'),
               value: auto,
               onChanged: (v) => ref.read(updateProvider.notifier).setAuto(v),
+            ),
+            SwitchListTile(
+              title: const Text('Vorabversionen erhalten'),
+              subtitle: const Text('Zwischenstände zum Ausprobieren, vor der fertigen Version'),
+              value: pre,
+              onChanged: (v) async {
+                await ref.read(repositoryProvider).setSetting('updatePrerelease', '$v');
+                await ref.read(updateProvider.notifier).check(download: true);
+              },
             ),
           ]),
           if (u.hasUpdate && (u.latest?.notes ?? '').isNotEmpty) ...[

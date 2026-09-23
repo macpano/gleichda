@@ -12,22 +12,48 @@ import 'providers.dart';
 /// Neueste Veröffentlichung auf GitHub (öffentliches Repository, kein Token).
 const releasesUrl = 'https://api.github.com/repos/macpano/gleich.da/releases/latest';
 
+/// Alle Veröffentlichungen, auch Vorabversionen (Schalter „Vorabversionen
+/// erhalten“).
+const allReleasesUrl = 'https://api.github.com/repos/macpano/gleich.da/releases?per_page=15';
+
 /// Übergabe an den Android-Installer (MainActivity.kt).
 const _channel = MethodChannel('de.gleichda/update');
 
-/// Vergleicht Versionen wie „0.2.0“ und „v0.10.1“: negativ, wenn [a] älter ist.
+/// Vergleicht Versionen wie „0.2.0“, „v0.10.1“ und Vorabversionen wie
+/// „0.4.8-vorab.2“: negativ, wenn [a] älter ist. Eine Vorabversion ist älter
+/// als die gleichnamige fertige Version („0.4.8-vorab.2“ < „0.4.8“).
 int compareVersions(String a, String b) {
-  List<int> parts(String v) => v
-      .replaceFirst(RegExp(r'^[vV]'), '')
-      .split(RegExp(r'[.+-]'))
-      .map((p) => int.tryParse(p) ?? 0)
-      .toList();
-  final x = parts(a), y = parts(b);
+  ({List<int> core, int? pre}) parse(String v) {
+    final clean = v.replaceFirst(RegExp(r'^[vV]'), '').split('+').first;
+    final dash = clean.indexOf('-');
+    final core = (dash < 0 ? clean : clean.substring(0, dash)).split('.').map((p) => int.tryParse(p) ?? 0).toList();
+    final pre = dash < 0 ? null : int.tryParse(RegExp(r'(\d+)$').firstMatch(clean.substring(dash))?.group(1) ?? '') ?? 0;
+    return (core: core, pre: pre);
+  }
+
+  final x = parse(a), y = parse(b);
   for (var i = 0; i < 3; i++) {
-    final d = (i < x.length ? x[i] : 0) - (i < y.length ? y[i] : 0);
+    final d = (i < x.core.length ? x.core[i] : 0) - (i < y.core.length ? y.core[i] : 0);
     if (d != 0) return d;
   }
-  return 0;
+  if (x.pre == null && y.pre == null) return 0;
+  if (x.pre == null) return 1;
+  if (y.pre == null) return -1;
+  return x.pre!.compareTo(y.pre!);
+}
+
+/// Neueste Veröffentlichung aus der Liste `releases` (ohne Entwürfe), auf
+/// Wunsch mit Vorabversionen.
+UpdateInfo? newestRelease(List<dynamic> releases, {required bool prerelease}) {
+  UpdateInfo? best;
+  for (final r in releases.whereType<Map<String, dynamic>>()) {
+    if (r['draft'] == true) continue;
+    if (r['prerelease'] == true && !prerelease) continue;
+    final info = UpdateInfo.fromRelease(r);
+    if (info == null) continue;
+    if (best == null || compareVersions(info.version, best.version) > 0) best = info;
+  }
+  return best;
 }
 
 class UpdateInfo {
@@ -163,11 +189,16 @@ class UpdateController extends Notifier<UpdateState> {
     }
     state = state.copyWith(phase: UpdatePhase.checking);
     try {
-      final res = await ref.read(dioProvider).get<Map<String, dynamic>>(
-            releasesUrl,
-            options: Options(headers: {'Accept': 'application/vnd.github+json'}),
-          );
-      final info = UpdateInfo.fromRelease(res.data ?? const {});
+      final opts = Options(headers: {'Accept': 'application/vnd.github+json'});
+      final dio = ref.read(dioProvider);
+      final UpdateInfo? info;
+      if (await ref.read(repositoryProvider).setting('updatePrerelease') == 'true') {
+        final res = await dio.get<List<dynamic>>(allReleasesUrl, options: opts);
+        info = newestRelease(res.data ?? const [], prerelease: true);
+      } else {
+        final res = await dio.get<Map<String, dynamic>>(releasesUrl, options: opts);
+        info = UpdateInfo.fromRelease(res.data ?? const {});
+      }
       final next = state.copyWith(latest: info, checkedAt: DateTime.now());
       state = next.copyWith(phase: next.hasUpdate ? UpdatePhase.available : UpdatePhase.upToDate);
     } catch (_) {
@@ -275,6 +306,10 @@ class UpdateController extends Notifier<UpdateState> {
 }
 
 final updateProvider = NotifierProvider<UpdateController, UpdateState>(UpdateController.new);
+
+/// Vorabversionen erhalten (Zwischenstände, nicht für alle gedacht).
+final updatePrereleaseProvider = StreamProvider<bool>(
+    (ref) => ref.watch(repositoryProvider).watchSetting('updatePrerelease').map((v) => v == 'true'));
 
 final updateAutoProvider = StreamProvider<bool>(
     (ref) => ref.watch(repositoryProvider).watchSetting('updateAuto').map((v) => v != 'false'));
