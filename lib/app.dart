@@ -21,6 +21,37 @@ import 'ui/theme.dart';
 /// Für Benachrichtigungen, die einen Screen öffnen.
 final navigatorKey = GlobalKey<NavigatorState>();
 
+/// Liegt die Startseite mit den Reitern oben? Dann steht die Unterwegs-Leiste
+/// über den Reitern (die Reiter verschieben sich nie); in allen anderen
+/// Ansichten ganz unten. Fenster von unten zählen nicht mit.
+final homeOnTop = ValueNotifier<bool>(true);
+
+class _PageDepth extends NavigatorObserver {
+  int _depth = 0;
+
+  void _set() => homeOnTop.value = _depth <= 1;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is PageRoute) _depth++;
+    _set();
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is PageRoute) _depth--;
+    _set();
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is PageRoute) _depth--;
+    _set();
+  }
+}
+
+final _pageDepth = _PageDepth();
+
 class GleichDaApp extends ConsumerWidget {
   const GleichDaApp({super.key});
 
@@ -31,6 +62,7 @@ class GleichDaApp extends ConsumerWidget {
     return MaterialApp(
       title: 'Gleich.da',
       navigatorKey: navigatorKey,
+      navigatorObservers: [_pageDepth],
       debugShowCheckedModeBanner: false,
       themeMode: mode,
       theme: buildTheme(Brightness.light, platform),
@@ -56,10 +88,17 @@ Widget appFrame(BuildContext context, Widget? child) {
     // dann den unteren Rand (den übernimmt die Leiste).
     Consumer(builder: (context, ref, _) {
       final following = ref.watch(companionProvider).active;
-      return Column(children: [
-        Expanded(child: MediaQuery.removePadding(context: context, removeBottom: following, child: child!)),
-        const GlobalCompanionBar(),
-      ]);
+      return ValueListenableBuilder<bool>(
+        valueListenable: homeOnTop,
+        builder: (context, home, _) {
+          // Auf der Startseite übernimmt HomeShell die Leiste (über den Reitern).
+          final here = following && !home;
+          return Column(children: [
+            Expanded(child: MediaQuery.removePadding(context: context, removeBottom: here, child: child!)),
+            if (here) const GlobalCompanionBar(),
+          ]);
+        },
+      );
     }),
     Positioned(
       top: 0,
@@ -143,7 +182,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           ),
           const Positioned(left: 12, right: 12, bottom: 12, child: UpdateToast()),
         ]),
-        bottomNavigationBar: context.isIOS
+        // Unterwegs-Leiste über den Reitern; die Reiter selbst bleiben fest.
+        bottomNavigationBar: Column(mainAxisSize: MainAxisSize.min, children: [
+          const GlobalCompanionBar(bottomPadding: false),
+          context.isIOS
             ? _IosTabBar(index: _tab, onTap: _select, tabs: _tabs)
             : NavigationBar(
                 selectedIndex: _tab,
@@ -154,6 +196,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                     NavigationDestination(icon: Icon(t.$1), label: t.$2),
                 ],
               ),
+        ]),
       ),
     );
   }
@@ -199,7 +242,10 @@ class _IosTabBar extends StatelessWidget {
 
 /// Die Unterwegs-Leiste für die ganze App, solange eine Begleitung läuft.
 class GlobalCompanionBar extends ConsumerWidget {
-  const GlobalCompanionBar({super.key});
+  const GlobalCompanionBar({super.key, this.bottomPadding = true});
+
+  /// Unteren Rand (Gestenleiste) mitnehmen – nicht über den Reitern.
+  final bool bottomPadding;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -210,6 +256,7 @@ class GlobalCompanionBar extends ConsumerWidget {
     return Material(
       type: MaterialType.transparency,
       child: CompanionBar(
+        bottomPadding: bottomPadding,
         trip: s.trip,
         now: now,
         issue: tripIssue(s.trip, lost: s.lost),

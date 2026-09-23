@@ -125,8 +125,19 @@ abstract class TransitProvider {
   /// Endhaltestelle, als Verbindung mit einem Abschnitt. null, wenn unbekannt.
   Future<Trip?> tripOfDeparture(Departure departure);
 
+  /// Steige mit genauer Lage im Umkreis (für die Karte). Leer, wenn unbekannt.
+  Future<List<Platform>> platformsNear(GeoPoint near, {int radiusMeters = 800});
+
   /// Linien, die an den Haltestellen nahe [near] halten (für „In deiner Nähe“).
   Future<List<Line>> linesNear(GeoPoint near);
+
+  /// Linien in der weiteren Umgebung (etwa 5 km) – daraus ergeben sich die
+  /// Verkehrsunternehmen vor Ort.
+  Future<List<Line>> linesAround(GeoPoint near);
+
+  /// Aktuelle und angekündigte Meldungen zu einer Linie (Schlüssel wie
+  /// „wsw:66604“), unabhängig vom Ort.
+  Future<List<Message>> messagesForLine(String lineKey);
 
   /// Linien zum Suchbegriff (Liniennummer), etwa zum Abonnieren –
   /// deutschlandweit, Linien in der Nähe von [near] zuerst.

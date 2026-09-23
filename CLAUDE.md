@@ -150,4 +150,7 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
   Schwebebahn dort ohne Echtzeit und als FUNICULAR. Bedingungen: Open Source, nicht kommerziell, ressourcenschonend,
   User-Agent mit Name/Version/Kontakt (Repo-Adresse), sichtbarer Link auf https://transitous.org/sources/, OSM-Namensnennung.
   Plan: im VRR weiter TRIAS/EFA, außerhalb Transitous (`MotisProvider`).
+- Karte: Steige mit genauer Lage über EFA `XML_COORD_REQUEST` `type_1=BUS_POINT` (Kennung `de:05124:11376:91:2`,
+  Nummer = letzter Teil, `parent.id` = Haltestelle). Die TRIAS-Koordinate ist die Haltestellenmitte, an großen
+  Haltestellen bis 120 m daneben. Unterwegs-Leiste: auf der Startseite über den Reitern (`homeOnTop`), sonst unten.
 - Kartenkacheln vorläufig FOSSGIS (`tile.openstreetmap.de`), offene Entscheidung im Konzept.
