@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../domain/connections.dart';
 import '../domain/models.dart';
+import '../domain/settings.dart';
 import 'format.dart';
 import 'theme.dart';
 import 'trip_status.dart';
@@ -59,6 +60,23 @@ List<ConnectionItem> rateConnections(List<Trip> trips,
     return a.trip.departure.best.compareTo(b.trip.departure.best);
   });
   return out;
+}
+
+/// Sortiert bewertete Verbindungen: erreichbare zuerst, dann nach [sort],
+/// bei Gleichstand nach Abfahrt.
+List<ConnectionItem> sortConnections(List<ConnectionItem> items, ConnectionSort sort) {
+  num key(Trip t) => switch (sort) {
+        ConnectionSort.departure => 0,
+        ConnectionSort.fastest => t.duration.inMinutes,
+        ConnectionSort.fewChanges => t.interchanges,
+        ConnectionSort.lessWalking => walkMinutes(t),
+      };
+  return [...items]
+    ..sort((a, b) {
+      if (a.reachable != b.reachable) return a.reachable ? -1 : 1;
+      final k = key(a.trip).compareTo(key(b.trip));
+      return k != 0 ? k : a.trip.departure.best.compareTo(b.trip.departure.best);
+    });
 }
 
 /// Zeile der Verbindungsliste.

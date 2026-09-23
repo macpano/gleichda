@@ -113,7 +113,10 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
   String? _error;
   Timer? _timer;
   bool _loadingMore = false;
-  SearchProfile _profile = SearchProfile.all;
+  ConnectionSort _sort = ConnectionSort.departure;
+
+  /// Nur stufenlose Wege – braucht eine neue Anfrage.
+  bool _accessible = false;
   bool _personal = true;
   int _seq = 0;
 
@@ -167,14 +170,17 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
           accessible: accessible,
         );
     final p = ref.read(transitProvider);
-    return switch (_profile) {
-      SearchProfile.all => _allProfiles(p, q(TripOptimization.fastest),
-          [q(TripOptimization.minChanges), q(TripOptimization.leastWalking)], time, arriveBy),
-      SearchProfile.fastest => p.planTrip(q(TripOptimization.fastest)),
-      SearchProfile.fewChanges => p.planTrip(q(TripOptimization.minChanges)),
-      SearchProfile.lessWalking => p.planTrip(q(TripOptimization.leastWalking)),
-      SearchProfile.accessible => p.planTrip(q(TripOptimization.fastest, accessible: true)),
-    };
+    // Immer alle Varianten zusammen – die Sortierung wählt nur die
+    // Reihenfolge, ohne neue Anfrage.
+    return _allProfiles(
+        p,
+        q(TripOptimization.fastest, accessible: _accessible),
+        [
+          q(TripOptimization.minChanges, accessible: _accessible),
+          q(TripOptimization.leastWalking, accessible: _accessible),
+        ],
+        time,
+        arriveBy);
   }
 
   /// „Alle“: die schnellste Suche erscheint, sobald sie da ist; die Profile
@@ -215,7 +221,7 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
         _loading = false;
         _error = null;
       });
-      if (_profile == SearchProfile.all && widget.via == null) {
+      if (!_accessible && widget.via == null) {
         await ref.read(repositoryProvider).recordSearch(widget.from, widget.to, result: trips);
       }
     } on ProviderException catch (e) {
@@ -270,7 +276,7 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
     final grid = settings.connectionsGrid;
     final items = _trips == null
         ? null
-        : rateConnections(_trips!, transferMinutes: settings.transferPace.transferMinutes);
+        : sortConnections(rateConnections(_trips!, transferMinutes: settings.transferPace.transferMinutes), _sort);
     final unreachable = items?.where((i) => !i.reachable).length ?? 0;
     return Scaffold(
       body: RefreshIndicator(
@@ -308,39 +314,54 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
               ),
             ]),
             const SizedBox(height: 12),
-            // Alle Suchprofile sichtbar, bei Bedarf in zwei Zeilen – kein
-            // seitliches Scrollen.
-            Wrap(runSpacing: 8, children: [
-                if (!settings.isDefault)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChipX(
-                      label: _personal ? 'Profil an' : 'Profil aus',
-                      selected: _personal,
-                      icon: Icons.person_outline,
-                      onTap: () {
-                        setState(() => _personal = !_personal);
-                        _load();
-                      },
+            // Eine Zeile: Sortierung (Menü, sofort), barrierefrei (neue Suche)
+            // und – bei angepasstem Profil – Profil an/aus.
+            Row(children: [
+              MenuAnchor(
+                builder: (context, menu, _) => ChoiceChipX(
+                  icon: Icons.swap_vert,
+                  label: _sort.label,
+                  selected: _sort != ConnectionSort.departure,
+                  dropdown: true,
+                  onTap: () => menu.isOpen ? menu.close() : menu.open(),
+                ),
+                menuChildren: [
+                  for (final o in ConnectionSort.values)
+                    MenuItemButton(
+                      leadingIcon: Icon(o == _sort ? Icons.check : null, size: 18),
+                      onPressed: () => setState(() => _sort = o),
+                      child: Text(o.label),
                     ),
+                ],
+              ),
+              const SizedBox(width: 8),
+              ChoiceChipX(
+                icon: Icons.accessible,
+                label: 'Barrierefrei',
+                selected: _accessible,
+                onTap: () {
+                  setState(() {
+                    _accessible = !_accessible;
+                    _trips = null;
+                  });
+                  _load();
+                },
+              ),
+              if (!settings.isDefault) ...[
+                const SizedBox(width: 8),
+                Flexible(
+                  child: ChoiceChipX(
+                    label: _personal ? 'Profil an' : 'Profil aus',
+                    selected: _personal,
+                    icon: Icons.person_outline,
+                    onTap: () {
+                      setState(() => _personal = !_personal);
+                      _load();
+                    },
                   ),
-                for (final p in SearchProfile.values)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChipX(
-                      label: p.label,
-                      selected: _profile == p,
-                      onTap: () {
-                        if (_profile == p) return;
-                        setState(() {
-                          _profile = p;
-                          _trips = null;
-                        });
-                        _load();
-                      },
-                    ),
-                  ),
-              ]),
+                ),
+              ],
+            ]),
             const SizedBox(height: 14),
             if (_error != null && items != null)
               Padding(
