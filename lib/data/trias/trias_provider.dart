@@ -137,7 +137,7 @@ class TriasProvider implements TransitProvider {
 
   /// Der Testserver beantwortet TripInfoRequest nicht (HTTP 400).
   @override
-  Future<Trip?> tripOfDeparture(Departure departure) async => null;
+  Future<Trip?> tripOfDeparture(Departure departure, {bool whole = false}) async => null;
 
   @override
   Future<List<Line>> searchLines(String query, {GeoPoint? near}) async => const [];

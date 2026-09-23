@@ -33,8 +33,10 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Abweichungs-Banner mit „Alternativen anzeigen“; Alternativen-Screen (nächste Fahrt derselben Linie, schneller/gleich schnell, etwas später, Zeitdifferenz)
 - ✅ Losfahren → Unterwegs-Modus: nächster Schritt groß, laufende Benachrichtigung (Linie und Ziel, wo aussteigen, in min + Uhrzeit, Fortschritt mit Fahrzeugsymbol, „Beenden“), Vordergrunddienst
 - ✅ Weg zum Steig: Karte (OSM/FOSSGIS), Standort, Ziel-Steig aus der EFA, andere Steige grau, Richtung und Entfernung, „Loslaufen in n min“, Übergabe an Karten-App
-- ◐ SEV violett in Abfahrten; eigene SEV-Halte-Darstellung mit Meldungstext am Halt fehlt
-- ☐ Abbiegehinweise (Stufe 2), Kompass, Tap auf Linie zeigt ganzen Linienverlauf
+- ✅ SEV: violett in Abfahrten, im Fahrtverlauf „Ersatzhaltestelle“ mit dem Satz aus der Meldung direkt am Einstieg;
+  ohne Angabe ehrlicher Hinweis (0.4.12). Offen: Plausibilitätsprüfung der Koordinaten
+- ✅ Abbiegehinweise im Fußweg; Pfeil in Laufrichtung (GPS-Kurs statt Magnetkompass); Tipp auf ein Linienschild zeigt
+  den ganzen Linienverlauf des Fahrzeugs mit Karte (0.4.12)
 
 ## Informieren
 - ✅ Abfahrten in der Nähe: bis zu vier Haltestellen nach Entfernung mit Gehzeit, „Alle Abfahrten“, Zeitwahl, Verkehrsmittel-Filter, Ausfall mit nächster Fahrt
@@ -262,3 +264,12 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   und letztem Ausstieg (höchstens drei), live geprüft
 - ✅ Endloses Scrollen in der Verbindungsliste
 - ✅ Lieblingshaltestellen mit Live-Abfahrten auf der Startseite
+
+## 0.4.12-vorab.2 (23.09.2026)
+- ✅ Ersatzverkehr: Hinweis „Ersatzhaltestelle“ am Einstieg mit dem Meldungssatz (`sevStopHint`)
+- ✅ Linienverlauf: Tipp aufs Linienschild in der Fahrt → alle Halte des Fahrzeugs mit Karte, Ein-/Ausstieg markiert
+  (`tripOfDeparture(whole: true)`, live: 611 ab Alter Markt 9 → ganz 37 Halte)
+- ✅ Fußweg: eigener Punkt als Pfeil in Laufrichtung
+- ✅ Erster Start: Erklärung zum Standort, bevor Android fragt (Standortabfragen warten darauf)
+- ✅ Große Schrift geprüft (150 %, Bildschirmfotos `gross_*`): feste Zeilenhöhen wachsen mit (`textGrowth`),
+  Sortier-/Barrierefrei-Knöpfe brechen um statt überzulaufen

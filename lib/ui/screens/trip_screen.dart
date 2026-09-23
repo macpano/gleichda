@@ -14,6 +14,7 @@ import '../trip_map.dart';
 import '../trip_status.dart';
 import '../widgets.dart';
 import 'alternatives_screen.dart';
+import 'line_run_screen.dart';
 import 'walk_screen.dart';
 
 /// Fahrtdetail der zuletzt geöffneten Fahrt, mit Fahrtverlauf nach
@@ -334,6 +335,8 @@ class _TripScreenState extends ConsumerState<TripScreen> {
       final open = _expanded.contains(i);
       rows.add(_stopRow(context, l.from, color, now,
           departure: true, first: true, walkLink: i == 0 ? l.from.stop : null));
+      // Ersatzverkehr: wo der Ersatzbus hält, groß direkt am Einstieg.
+      if (isReplacement(l)) rows.add(_sevRow(context, trip, l, color));
       final dep = l.from.departure;
       final (tag, tagColor) = !(dep?.hasRealtime ?? false)
           ? ('nur Fahrplan', c.muted)
@@ -350,7 +353,12 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           height: 56,
           rail: _Rail(color: color),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Padding(padding: const EdgeInsets.only(top: 1), child: LineBadge(l.line)),
+            // Tipp auf die Linie: ganzer Linienverlauf des Fahrzeugs.
+            GestureDetector(
+              onTap: () => pushOnce(Navigator.of(context), 'linie:${l.journeyRef}',
+                  (_) => LineRunScreen(leg: l)),
+              child: Padding(padding: const EdgeInsets.only(top: 1), child: LineBadge(l.line)),
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -419,6 +427,35 @@ class _TripScreenState extends ConsumerState<TripScreen> {
       rows.add(_stopRow(context, l.to, color, now, departure: false, last: true));
     }
     return rows;
+  }
+
+  Widget _sevRow(BuildContext context, Trip trip, Leg l, Color color) {
+    final c = context.c;
+    final hint = sevStopHint(trip, l);
+    return _NoteRow(
+      rail: _Rail(color: color),
+      child: Container(
+        decoration: BoxDecoration(
+          color: c.sev.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(Icons.directions_bus_filled_outlined, size: 20, color: c.sev),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Ersatzhaltestelle', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.sev)),
+              const SizedBox(height: 2),
+              Text(
+                hint ?? 'Die Auskunft nennt die Lage des Ersatzhalts nicht. Vor Ort auf Aushänge achten.',
+                style: TextStyle(fontSize: 15, height: 1.35, color: hint == null ? c.muted : c.ink),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    );
   }
 
   Widget _stopRow(BuildContext context, StopTime s, Color color, DateTime now,
@@ -565,6 +602,26 @@ class _Rail {
 }
 
 /// Zeile im Fahrtverlauf: 52 px Zeit | 24 px Linie | Inhalt. Feste Höhe.
+/// Zeile mit freier Höhe (Hinweistext) neben der durchgehenden Linie.
+class _NoteRow extends StatelessWidget {
+  const _NoteRow({required this.rail, required this.child});
+
+  final _Rail rail;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = (MediaQuery.textScalerOf(context).scale(16) / 16).clamp(1.0, 1.8);
+    return IntrinsicHeight(
+      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        SizedBox(width: 52 * k),
+        SizedBox(width: 24, child: CustomPaint(painter: _RailPainter(rail, dotY: 0))),
+        Expanded(child: Padding(padding: const EdgeInsets.fromLTRB(8, 4, 0, 8), child: child)),
+      ]),
+    );
+  }
+}
+
 class _Row extends StatelessWidget {
   const _Row({required this.height, required this.rail, required this.child, this.time, this.marker});
 
