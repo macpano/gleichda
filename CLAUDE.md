@@ -161,4 +161,7 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
   Kurve easeOutCubic, bei „Bewegung reduzieren“ aus (`Motion.of`). Keine eigenen Dauern in Seiten.
   Die Unterwegs-Leiste folgt `firstPageAnimation`; Seiten über der Startseite halten ihren Platz über
   `CompanionAwareTransitions` frei.
+- **Rückmeldung** (Mehr → Funktion vorschlagen / Fehler melden): FormSubmit mit Kennung `feedbackEndpoint`
+  (`lib/data/feedback.dart`), Anfragen brauchen `Origin`/`Referer` https://github.com/macpano/gleich.da. Die
+  Empfängeradresse steht **nie** im Repo (öffentlich) – nur die Kennung.
 - Kartenkacheln vorläufig FOSSGIS (`tile.openstreetmap.de`), offene Entscheidung im Konzept.

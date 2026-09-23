@@ -7,7 +7,7 @@ import 'transit_provider.dart' show ProviderException;
 /// vergibt. Sie ersetzt die Empfängeradresse – die Adresse selbst steht
 /// weder in der App noch im öffentlichen Quelltext. Leer = noch nicht
 /// eingerichtet; dann lässt sich nichts senden.
-const feedbackEndpoint = '';
+const feedbackEndpoint = '3fd5b4a000f7c070296a9963c8c4d658';
 
 enum FeedbackKind {
   feature('Funktion vorschlagen', 'Vorschlag'),
