@@ -104,6 +104,9 @@ class FakeProvider implements TransitProvider {
   Future<Set<int>> guaranteedConnections(Trip trip) async => const {};
 
   @override
+  Future<Map<String, Set<int>>> guaranteedForTrips(List<Trip> trips) async => const {};
+
+  @override
   Future<List<m.Platform>> platformsNear(GeoPoint near, {int radiusMeters = 800}) async => const [
         m.Platform(id: 'de:05124:11376:91:2', stopId: 'de:05124:11376', name: '2', lat: 51.25453, lon: 7.14995),
         m.Platform(id: 'de:05124:11376:91:3', stopId: 'de:05124:11376', name: '3', lat: 51.25442, lon: 7.15001),
@@ -232,6 +235,7 @@ void main() {
     await r.recordSearch(trips.first.origin, trips.first.destination);
     await r.recordSearch(hbf, trips.first.origin);
     await r.toggleFavoriteRoute(hbf, trips.first.destination);
+    await r.toggleFavoriteStop(hbf);
     await r.savePlace(SavedPlace(id: 'home', name: 'Zuhause', kind: PlaceKind.home, location: trips.first.destination));
     await r.savePlace(SavedPlace(id: 'work', name: 'Arbeit', kind: PlaceKind.work, location: hbf));
   }

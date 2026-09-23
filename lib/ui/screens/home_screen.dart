@@ -13,6 +13,7 @@ import '../theme.dart';
 import '../trip_status.dart';
 import '../widgets.dart';
 import 'connections_screen.dart';
+import 'departures_screen.dart' show DeparturesScreen, DepartureRow;
 import 'location_search_screen.dart';
 import 'options_sheet.dart';
 import 'places_screen.dart';
@@ -37,6 +38,7 @@ class HomeScreen extends ConsumerWidget {
         SizedBox(height: 20),
         _LastTripSection(),
         _FavoritesSection(),
+        _FavoriteStopsSection(),
         _HistorySection(),
       ],
     );
@@ -575,6 +577,100 @@ class _FavoriteTime extends ConsumerWidget {
           : FadeText(hm(dep.best),
               align: TextAlign.right,
               style: context.t.time(16).copyWith(color: timeColor(context, dep, neutral: c.muted))),
+    );
+  }
+}
+
+// --- Haltestellen (Favoriten) ---
+
+/// Nächste Abfahrten einer Lieblingshaltestelle.
+final _stopNext = FutureProvider.autoDispose.family<List<Departure>, Location>((ref, stop) async {
+  try {
+    final board = await ref.read(transitProvider).departures(stop, limit: 6);
+    final now = DateTime.now();
+    return board.departures.where((d) => d.time.best.isAfter(now.subtract(const Duration(minutes: 1)))).take(3).toList();
+  } catch (_) {
+    return const [];
+  }
+});
+
+class _FavoriteStopsSection extends ConsumerStatefulWidget {
+  const _FavoriteStopsSection();
+
+  @override
+  ConsumerState<_FavoriteStopsSection> createState() => _FavoriteStopsSectionState();
+}
+
+class _FavoriteStopsSectionState extends ConsumerState<_FavoriteStopsSection> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Abfahrten jede Minute neu.
+    _timer = Timer.periodic(const Duration(seconds: 60), (_) {
+      for (final f in ref.read(favoritesProvider).value ?? const <FavoriteItem>[]) {
+        if (f.stop != null) ref.invalidate(_stopNext(f.stop!));
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final favs = (ref.watch(favoritesProvider).value ?? const []).where((f) => f.kind == 'stop' && f.stop != null).toList();
+    if (favs.isEmpty) return const SizedBox.shrink();
+    final c = context.c;
+    final now = ref.watch(clockProvider).value ?? DateTime.now();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        const SectionTitle('Haltestellen'),
+        for (final f in favs) ...[
+          ListGroup(children: [
+            Dismissible(
+              key: ValueKey('stop-${f.id}'),
+              direction: DismissDirection.endToStart,
+              secondaryBackground: _SwipeBg(label: 'Entfernen', color: c.red, alignEnd: true),
+              background: const SizedBox.shrink(),
+              onDismissed: (_) => ref.read(repositoryProvider).deleteFavorite(f.id),
+              child: InkWell(
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => Scaffold(body: DeparturesScreen(initialStop: f.stop, standalone: true)))),
+                child: Container(
+                  height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(children: [
+                    Expanded(child: OneLine(f.stop!.label, style: context.t.listRow.copyWith(fontWeight: FontWeight.w600))),
+                    Icon(Icons.chevron_right, size: 20, color: c.muted),
+                  ]),
+                ),
+              ),
+            ),
+            ...switch (ref.watch(_stopNext(f.stop!))) {
+              AsyncData(:final value) when value.isEmpty => [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                    child: Text('Keine Abfahrten in der nächsten Zeit.', style: TextStyle(fontSize: 14, color: c.muted)),
+                  ),
+                ],
+              AsyncData(:final value) => [for (final d in value) DepartureRow(d, now: now)],
+              _ => [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 12, 16, 12),
+                    child: SkeletonBlock(height: 16, width: 200),
+                  ),
+                ],
+            },
+          ]),
+          const SizedBox(height: 10),
+        ],
+      ]),
     );
   }
 }

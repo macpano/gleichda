@@ -16,10 +16,10 @@ import 'time_sheet.dart';
 import 'trip_screen.dart';
 
 Set<TransportMode> modesOf(Set<ModeGroup> groups) => {
-      for (final g in groups)
-        for (final m in TransportMode.values)
-          if (g.matches(m)) m,
-    };
+  for (final g in groups)
+    for (final m in TransportMode.values)
+      if (g.matches(m)) m,
+};
 
 /// Baut die Anfrage aus Suchprofil und persönlichem Profil.
 TripQuery buildQuery({
@@ -32,27 +32,30 @@ TripQuery buildQuery({
   bool usePersonal = true,
   TripOptimization optimization = TripOptimization.fastest,
   bool accessible = false,
-}) =>
-    TripQuery(
-      from: from,
-      to: to,
-      via: via,
-      time: time,
-      arriveBy: arriveBy,
-      maxResults: 5,
-      optimization: optimization,
-      excludedModes: usePersonal ? modesOf(settings.excludedModes) : const {},
-      accessible: accessible || (usePersonal && settings.accessible),
-      walkSpeedPercent: usePersonal ? settings.walkPace.walkPercent : 100,
-      maxWalkMinutes: settings.maxWalkMinutes,
-    );
+}) => TripQuery(
+  from: from,
+  to: to,
+  via: via,
+  time: time,
+  arriveBy: arriveBy,
+  maxResults: 5,
+  optimization: optimization,
+  excludedModes: usePersonal ? modesOf(settings.excludedModes) : const {},
+  accessible: accessible || (usePersonal && settings.accessible),
+  walkSpeedPercent: usePersonal ? settings.walkPace.walkPercent : 100,
+  maxWalkMinutes: settings.maxWalkMinutes,
+);
 
 /// Mehrere Profile parallel, Doppelte entfernt, nach Abfahrt sortiert.
 Future<List<Trip>> searchMerged(TransitProvider p, List<TripQuery> queries) async {
-  final results = await Future.wait(queries.map((q) => p.planTrip(q).catchError((Object e) {
+  final results = await Future.wait(
+    queries.map(
+      (q) => p.planTrip(q).catchError((Object e) {
         if (identical(q, queries.first)) throw e;
         return <Trip>[];
-      })));
+      }),
+    ),
+  );
   return mergeTrips(results.first, results.skip(1).expand((l) => l));
 }
 
@@ -62,7 +65,10 @@ Future<List<Trip>> searchMerged(TransitProvider p, List<TripQuery> queries) asyn
 /// Verbindungen standen.
 List<Trip> mergeTrips(List<Trip> main, Iterable<Trip> extra) {
   final seen = <String>{};
-  final out = <Trip>[for (final t in main) if (seen.add(tripSignature(t))) t];
+  final out = <Trip>[
+    for (final t in main)
+      if (seen.add(tripSignature(t))) t,
+  ];
   final until = main.isEmpty ? null : main.map((t) => t.departure.planned).reduce((a, b) => a.isAfter(b) ? a : b);
   for (final t in extra) {
     if (until != null && t.departure.planned.isAfter(until)) continue;
@@ -203,34 +209,40 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
     final from = await loc.resolve(widget.from);
     final to = await loc.resolve(widget.to);
     TripQuery q(TripOptimization o, {bool accessible = false}) => buildQuery(
-          from: from,
-          to: to,
-          via: widget.via,
-          time: time,
-          arriveBy: arriveBy,
-          settings: settings,
-          usePersonal: _personal,
-          optimization: o,
-          accessible: accessible,
-        );
+      from: from,
+      to: to,
+      via: widget.via,
+      time: time,
+      arriveBy: arriveBy,
+      settings: settings,
+      usePersonal: _personal,
+      optimization: o,
+      accessible: accessible,
+    );
     final p = ref.read(transitProvider);
     // Immer alle Varianten zusammen – die Sortierung wählt nur die
     // Reihenfolge, ohne neue Anfrage.
     return _allProfiles(
-        p,
-        q(TripOptimization.fastest, accessible: _accessible),
-        [
-          q(TripOptimization.minChanges, accessible: _accessible),
-          q(TripOptimization.leastWalking, accessible: _accessible),
-        ],
-        time,
-        arriveBy);
+      p,
+      q(TripOptimization.fastest, accessible: _accessible),
+      [
+        q(TripOptimization.minChanges, accessible: _accessible),
+        q(TripOptimization.leastWalking, accessible: _accessible),
+      ],
+      time,
+      arriveBy,
+    );
   }
 
   /// „Alle“: die schnellste Suche erscheint, sobald sie da ist; die Profile
   /// „wenig Umstiege“ und „wenig Fußweg“ ergänzen die Liste danach.
   Future<List<Trip>> _allProfiles(
-      TransitProvider p, TripQuery main, List<TripQuery> extra, DateTime time, bool arriveBy) async {
+    TransitProvider p,
+    TripQuery main,
+    List<TripQuery> extra,
+    DateTime time,
+    bool arriveBy,
+  ) async {
     final seq = _seq;
     final others = [for (final q in extra) p.planTrip(q).catchError((Object _) => <Trip>[])];
     final first = await p.planTrip(main);
@@ -249,6 +261,10 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
 
   Future<void> _load({bool quiet = false}) async {
     final seq = ++_seq;
+    if (!quiet) {
+      _autoLoads = 0;
+      _laterExhausted = false;
+    }
     setState(() {
       _loading = true;
       if (!quiet) _error = null;
@@ -287,6 +303,20 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
     });
   }
 
+  /// Endloses Scrollen: Kurz vor dem Ende der Liste lädt sie spätere
+  /// Verbindungen von selbst nach (höchstens achtmal hintereinander und nur,
+  /// solange neue dazukommen – „Später“ bleibt als Knopf und Ladeanzeige).
+  int _autoLoads = 0;
+  bool _laterExhausted = false;
+
+  bool _onScroll(ScrollNotification n) {
+    if (n.metrics.axis != Axis.vertical || n.metrics.extentAfter > 400) return false;
+    if (_loadingMore || _laterExhausted || _autoLoads >= 8 || (_trips?.isEmpty ?? true)) return false;
+    _autoLoads++;
+    _more(later: true);
+    return false;
+  }
+
   Future<void> _more({required bool later}) async {
     final trips = _trips;
     if (trips == null || trips.isEmpty || _loadingMore) return;
@@ -298,10 +328,11 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
       final more = await _query(at);
       if (!mounted) return;
       final ids = trips.map(tripSignature).toSet();
-      final add = more.where((t) => ids.add(tripSignature(t)) &&
-          (later || t.departure.best.isBefore(trips.first.departure.best)));
-      setState(() => _trips = [...trips, ...add]
-        ..sort((a, b) => a.departure.best.compareTo(b.departure.best)));
+      final add = more
+          .where((t) => ids.add(tripSignature(t)) && (later || t.departure.best.isBefore(trips.first.departure.best)))
+          .toList();
+      if (later) _laterExhausted = add.isEmpty;
+      setState(() => _trips = [...trips, ...add]..sort((a, b) => a.departure.best.compareTo(b.departure.best)));
       _loadGuaranteed();
     } on ProviderException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
@@ -326,150 +357,169 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
     final items = _trips == null
         ? null
         : sortConnections(
-            rateConnections(_trips!,
-                transferMinutes: settings.transferPace.transferMinutes, guaranteed: _guaranteed),
-            _sort);
+            rateConnections(_trips!, transferMinutes: settings.transferPace.transferMinutes, guaranteed: _guaranteed),
+            _sort,
+          );
     final unreachable = items?.where((i) => !i.reachable).length ?? 0;
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: _load,
-        child: ListView(
-          padding: pagePadding(context),
-          children: [
-            SubpageHeader(
-              title: 'Verbindungen',
-              backLabel: 'Suche',
-              trailing: FreshnessStamp(
-                updatedAt: _updatedAt,
-                now: now,
-                refreshing: _loading,
-                failed: _error != null,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: _onScroll,
+          child: ListView(
+            padding: pagePadding(context),
+            children: [
+              SubpageHeader(
+                title: 'Verbindungen',
+                backLabel: 'Suche',
+                trailing: FreshnessStamp(updatedAt: _updatedAt, now: now, refreshing: _loading, failed: _error != null),
               ),
-            ),
-            const SizedBox(height: 4),
-            Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  RouteSummary(
-                    from: widget.from.label,
-                    to: widget.to.label,
-                    when: widget.via == null ? null : 'über ${widget.via!.label}',
-                  ),
-                  // Zeit antippbar: öffnet das Zeitfenster, danach neue Suche.
-                  InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: _pickTime,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.schedule, size: 16, color: c.accent),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: OneLine(
-                            _time == null
-                                ? 'Heute ab ${hm(now)}'
-                                : '${_arriveBy ? 'Ankunft bis' : 'Ab'} ${dayText(_time!, now)} ${hm(_time!)}',
-                            style: context.t.number(14).copyWith(color: c.accent),
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        RouteSummary(
+                          from: widget.from.label,
+                          to: widget.to.label,
+                          when: widget.via == null ? null : 'über ${widget.via!.label}',
+                        ),
+                        // Zeit antippbar: öffnet das Zeitfenster, danach neue Suche.
+                        InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: _pickTime,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.schedule, size: 16, color: c.accent),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: OneLine(
+                                    _time == null
+                                        ? 'Heute ab ${hm(now)}'
+                                        : '${_arriveBy ? 'Ankunft bis' : 'Ab'} ${dayText(_time!, now)} ${hm(_time!)}',
+                                    style: context.t.number(14).copyWith(color: c.accent),
+                                  ),
+                                ),
+                                Icon(Icons.arrow_drop_down, size: 20, color: c.accent),
+                              ],
+                            ),
                           ),
                         ),
-                        Icon(Icons.arrow_drop_down, size: 20, color: c.accent),
-                      ]),
+                      ],
                     ),
                   ),
-                ]),
-              ),
-              _ViewToggle(
-                grid: grid,
-                onChanged: (g) => updateSettings(ref, (s) => s.copyWith(connectionsGrid: g)),
-              ),
-            ]),
-            const SizedBox(height: 12),
-            // Eine Zeile: Sortierung (Menü, sofort), barrierefrei (neue Suche)
-            // und – bei angepasstem Profil – Profil an/aus.
-            Row(children: [
-              MenuAnchor(
-                builder: (context, menu, _) => ChoiceChipX(
-                  icon: Icons.swap_vert,
-                  label: _sort.label,
-                  selected: _sort != ConnectionSort.arrival,
-                  dropdown: true,
-                  onTap: () => menu.isOpen ? menu.close() : menu.open(),
-                ),
-                menuChildren: [
-                  for (final o in ConnectionSort.values)
-                    MenuItemButton(
-                      leadingIcon: Icon(o == _sort ? Icons.check : null, size: 18),
-                      onPressed: () => setState(() => _sort = o),
-                      child: Text(o.label),
-                    ),
+                  _ViewToggle(
+                    grid: grid,
+                    onChanged: (g) => updateSettings(ref, (s) => s.copyWith(connectionsGrid: g)),
+                  ),
                 ],
               ),
-              const SizedBox(width: 8),
-              ChoiceChipX(
-                icon: Icons.accessible,
-                label: 'Barrierefrei',
-                selected: _accessible,
-                onTap: () {
-                  setState(() {
-                    _accessible = !_accessible;
-                    _trips = null;
-                  });
-                  _load();
-                },
-              ),
-              if (!settings.isDefault) ...[
-                const SizedBox(width: 8),
-                Flexible(
-                  child: ChoiceChipX(
-                    label: _personal ? 'Profil an' : 'Profil aus',
-                    selected: _personal,
-                    icon: Icons.person_outline,
+              const SizedBox(height: 12),
+              // Eine Zeile: Sortierung (Menü, sofort), barrierefrei (neue Suche)
+              // und – bei angepasstem Profil – Profil an/aus.
+              Row(
+                children: [
+                  MenuAnchor(
+                    builder: (context, menu, _) => ChoiceChipX(
+                      icon: Icons.swap_vert,
+                      label: _sort.label,
+                      selected: _sort != ConnectionSort.arrival,
+                      dropdown: true,
+                      onTap: () => menu.isOpen ? menu.close() : menu.open(),
+                    ),
+                    menuChildren: [
+                      for (final o in ConnectionSort.values)
+                        MenuItemButton(
+                          leadingIcon: Icon(o == _sort ? Icons.check : null, size: 18),
+                          onPressed: () => setState(() => _sort = o),
+                          child: Text(o.label),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChipX(
+                    icon: Icons.accessible,
+                    label: 'Barrierefrei',
+                    selected: _accessible,
                     onTap: () {
-                      setState(() => _personal = !_personal);
+                      setState(() {
+                        _accessible = !_accessible;
+                        _trips = null;
+                      });
                       _load();
                     },
                   ),
-                ),
-              ],
-            ]),
-            const SizedBox(height: 14),
-            if (_error != null && items != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Text('$_error. Angezeigt wird der letzte Stand.',
-                    style: TextStyle(fontSize: 14, color: c.orange)),
+                  if (!settings.isDefault) ...[
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: ChoiceChipX(
+                        label: _personal ? 'Profil an' : 'Profil aus',
+                        selected: _personal,
+                        icon: Icons.person_outline,
+                        onTap: () {
+                          setState(() => _personal = !_personal);
+                          _load();
+                        },
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            if (items == null && _loading)
-              ListGroup(children: [for (var i = 0; i < 4; i++) const _ConnectionSkeleton()])
-            else if (items == null)
-              Notice(_error ?? 'Keine Verbindungen gefunden.', action: 'Erneut versuchen', onAction: _load)
-            else if (items.isEmpty)
-              Notice('Keine Verbindungen gefunden.', action: 'Erneut versuchen', onAction: _load)
-            else if (grid)
-              ConnectionGrid(items: items, onTap: (i) => _open(i.trip))
-            else
-              ListGroup(indent: 0, children: [
-                MoreButton(label: 'Früher', busy: _loadingMore, onTap: () => _more(later: false)),
-                for (final i in items)
-                  ConnectionRow(item: i, stale: _fromCache, onTap: () => _open(i.trip)),
-                MoreButton(label: 'Später', busy: _loadingMore, onTap: () => _more(later: true)),
-              ]),
-            if (unreachable > 0)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 10, 4, 0),
-                child: Text(
-                  unreachable == 1
-                      ? '1 Verbindung wegen Verspätung nicht erreichbar.'
-                      : '$unreachable Verbindungen wegen Verspätung nicht erreichbar.',
-                  style: TextStyle(fontSize: 13, color: c.muted),
+              const SizedBox(height: 14),
+              if (_error != null && items != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    '$_error. Angezeigt wird der letzte Stand.',
+                    style: TextStyle(fontSize: 14, color: c.orange),
+                  ),
                 ),
-              ),
-            if (grid && items != null && items.isNotEmpty)
-              Row(children: [
-                Expanded(child: MoreButton(label: 'Früher', busy: _loadingMore, onTap: () => _more(later: false))),
-                Expanded(child: MoreButton(label: 'Später', busy: _loadingMore, onTap: () => _more(later: true))),
-              ]),
-          ],
+              if (items == null && _loading)
+                ListGroup(children: [for (var i = 0; i < 4; i++) const _ConnectionSkeleton()])
+              else if (items == null)
+                Notice(_error ?? 'Keine Verbindungen gefunden.', action: 'Erneut versuchen', onAction: _load)
+              else if (items.isEmpty)
+                Notice('Keine Verbindungen gefunden.', action: 'Erneut versuchen', onAction: _load)
+              else if (grid)
+                ConnectionGrid(items: items, onTap: (i) => _open(i.trip))
+              else
+                ListGroup(
+                  indent: 0,
+                  children: [
+                    MoreButton(label: 'Früher', busy: _loadingMore, onTap: () => _more(later: false)),
+                    for (final i in items) ConnectionRow(item: i, stale: _fromCache, onTap: () => _open(i.trip)),
+                    MoreButton(label: 'Später', busy: _loadingMore, onTap: () => _more(later: true)),
+                  ],
+                ),
+              if (unreachable > 0)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 10, 4, 0),
+                  child: Text(
+                    unreachable == 1
+                        ? '1 Verbindung wegen Verspätung nicht erreichbar.'
+                        : '$unreachable Verbindungen wegen Verspätung nicht erreichbar.',
+                    style: TextStyle(fontSize: 13, color: c.muted),
+                  ),
+                ),
+              if (grid && items != null && items.isNotEmpty)
+                Row(
+                  children: [
+                    Expanded(
+                      child: MoreButton(label: 'Früher', busy: _loadingMore, onTap: () => _more(later: false)),
+                    ),
+                    Expanded(
+                      child: MoreButton(label: 'Später', busy: _loadingMore, onTap: () => _more(later: true)),
+                    ),
+                  ],
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -486,9 +536,9 @@ class MoreButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: 44,
-        child: TextButton(onPressed: busy ? null : onTap, child: Text(label)),
-      );
+    height: 44,
+    child: TextButton(onPressed: busy ? null : onTap, child: Text(label)),
+  );
 }
 
 class _ViewToggle extends StatelessWidget {
@@ -502,35 +552,34 @@ class _ViewToggle extends StatelessWidget {
     final c = context.c;
     final dark = Theme.of(context).brightness == Brightness.dark;
     Widget b(bool g, String label) => Semantics(
-          button: true,
-          selected: grid == g,
-          label: label,
-          child: InkWell(
+      button: true,
+      selected: grid == g,
+      label: label,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => onChanged(g),
+        child: Container(
+          width: 40,
+          height: 32,
+          decoration: BoxDecoration(
+            color: grid == g ? (dark ? const Color(0xFF3A3F46) : c.surface) : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
-            onTap: () => onChanged(g),
-            child: Container(
-              width: 40,
-              height: 32,
-              decoration: BoxDecoration(
-                color: grid == g ? (dark ? const Color(0xFF3A3F46) : c.surface) : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              alignment: Alignment.center,
-              child: CustomPaint(
-                size: const Size(18, 16),
-                painter: _ViewIconPainter(grid: g, color: grid == g ? c.ink : c.muted),
-              ),
-            ),
           ),
-        );
+          alignment: Alignment.center,
+          child: CustomPaint(
+            size: const Size(18, 16),
+            painter: _ViewIconPainter(grid: g, color: grid == g ? c.ink : c.muted),
+          ),
+        ),
+      ),
+    );
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(color: c.fill, borderRadius: BorderRadius.circular(Radii.input)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        b(false, 'Liste'),
-        const SizedBox(width: 2),
-        b(true, 'Zeitraster'),
-      ]),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [b(false, 'Liste'), const SizedBox(width: 2), b(true, 'Zeitraster')],
+      ),
     );
   }
 }
@@ -573,13 +622,16 @@ class _ConnectionSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Padding(
-        padding: EdgeInsets.fromLTRB(16, 12, 16, 12),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SkeletonBlock(height: 22, width: 140),
-          SizedBox(height: 9),
-          SkeletonBlock(height: 22),
-          SizedBox(height: 9),
-          SkeletonBlock(height: 15, width: 180),
-        ]),
-      );
+    padding: EdgeInsets.fromLTRB(16, 12, 16, 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SkeletonBlock(height: 22, width: 140),
+        SizedBox(height: 9),
+        SkeletonBlock(height: 22),
+        SizedBox(height: 9),
+        SkeletonBlock(height: 15, width: 180),
+      ],
+    ),
+  );
 }

@@ -10,6 +10,7 @@ import '../data/efa/efa_client.dart';
 import '../data/repository.dart';
 import '../data/transit_provider.dart';
 import '../data/walk_route.dart';
+import '../data/trias/trias_parser.dart' show stopAreaId;
 import '../data/trias/trias_provider.dart';
 import '../data/vrr_provider.dart';
 import '../domain/models.dart';
@@ -65,6 +66,10 @@ final historyProvider =
 
 final favoritesProvider =
     StreamProvider<List<FavoriteItem>>((ref) => ref.watch(repositoryProvider).watchFavorites());
+
+/// Ist diese Haltestelle ein Favorit?
+bool isFavoriteStop(List<FavoriteItem> favs, Location stop) =>
+    favs.any((f) => f.kind == 'stop' && f.stop != null && stopAreaId(f.stop!.id) == stopAreaId(stop.id));
 
 /// Zustand der zuletzt angesehenen Fahrt.
 class LastTripState {
