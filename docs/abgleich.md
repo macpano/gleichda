@@ -192,7 +192,7 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   Unterseiten ganz unten
 
 ## 0.4.11-vorab.5 (23.09.2026, nach Rückmeldungen von Timo)
-- ✅ Gesicherte Anschlüsse: „Anschluss wartet in der Regel“ im Fahrtverlauf statt „knapp“/„nicht erreichbar“.
+- ✅ Gesicherte Anschlüsse: „Anschluss wartet“ im Fahrtverlauf statt „knapp“/„nicht erreichbar“.
   TRIAS meldet sie nur als Fußweg (`InterchangeMode walk`); die EFA führt einen eigenen Abschnitt mit Produktklasse 98
   „gesicherter Anschluss“. Beim Öffnen einer Fahrt wird dieselbe Verbindung bei der EFA gesucht (alle Fahrten gleich).
   Live geprüft: Oberbarmen Bf → Hannoverstraße, 602 → 632 an der Weiherstraße (`test_live/gesichert_live_test.dart`)
@@ -211,3 +211,7 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   (`de:05124:11376:91:2`); TRIAS liefert dann nur diesen Steig (live 15/15). Vorher wurde nach der Steignummer
   gefiltert – am Hbf gibt es „2“ mehrfach (Busbahnhof `…:2:2`, Gleis `…:91:2`). Gleiswechsel stehen beim geplanten
   Steig (`test_live/steig_live_test.dart`)
+
+## 0.4.11-vorab.8 (23.09.2026)
+- ✅ Gesicherter Anschluss kurz „Anschluss wartet“ (wie „Anschluss sicher/knapp“); „… wartet in der Regel“ wurde
+  bei großer Schrift abgeschnitten
