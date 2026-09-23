@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Neue Version für Obtainium veröffentlichen:
+# Neue Version veröffentlichen (die App findet sie selbst über das neueste Release):
 #
 #   bash tool/release.sh 0.1.1 "Was neu ist"
 #

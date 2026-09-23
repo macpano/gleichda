@@ -1,5 +1,9 @@
 # Gleich.da – Projektstart
 
+**Installieren:** die APK aus dem [neuesten Release](https://github.com/macpano/gleich.da/releases/latest)
+herunterladen und öffnen. Danach aktualisiert sich Gleich.da selbst: Neue Versionen lädt die App
+im Hintergrund und bietet sie zum Installieren an.
+
 
 - `docs/konzept.md` – das vollständige Konzept aus dem Chat, die Anforderungen
 - `docs/design.md` – Farben, Maße, Schrift, Layoutregeln in Zahlen
