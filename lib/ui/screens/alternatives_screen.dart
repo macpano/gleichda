@@ -140,6 +140,7 @@ class _AlternativesScreenState extends ConsumerState<AlternativesScreen> {
 
     return Scaffold(
       body: RefreshIndicator(
+        edgeOffset: MediaQuery.paddingOf(context).top,
         onRefresh: _load,
         child: ListView(
           padding: pagePadding(context),

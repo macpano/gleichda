@@ -101,6 +101,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
           _Filter.myStops => m.stopIds.map(stopAreaId).any(stopKeys.contains),
         }).toList();
     return RefreshIndicator(
+        edgeOffset: MediaQuery.paddingOf(context).top,
       onRefresh: () => ref.read(messagesProvider.notifier).refresh(),
       child: ListView(
         padding: pagePadding(context),

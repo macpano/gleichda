@@ -36,6 +36,11 @@ final homeOnTop = ValueNotifier<bool>(true);
 /// dann tritt die Leiste dort zurück, statt es zu verdecken.
 final popupOnHome = ValueNotifier<bool>(false);
 
+/// Animation der Seite direkt über der Startseite: Die Unterwegs-Leiste
+/// gleitet genau mit ihr zwischen „über den Reitern“ und „ganz unten“ –
+/// beim Öffnen, Zurückgehen und bei der Zurück-Geste.
+final firstPageAnimation = ValueNotifier<Animation<double>?>(null);
+
 /// Höhe der Reiterleiste: So weit über dem unteren Rand steht die
 /// Unterwegs-Leiste auf der Startseite.
 final tabBarHeight = ValueNotifier<double>(0);
@@ -56,9 +61,26 @@ class PageStack extends NavigatorObserver {
   }
 
   void _apply() {
-    final pages = _routes.whereType<PageRoute<dynamic>>().length;
-    homeOnTop.value = pages <= 1;
-    popupOnHome.value = pages <= 1 && _routes.any((r) => r is PopupRoute);
+    final pages = _routes.whereType<PageRoute<dynamic>>().toList();
+    homeOnTop.value = pages.length <= 1;
+    // Über jedem Blatt von unten, Dialog oder Menü tritt die Leiste zurück –
+    // die Ansicht hat die volle Höhe, das Blatt läge sonst unter ihr.
+    popupOnHome.value = _routes.any((r) => r is PopupRoute);
+    // Die Seite über der Startseite: ihre Animation steuert die Leiste. Nach
+    // dem Zurückgehen bleibt sie stehen, bis sie ganz zurückgelaufen ist.
+    if (pages.length >= 2) {
+      final a = pages[1].animation;
+      if (a != null && firstPageAnimation.value != a) {
+        firstPageAnimation.value = a;
+        a.addStatusListener((s) {
+          if (s == AnimationStatus.dismissed && firstPageAnimation.value == a) {
+            SchedulerBinding.instance.addPostFrameCallback((_) {
+              if (firstPageAnimation.value == a) firstPageAnimation.value = null;
+            });
+          }
+        });
+      }
+    }
   }
 
   /// Die Ansicht mit diesem Namen, falls sie im Stapel liegt.
@@ -146,61 +168,86 @@ Widget appFrame(BuildContext context, Widget? child) {
   final inset = MediaQuery.paddingOf(context).bottom;
   return Consumer(builder: (context, ref, _) {
     final shown = companionShown(ref);
-    return ListenableBuilder(
-      listenable: Listenable.merge([homeOnTop, popupOnHome, tabBarHeight]),
-      builder: (context, _) {
-        // Startseite mit Reitern oben (Reiterleiste gemessen).
-        final home = homeOnTop.value && tabBarHeight.value > 0;
-        final atBottom = shown && !home;
-        return Stack(children: [
-          Column(children: [
-            // Unten verliert die Ansicht ihren Rand; den übernimmt die Leiste.
-            Expanded(child: MediaQuery.removePadding(context: context, removeBottom: atBottom, child: child!)),
-            AnimatedContainer(
-              duration: companionMove,
-              curve: Curves.easeOutCubic,
-              height: atBottom ? companionBarHeight + inset : 0,
-              color: context.c.bar,
-            ),
-          ]),
-          if (shown)
-            AnimatedPositioned(
-              duration: companionMove,
-              curve: Curves.easeOutCubic,
-              left: 0,
-              right: 0,
-              bottom: home ? tabBarHeight.value : 0,
-              child: IgnorePointer(
-                ignoring: home && popupOnHome.value,
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 150),
-                  opacity: home && popupOnHome.value ? 0 : 1,
-                  child: ColoredBox(
-                    color: context.c.bar,
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      const GlobalCompanionBar(),
-                      AnimatedContainer(
-                          duration: companionMove, curve: Curves.easeOutCubic, height: home ? 0 : inset),
-                    ]),
+    // Platz unter den Seiten freihalten (nach dem Bild, nicht im Aufbau).
+    final reserve = shown ? companionBarHeight : 0.0;
+    if (companionReserve.value != reserve) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => companionReserve.value = reserve);
+    }
+    return Stack(children: [
+      // Die Ansicht behält die ganze Höhe; Seiten über der Startseite halten
+      // den Platz der Leiste selbst frei (CompanionAwareTransitions).
+      Positioned.fill(child: child!),
+      if (shown)
+        ListenableBuilder(
+          listenable: Listenable.merge([homeOnTop, popupOnHome, tabBarHeight, firstPageAnimation]),
+          builder: (context, _) {
+            final anim = firstPageAnimation.value;
+            final tabs = tabBarHeight.value;
+            final hidden = popupOnHome.value;
+            return AnimatedBuilder(
+              animation: anim ?? const AlwaysStoppedAnimation(0.0),
+              builder: (context, _) {
+                // 0 = über den Reitern (Startseite), 1 = ganz unten.
+                final t = tabs <= 0
+                    ? 1.0
+                    : anim == null
+                        ? (homeOnTop.value ? 0.0 : 1.0)
+                        : (MediaQuery.of(context).disableAnimations ? anim.value.roundToDouble() : Motion.curve.transform(anim.value));
+                return Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: tabs * (1 - t),
+                  child: IgnorePointer(
+                    ignoring: hidden,
+                    child: AnimatedOpacity(
+                      duration: Motion.of(context, Motion.short),
+                      opacity: hidden ? 0 : 1,
+                      child: _SlideIn(
+                        child: ColoredBox(
+                          color: context.c.bar,
+                          child: Column(mainAxisSize: MainAxisSize.min, children: [
+                            const GlobalCompanionBar(),
+                            SizedBox(height: inset * t),
+                          ]),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: top,
-            child: IgnorePointer(child: ColoredBox(color: Theme.of(context).scaffoldBackgroundColor)),
-          ),
-        ]);
-      },
-    );
+                );
+              },
+            );
+          },
+        ),
+      Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        height: top,
+        child: IgnorePointer(child: ColoredBox(color: Theme.of(context).scaffoldBackgroundColor)),
+      ),
+    ]);
   });
 }
 
-/// Dauer, mit der die Unterwegs-Leiste den Platz wechselt.
-const companionMove = Duration(milliseconds: 260);
+/// Die Leiste erscheint beim Losfahren von unten statt plötzlich.
+class _SlideIn extends StatelessWidget {
+  const _SlideIn({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+        tween: Tween(begin: 1, end: 0),
+        duration: Motion.of(context, Motion.medium),
+        curve: Motion.curve,
+        child: child,
+        builder: (context, v, child) =>
+            ClipRect(child: FractionalTranslation(translation: Offset(0, v), child: child)),
+      );
+}
+
+/// Platzhalter über den Reitern wächst beim Losfahren mit der Leiste.
+const companionMove = Motion.medium;
 
 /// Läuft eine Begleitung für die zuletzt angesehene Fahrt?
 bool companionShown(WidgetRef ref) {
@@ -294,7 +341,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       ),
       child: Scaffold(
         body: Stack(children: [
-          IndexedStack(
+          _FadeTabs(
             index: _tab,
             children: [
               const HomeScreen(),
@@ -314,7 +361,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         bottomNavigationBar: Column(mainAxisSize: MainAxisSize.min, children: [
           AnimatedContainer(
             duration: companionMove,
-            curve: Curves.easeOutCubic,
+            curve: Motion.curve,
             height: companionShown(ref) ? companionBarHeight : 0,
           ),
           _MeasureHeight(
@@ -472,5 +519,35 @@ class LocationIntroSheet extends StatelessWidget {
         ]),
       ),
     );
+  }
+}
+
+/// Reiter wie ein IndexedStack (Zustand bleibt erhalten), aber beim Wechsel
+/// kurz überblendet statt hart umgeschaltet. Verdeckte Reiter laufen nicht
+/// weiter (TickerMode) und nehmen keine Eingaben an.
+class _FadeTabs extends StatelessWidget {
+  const _FadeTabs({required this.index, required this.children});
+
+  final int index;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = Motion.of(context, Motion.short);
+    return Stack(fit: StackFit.expand, children: [
+      for (var i = 0; i < children.length; i++)
+        IgnorePointer(
+          ignoring: i != index,
+          child: TickerMode(
+            enabled: i == index,
+            child: AnimatedOpacity(
+              duration: d,
+              curve: Motion.curve,
+              opacity: i == index ? 1 : 0,
+              child: ExcludeSemantics(excluding: i != index, child: children[i]),
+            ),
+          ),
+        ),
+    ]);
   }
 }

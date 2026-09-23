@@ -156,4 +156,8 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 - Gesicherte Anschlüsse: TRIAS liefert sie nur als `InterchangeMode walk`; die EFA (`XML_TRIP_REQUEST2`) als eigenen
   Abschnitt mit `product.class` 98 „gesicherter Anschluss“ (`parseRides`, `VrrProvider.guaranteedConnections`).
 - Live-Prüfungen (nicht Teil von `flutter test`): `flutter test test_live/<datei>`.
+- **Bewegung** nur über `Motion` (`lib/ui/theme.dart`): Seite 320 ms, Einblenden/Aufklappen 220 ms, Zustand 150 ms,
+  Kurve easeOutCubic, bei „Bewegung reduzieren“ aus (`Motion.of`). Keine eigenen Dauern in Seiten.
+  Die Unterwegs-Leiste folgt `firstPageAnimation`; Seiten über der Startseite halten ihren Platz über
+  `CompanionAwareTransitions` frei.
 - Kartenkacheln vorläufig FOSSGIS (`tile.openstreetmap.de`), offene Entscheidung im Konzept.

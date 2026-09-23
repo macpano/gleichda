@@ -276,3 +276,17 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 
 ## 0.4.12-vorab.3 (23.09.2026)
 - ✅ Reiter in der Reihenfolge Suche · Abfahrten · Karte · Meldungen · Mehr (Nutzervorgabe)
+
+## 0.4.12-vorab.4 (24.09.2026)
+- ✅ Keine Verbindung jetzt → die App weicht aus: ohne Profil-Einschränkungen (falls das Profil alles aussortiert hat),
+  sonst die nächste mögliche Verbindung in 1 h, 3 h oder am nächsten Morgen ab 5 Uhr, mit Hinweis „Jetzt gibt es keine
+  Verbindung. Die nächste fährt …“ (`_searchWithFallback`)
+- ✅ Aktualisieren-Kreisel beim Herunterziehen unter der Statusleiste statt dahinter (`edgeOffset`)
+- ✅ Bewegungssprache `Motion` (Seite 320 ms, Einblenden 220 ms, Zustand 150 ms, easeOutCubic):
+  Die Unterwegs-Leiste hängt an der Animation der Seite über der Startseite (`firstPageAnimation`) – exakt gleichzeitig
+  beim Öffnen, Zurückgehen und bei der Zurück-Geste. Den Platz unten hält die Seite selbst frei
+  (`CompanionAwareTransitions`), die Startseite dahinter bewegt sich nicht mehr. Leiste erscheint beim Losfahren von
+  unten, tritt unter Blättern und Dialogen zurück
+- ✅ Weitere Übergänge: Reiterwechsel überblendet (`_FadeTabs`), Platzhalter → Ergebnis überblendet (`FadeSwitch`,
+  Verbindungen und Abfahrten), Zwischenhalte klappen weich auf (`AnimatedSize`), Fahrt auf der Karte schiebt sich von
+  unten herein; alle Einzeldauern auf `Motion` vereinheitlicht

@@ -203,7 +203,7 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
     _scheduleRefresh();
   }
 
-  Future<List<Trip>> _query(DateTime time, {bool arriveBy = false}) async {
+  Future<List<Trip>> _query(DateTime time, {bool arriveBy = false, bool? personal}) async {
     final settings = ref.read(settingsProvider).value ?? const AppSettings();
     final loc = ref.read(locationServiceProvider);
     final from = await loc.resolve(widget.from);
@@ -215,7 +215,7 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
       time: time,
       arriveBy: arriveBy,
       settings: settings,
-      usePersonal: _personal,
+      usePersonal: personal ?? _personal,
       optimization: o,
       accessible: accessible,
     );
@@ -259,6 +259,39 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
     return arriveBy ? merged : dropStarted(merged, time);
   }
 
+  /// Hinweis über der Liste, wenn die Suche ausweichen musste.
+  String? _fallbackNote;
+
+  /// Findet die Suche jetzt nichts, weicht sie aus statt „Keine
+  /// Verbindungen“ zu zeigen: erst ohne Profil-Einschränkungen (falls die
+  /// alles aussortiert haben), dann später – in 1 und 3 Stunden, dann am
+  /// nächsten Morgen ab 5 Uhr. Die Verbindung beginnt wie immer mit dem
+  /// Fußweg zur Abfahrtshaltestelle.
+  Future<(List<Trip>, String?)> _searchWithFallback(DateTime at) async {
+    List<Trip> keep(List<Trip> found, DateTime t) => _arriveBy ? found : dropStarted(found, t);
+    final trips = keep(await _query(at, arriveBy: _arriveBy), at);
+    if (trips.isNotEmpty || _arriveBy) return (trips, null);
+    final settings = ref.read(settingsProvider).value ?? const AppSettings();
+    if (_personal && !settings.isDefault) {
+      final plain = keep(await _query(at, personal: false), at);
+      if (plain.isNotEmpty) {
+        return (plain, 'Mit deinem Profil gibt es gerade keine Verbindung – gezeigt ohne seine Einschränkungen.');
+      }
+    }
+    final l = at.toLocal();
+    var morning = DateTime(l.year, l.month, l.day, 5);
+    if (!morning.isAfter(l.add(const Duration(hours: 3)))) morning = morning.add(const Duration(days: 1));
+    for (final later in [at.add(const Duration(hours: 1)), at.add(const Duration(hours: 3)), morning]) {
+      final found = keep(await _query(later), later);
+      if (found.isEmpty) continue;
+      final first = found.map((t) => t.departure.best).reduce((a, b) => a.isBefore(b) ? a : b);
+      final day = relativeDay(first.toLocal(), at.toLocal());
+      final when = switch (day) { 'Heute' => 'um', 'Morgen' => 'morgen um', _ => 'am $day um' };
+      return (found, 'Jetzt gibt es keine Verbindung. Die nächste fährt $when ${hm(first)}.');
+    }
+    return (trips, null);
+  }
+
   Future<void> _load({bool quiet = false}) async {
     final seq = ++_seq;
     if (!quiet) {
@@ -271,10 +304,10 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
     });
     try {
       final at = _time ?? DateTime.now();
-      final found = await _query(at, arriveBy: _arriveBy);
-      final trips = _arriveBy ? found : dropStarted(found, at);
+      final (trips, note) = await _searchWithFallback(at);
       if (!mounted || seq != _seq) return;
       setState(() {
+        _fallbackNote = note;
         _trips = trips;
         _updatedAt = DateTime.now();
         _fromCache = false;
@@ -363,6 +396,7 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
     final unreachable = items?.where((i) => !i.reachable).length ?? 0;
     return Scaffold(
       body: RefreshIndicator(
+        edgeOffset: MediaQuery.paddingOf(context).top,
         onRefresh: _load,
         child: NotificationListener<ScrollNotification>(
           onNotification: _onScroll,
@@ -475,6 +509,15 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
                 ],
               ),
               const SizedBox(height: 14),
+              if (_fallbackNote != null && items != null && items.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Icon(Icons.info_outline, size: 18, color: c.orange),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(_fallbackNote!, style: TextStyle(fontSize: 14, height: 1.35, color: c.orange))),
+                  ]),
+                ),
               if (_error != null && items != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
@@ -483,23 +526,31 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
                     style: TextStyle(fontSize: 14, color: c.orange),
                   ),
                 ),
-              if (items == null && _loading)
-                ListGroup(children: [for (var i = 0; i < 4; i++) const _ConnectionSkeleton()])
-              else if (items == null)
-                Notice(_error ?? 'Keine Verbindungen gefunden.', action: 'Erneut versuchen', onAction: _load)
-              else if (items.isEmpty)
-                Notice('Keine Verbindungen gefunden.', action: 'Erneut versuchen', onAction: _load)
-              else if (grid)
-                ConnectionGrid(items: items, onTap: (i) => _open(i.trip))
-              else
-                ListGroup(
-                  indent: 0,
-                  children: [
-                    MoreButton(label: 'Früher', busy: _loadingMore, onTap: () => _more(later: false)),
-                    for (final i in items) ConnectionRow(item: i, stale: _fromCache, onTap: () => _open(i.trip)),
-                    MoreButton(label: 'Später', busy: _loadingMore, onTap: () => _more(later: true)),
-                  ],
-                ),
+              // Platzhalter, Ergebnis und Hinweise blenden ineinander über.
+              FadeSwitch(
+                state: items == null
+                    ? (_loading ? 'laden' : 'fehler')
+                    : items.isEmpty
+                        ? 'leer'
+                        : (grid ? 'raster' : 'liste'),
+                child: items == null && _loading
+                    ? ListGroup(children: [for (var i = 0; i < 4; i++) const _ConnectionSkeleton()])
+                    : items == null
+                        ? Notice(_error ?? 'Keine Verbindungen gefunden.', action: 'Erneut versuchen', onAction: _load)
+                        : items.isEmpty
+                            ? Notice('Keine Verbindungen gefunden.', action: 'Erneut versuchen', onAction: _load)
+                            : grid
+                                ? ConnectionGrid(items: items, onTap: (i) => _open(i.trip))
+                                : ListGroup(
+                                    indent: 0,
+                                    children: [
+                                      MoreButton(label: 'Früher', busy: _loadingMore, onTap: () => _more(later: false)),
+                                      for (final i in items)
+                                        ConnectionRow(item: i, stale: _fromCache, onTap: () => _open(i.trip)),
+                                      MoreButton(label: 'Später', busy: _loadingMore, onTap: () => _more(later: true)),
+                                    ],
+                                  ),
+              ),
               if (unreachable > 0)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, 10, 4, 0),

@@ -180,6 +180,7 @@ void main() {
       {Brightness brightness = Brightness.light,
       Future<void> Function(Repository)? seed,
       Future<void> Function(WidgetTester)? act,
+      bool settle = true,
       List<Override> overrides = const [],
       List<Trip>? planned,
       double textScale = 1,
@@ -221,7 +222,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     if (act != null) {
       await act(tester);
-      for (var i = 0; i < 4; i++) {
+      for (var i = 0; i < (settle ? 4 : 0); i++) {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 60)));
         await tester.pump(const Duration(milliseconds: 250));
       }
@@ -321,6 +322,19 @@ void main() {
             await t.pump(const Duration(milliseconds: 100));
           }
         });
+  });
+  testWidgets('Übergang: mitten im Seitenwechsel', (t) {
+    final onBoard = withCoords(tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first);
+    return shot(t, 'unterwegs_uebergang', const HomeShell(),
+        seed: (r) => r.saveLastTrip(onBoard),
+        overrides: [companionProvider.overrideWith(() => _Following(onBoard.id))],
+        act: (t) async {
+          Navigator.of(t.element(find.byType(NavigationBar)))
+              .push(MaterialPageRoute<void>(builder: (_) => const TripScreen()));
+          await t.pump();
+          await t.pump(const Duration(milliseconds: 110)); // mitten im Wechsel
+        },
+        settle: false);
   });
   testWidgets('Fahrt unterwegs', (t) => shot(t, 'fahrt_unterwegs', const TripScreen(), seed: (r) async {
         final onBoard = tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first;

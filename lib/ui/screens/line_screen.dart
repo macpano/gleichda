@@ -77,6 +77,7 @@ class _LineScreenState extends ConsumerState<LineScreen> {
     }.join(' · ');
     return Scaffold(
       body: RefreshIndicator(
+        edgeOffset: MediaQuery.paddingOf(context).top,
         onRefresh: _load,
         child: ListView(
           padding: pagePadding(context),
