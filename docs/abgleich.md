@@ -316,3 +316,8 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Reiterwechsel ohne Überlagerung: Die Überblendung ließ zwei Reiter halbdurchsichtig übereinander stehen (Reiter haben
   keinen eigenen Hintergrund). Jetzt „fade through“: der alte verschwindet sofort, der neue blendet ein und rückt leicht
   nach oben (`_FadeTabs`, Bildschirmfoto `reiterwechsel` mitten im Wechsel)
+
+## 0.4.12-vorab.9 (24.09.2026)
+- ✅ Übergänge sauberer: `FadeSwitch` ohne Überblendung (Platzhalter und Ergebnis lagen kurz übereinander) – der neue
+  Zustand blendet ein und rückt leicht nach oben, wie beim Reiterwechsel. Zwischenhalte werden auf- und zugezogen
+  (`AnimatedAlign` mit `heightFactor`, geklippt), statt erst zu verschwinden und dann Leere schrumpfen zu lassen

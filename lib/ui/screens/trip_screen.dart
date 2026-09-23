@@ -409,7 +409,13 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                 ? const SizedBox.shrink()
                 : OneLine('nächster Halt ${next.stop.name}', style: TextStyle(fontSize: 13, color: c.muted)),
           );
-      final shown = open
+      // Ohne Besonderheiten (entfallene Halte, Umleitung) sind eingeklappt gar
+      // keine Zwischenhalte zu sehen: Dann bleibt die volle Liste stehen und
+      // wird nur auf- und zugezogen – der Inhalt schrumpft sichtbar mit,
+      // statt erst zu verschwinden und dann Leere schrumpfen zu lassen.
+      final special = l.intermediates.any((s) => s.status != StopStatus.normal);
+      final showOpen = open || !special;
+      final shown = showOpen
           ? l.intermediates
           : l.intermediates.where((s) => s.status != StopStatus.normal).toList();
       var placed = false;
@@ -417,7 +423,6 @@ class _TripScreenState extends ConsumerState<TripScreen> {
         rows.add(position(stops[lastPassed + 1]));
         placed = true;
       }
-      // Zwischenhalte klappen weich auf und zu.
       final mid = <Widget>[];
       for (final s in shown) {
         mid.add(_stopRow(context, s, color, now));
@@ -427,12 +432,23 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           placed = true;
         }
       }
-      rows.add(AnimatedSize(
-        duration: Motion.of(context, Motion.medium),
-        curve: Motion.curve,
-        alignment: Alignment.topCenter,
-        child: Column(mainAxisSize: MainAxisSize.min, children: mid),
-      ));
+      final list = Column(mainAxisSize: MainAxisSize.min, children: mid);
+      rows.add(special
+          ? AnimatedSize(
+              duration: Motion.of(context, Motion.medium),
+              curve: Motion.curve,
+              alignment: Alignment.topCenter,
+              child: list,
+            )
+          : ClipRect(
+              child: AnimatedAlign(
+                duration: Motion.of(context, Motion.medium),
+                curve: Motion.curve,
+                alignment: Alignment.topCenter,
+                heightFactor: open ? 1 : 0,
+                child: list,
+              ),
+            ));
       rows.add(_stopRow(context, l.to, color, now, departure: false, last: true));
     }
     return rows;

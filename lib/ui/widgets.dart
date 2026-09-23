@@ -972,9 +972,11 @@ class _PositionDotPainter extends CustomPainter {
 /// damit große Schrift nicht abgeschnitten wird.
 double textGrowth(BuildContext context) => (MediaQuery.textScalerOf(context).scale(16) / 16).clamp(1.0, 1.8);
 
-/// Wechsel zwischen Zuständen (Platzhalter → Ergebnis → Hinweis): kurz
-/// überblendet, oben ausgerichtet. Neue Einträge im selben Zustand springen
-/// nicht – nur ein anderer [state] blendet über.
+/// Wechsel zwischen Zuständen (Platzhalter → Ergebnis → Hinweis): Der alte
+/// Zustand verschwindet sofort, der neue blendet ein und rückt leicht nach
+/// oben – wie beim Reiterwechsel. Keine Überblendung: Platzhalter und
+/// Ergebnis lagen sonst kurz halbdurchsichtig übereinander. Neue Einträge im
+/// selben Zustand springen nicht – nur ein anderer [state] blendet ein.
 class FadeSwitch extends StatelessWidget {
   const FadeSwitch({super.key, required this.state, required this.child});
 
@@ -984,11 +986,15 @@ class FadeSwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AnimatedSwitcher(
         duration: Motion.of(context, Motion.medium),
+        reverseDuration: Duration.zero,
         switchInCurve: Motion.curve,
-        switchOutCurve: Motion.curve,
-        layoutBuilder: (current, previous) => Stack(
-          alignment: Alignment.topCenter,
-          children: [...previous, ?current],
+        layoutBuilder: (current, previous) => current ?? const SizedBox.shrink(),
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween(begin: const Offset(0, 0.02), end: Offset.zero).animate(animation),
+            child: child,
+          ),
         ),
         child: KeyedSubtree(key: ValueKey(state), child: child),
       );
