@@ -114,6 +114,11 @@ class LastTripController extends AsyncNotifier<LastTripState?> {
   Timer? _timer;
   bool _busy = false;
 
+  /// Beim Öffnen schon angekommen (z. B. über „Früher“): Sie bleibt, solange
+  /// man sie ansieht, und verschwindet erst beim nächsten Start. Vorher
+  /// räumte die erste Aktualisierung sie sofort weg – „Keine Fahrt geöffnet“.
+  bool _openedPast = false;
+
   static const interval = Duration(seconds: 30);
 
   @override
@@ -139,6 +144,7 @@ class LastTripController extends AsyncNotifier<LastTripState?> {
   /// Öffnet eine Fahrt: sie wird sofort die zuletzt angesehene.
   Future<void> open(Trip trip, {DateTime? updatedAt}) async {
     final at = updatedAt ?? DateTime.now();
+    _openedPast = arrivedLongAgo(trip, DateTime.now());
     state = AsyncData(LastTripState(trip: trip, updatedAt: at));
     await ref.read(repositoryProvider).saveLastTrip(trip, updatedAt: at);
     _schedule(immediately: DateTime.now().difference(at) > const Duration(seconds: 20));
@@ -148,7 +154,7 @@ class LastTripController extends AsyncNotifier<LastTripState?> {
   /// die App die ganze Zeit offen war.
   Future<bool> _dropIfArrived() async {
     final cur = state.value;
-    if (cur == null || !arrivedLongAgo(cur.trip, DateTime.now())) return false;
+    if (cur == null || _openedPast || !arrivedLongAgo(cur.trip, DateTime.now())) return false;
     _timer?.cancel();
     state = const AsyncData(null);
     await ref.read(repositoryProvider).clearLastTrip();
@@ -385,6 +391,10 @@ class TripPathKey {
   @override
   int get hashCode => trip.id.hashCode;
 }
+
+/// Gesicherte Anschlüsse der Fahrt (Indizes in `trip.legs`).
+final guaranteedProvider = FutureProvider.family<Set<int>, TripPathKey>(
+    (ref, key) => ref.watch(transitProvider).guaranteedConnections(key.trip));
 
 /// Linienwege je Abschnitt; null, wo keiner bekannt ist.
 final legPathsProvider = FutureProvider.family<List<List<GeoPoint>?>, TripPathKey>(

@@ -133,6 +133,25 @@ class EfaClient {
     return parseLegPaths(json);
   }
 
+  /// Verbindungen von [from] nach [to] ab [departure] als Folge ihrer
+  /// Fahrtabschnitte, je mit der Angabe, ob der Umstieg davor ein
+  /// gesicherter Anschluss ist.
+  Future<List<List<EfaRide>>> rides(String from, String to, DateTime departure) async {
+    final l = departure.toLocal();
+    String two(int v) => v.toString().padLeft(2, '0');
+    final json = await _get('XML_TRIP_REQUEST2', {
+      'type_origin': 'stop',
+      'name_origin': from,
+      'type_destination': 'stop',
+      'name_destination': to,
+      'itdDate': '${l.year}${two(l.month)}${two(l.day)}',
+      'itdTime': '${two(l.hour)}${two(l.minute)}',
+      'itdTripDateTimeDepArr': 'dep',
+      'calcNumberOfTrips': '5',
+    });
+    return parseRides(json);
+  }
+
   /// Gemeindeschlüssel (OMC) der Haltestellen nahe einer Koordinate
   /// (XML_COORD_REQUEST): „placeID:5954020:2“ → „5954020“ (Herdecke).
   Future<Set<String>> placesNear(double lat, double lon, {int radiusMeters = 1500}) async =>
@@ -398,6 +417,59 @@ List<EfaLegPath> parseLegPaths(Map<String, dynamic> json) {
         ],
       ));
     }
+  }
+  return out;
+}
+
+/// Fahrtabschnitt einer EFA-Verbindung.
+class EfaRide {
+  const EfaRide({
+    required this.line,
+    required this.lineName,
+    required this.tripCode,
+    required this.departurePlanned,
+    required this.guaranteedBefore,
+  });
+
+  final String line;
+  final String lineName;
+  final String? tripCode;
+  final DateTime? departurePlanned;
+
+  /// Der Umstieg auf diesen Abschnitt ist ein gesicherter Anschluss: Die EFA
+  /// führt dafür einen eigenen Abschnitt mit Produktklasse 98 („gesicherter
+  /// Anschluss“), TRIAS dagegen nur einen Fußweg (`walk`, geprüft 23.09.2026,
+  /// Oberbarmen Bf → Hannoverstraße, 602 → 632 an der Weiherstraße).
+  final bool guaranteedBefore;
+}
+
+List<List<EfaRide>> parseRides(Map<String, dynamic> json) {
+  final out = <List<EfaRide>>[];
+  for (final j in (json['journeys'] as List?) ?? const []) {
+    if (j is! Map) continue;
+    final rides = <EfaRide>[];
+    var guaranteed = false;
+    for (final l in (j['legs'] as List?) ?? const []) {
+      if (l is! Map) continue;
+      final t = l['transportation'];
+      if (t is! Map) continue;
+      final cls = ((t['product'] as Map?)?['class'] as num?)?.toInt();
+      if (cls == 98) {
+        guaranteed = true;
+        continue;
+      }
+      final id = t['id'] as String?;
+      if (id == null || cls == null || cls >= 97) continue; // Fußwege, Sitzenbleiben
+      rides.add(EfaRide(
+        line: id,
+        lineName: (t['disassembledName'] ?? t['number'] ?? '') as String,
+        tripCode: ((t['properties'] as Map?)?['tripCode'])?.toString(),
+        departurePlanned: _t((l['origin'] as Map?)?['departureTimePlanned']),
+        guaranteedBefore: guaranteed && rides.isNotEmpty,
+      ));
+      guaranteed = false;
+    }
+    out.add(rides);
   }
   return out;
 }

@@ -134,6 +134,9 @@ class TriasProvider implements TransitProvider {
   Future<List<Line>> searchLines(String query, {GeoPoint? near}) async => const [];
 
   @override
+  Future<Set<int>> guaranteedConnections(Trip trip) async => const {};
+
+  @override
   Future<List<Platform>> platformsNear(GeoPoint near, {int radiusMeters = 800}) async => const [];
 
   @override

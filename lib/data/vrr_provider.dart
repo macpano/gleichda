@@ -201,6 +201,53 @@ class VrrProvider implements TransitProvider {
     }
   }
 
+  final _guaranteed = <String, Set<int>>{};
+
+  /// Gesicherte Anschlüsse: dieselbe Verbindung bei der EFA suchen (alle
+  /// Fahrtabschnitte gleich, über Linie und Fahrtnummer bzw. Linienname und
+  /// Abfahrt) und deren Abschnitte „gesicherter Anschluss“ übernehmen.
+  @override
+  Future<Set<int>> guaranteedConnections(Trip trip) async {
+    final rides = [
+      for (var i = 0; i < trip.legs.length; i++)
+        if (trip.legs[i].type == LegType.ride && trip.legs[i].from.departure != null) i,
+    ];
+    if (rides.length < 2) return const {};
+    final first = trip.legs[rides.first];
+    final last = trip.legs[rides.last];
+    final cacheKey = [for (final i in rides) '${trip.legs[i].journeyRef}|${trip.legs[i].from.departure!.planned}']
+        .join(';');
+    final cached = _guaranteed[cacheKey];
+    if (cached != null) return cached;
+    try {
+      final found = await efa.rides(
+          stopAreaId(first.from.stop.id), stopAreaId(last.to.stop.id), first.from.departure!.planned);
+      bool same(Leg l, EfaRide r) {
+        final dep = l.from.departure!.planned;
+        final key = l.journeyRef == null ? null : EfaTripKey.fromJourneyRef(l.journeyRef!, '', dep);
+        if (key != null && r.tripCode == key.tripCode && lineKey(r.line) == lineKey(key.line)) return true;
+        return r.lineName.replaceAll(' ', '') == (l.line?.name ?? '').replaceAll(' ', '') &&
+            r.departurePlanned == dep;
+      }
+
+      for (final j in found) {
+        if (j.length != rides.length) continue;
+        var match = true;
+        for (var k = 0; k < rides.length && match; k++) {
+          match = same(trip.legs[rides[k]], j[k]);
+        }
+        if (!match) continue;
+        return _guaranteed[cacheKey] = {
+          for (var k = 0; k < rides.length; k++)
+            if (j[k].guaranteedBefore) rides[k],
+        };
+      }
+      return _guaranteed[cacheKey] = const {};
+    } on ProviderException {
+      return const {};
+    }
+  }
+
   /// Fahrtverlauf per XML_TRIPSTOPTIMES_REQUEST, ab der Haltestelle der
   /// Abfahrt bis zur Endhaltestelle.
   @override

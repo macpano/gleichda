@@ -125,6 +125,10 @@ abstract class TransitProvider {
   /// Endhaltestelle, als Verbindung mit einem Abschnitt. null, wenn unbekannt.
   Future<Trip?> tripOfDeparture(Departure departure);
 
+  /// Fahrtabschnitte (Index in `trip.legs`), auf die ein gesicherter
+  /// Anschluss führt – der Anschluss wartet in der Regel. Leer, wenn unbekannt.
+  Future<Set<int>> guaranteedConnections(Trip trip);
+
   /// Steige mit genauer Lage im Umkreis (für die Karte). Leer, wenn unbekannt.
   Future<List<Platform>> platformsNear(GeoPoint near, {int radiusMeters = 800});
 

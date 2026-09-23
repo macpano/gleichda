@@ -101,6 +101,9 @@ class FakeProvider implements TransitProvider {
   Future<List<Line>> linesNear(GeoPoint near) async => const [];
 
   @override
+  Future<Set<int>> guaranteedConnections(Trip trip) async => const {};
+
+  @override
   Future<List<m.Platform>> platformsNear(GeoPoint near, {int radiusMeters = 800}) async => const [
         m.Platform(id: 'de:05124:11376:91:2', stopId: 'de:05124:11376', name: '2', lat: 51.25453, lon: 7.14995),
         m.Platform(id: 'de:05124:11376:91:3', stopId: 'de:05124:11376', name: '3', lat: 51.25442, lon: 7.15001),
