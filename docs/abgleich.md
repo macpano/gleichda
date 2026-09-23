@@ -145,7 +145,7 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Fußnavigation beim Umsteigen: Gehsymbol in jeder Umsteigezeile (zum Steig des Anschlusses, mit dessen Abfahrt),
   in der Unterwegs-Leiste vor jedem Einsteigen und als Knopf „Weg zum Steig“ in der Benachrichtigung
 
-## Unveröffentlicht (nach Rückmeldungen von Timo, 23.09.2026)
+## v0.4.8 (23.09.2026, nach Rückmeldungen von Timo)
 - ✅ Sortierung „Früheste Ankunft“ als Standard, „Kürzeste Fahrzeit“ statt „Schnellste“; Von–bis inklusive Fußweg;
   keine doppelten Etiketten („ohne Umstieg“)
 - ✅ Umstieg „nicht erreichbar“ erst, wenn nicht einmal der Umsteigeweg (am selben Halt 1 min) passt; die persönliche
@@ -158,3 +158,4 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Weg zum Steig aus der Ferne (> 2 km): Vorschau des Umsteigewegs statt Führung vom Standort
 - ✅ Schnellziele Zuhause/Arbeit unter der Suche
 - ✅ Verbindungen: Zeitzeile („Heute ab …“) antippbar, öffnet das Zeitfenster und sucht neu
+- ✅ Schalter „Vorabversionen erhalten“ (Mehr → Aktualisierung), Lizenz GPL-3.0
