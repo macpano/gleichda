@@ -126,5 +126,5 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Über eine Abfahrt geöffnete Fahrt zeigt Linie und Ziel oben im Kopf
 
 ## v0.4.3 (23.09.2026)
-- ✅ Abfahrten: drei Knöpfe ohne Scrollen – Haltestelle (öffnet immer die Suche, „Mein Standort“ = in der Nähe), Zeit,
-  Verkehrsmittel; vorher ließ sich nach Wahl einer Haltestelle keine andere mehr suchen
+- ✅ Abfahrten: drei Knöpfe ohne Scrollen – Ort (öffnet immer die Suche, „Mein Standort“ = in der Nähe), Verkehrsmittel,
+  Uhrzeit (v0.4.4); vorher ließ sich nach Wahl einer Haltestelle keine andere mehr suchen
