@@ -15,7 +15,7 @@ import 'package:gleichda/domain/connections.dart';
 import 'package:gleichda/domain/models.dart';
 import 'package:gleichda/domain/settings.dart';
 import 'package:gleichda/state/alarm_planner.dart';
-import 'package:gleichda/state/providers.dart' show arrivedLongAgo;
+import 'package:gleichda/state/providers.dart' show MessagesState, arrivedLongAgo;
 import 'package:gleichda/ui/connection_views.dart';
 import 'package:gleichda/ui/screens/connections_screen.dart' show mergeTrips, dropStarted;
 
