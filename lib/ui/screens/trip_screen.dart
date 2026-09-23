@@ -29,6 +29,9 @@ class _TripScreenState extends ConsumerState<TripScreen> {
   final _expanded = <int>{};
   final _openMessages = <String>{};
 
+  /// Fahrt, deren Zwischenhalte schon von selbst aufgeklappt wurden.
+  String? _autoOpened;
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
@@ -51,6 +54,13 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     final companion = ref.watch(companionProvider);
     final arrived = trip.arrival.best.isBefore(now);
     final following = companion.active && companion.tripId == trip.id;
+    // Über den Abfahrtsmonitor geöffnet: Verlauf eines Fahrzeugs, keine
+    // Reise von A nach B – Zwischenhalte gleich aufgeklappt.
+    final vehicleView = trip.id.startsWith('abfahrt:') && trip.rides.length == 1;
+    if (vehicleView && _autoOpened != trip.id) {
+      _autoOpened = trip.id;
+      _expanded.add(trip.legs.indexWhere((l) => l.type == LegType.ride));
+    }
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: () => ref.read(lastTripProvider.notifier).refresh(),
@@ -58,7 +68,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           padding: pagePadding(context),
           children: [
             SubpageHeader(
-              title: 'Fahrt',
+              title: vehicleView ? 'Fahrtverlauf' : 'Fahrt',
               backLabel: 'Zurück',
               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                 IconButton(
@@ -74,7 +84,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
               ]),
             ),
             // Über eine Abfahrt geöffnet: Linie und Ziel stehen oben.
-            if (trip.id.startsWith('abfahrt:') && trip.rides.length == 1)
+            if (vehicleView)
               Padding(
                 padding: const EdgeInsets.only(left: 4, bottom: 6),
                 child: Row(children: [
@@ -86,18 +96,19 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                   ),
                 ]),
               ),
-            RouteSummary(from: trip.origin.label, to: trip.destination.label),
+            if (!vehicleView) RouteSummary(from: trip.origin.label, to: trip.destination.label),
             Padding(
               padding: const EdgeInsets.only(left: 4),
               child: Row(children: [
                 Expanded(
                   child: OneLine(
-                    [
-                      '${hm(trip.departure.best)} – ${hm(trip.arrival.best)}',
-                      durationText(trip.duration),
-                      // Über eine Abfahrt geöffnet: keine Umstiegsangabe.
-                      if (!trip.id.startsWith('abfahrt:')) interchangesText(trip.interchanges),
-                    ].join(' · '),
+                    vehicleView
+                        ? 'ab ${trip.origin.label} ${hm(trip.departure.best)} · an ${hm(trip.arrival.best)}'
+                        : [
+                            '${hm(trip.departure.best)} – ${hm(trip.arrival.best)}',
+                            durationText(trip.duration),
+                            interchangesText(trip.interchanges),
+                          ].join(' · '),
                     style: context.t.number(14).copyWith(color: c.muted),
                   ),
                 ),
