@@ -34,11 +34,13 @@ class _TripScreenState extends ConsumerState<TripScreen> {
   void initState() {
     super.initState();
     TripScreen.open++;
+    tripViewers++;
   }
 
   @override
   void dispose() {
     TripScreen.open--;
+    tripViewers--;
     super.dispose();
   }
 

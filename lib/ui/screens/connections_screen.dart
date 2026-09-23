@@ -256,6 +256,9 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
       _fail(seq, e.message);
     } on LocationException catch (e) {
       _fail(seq, e.message);
+    } catch (_) {
+      // Unerwartetes (z. B. Antwort nicht lesbar): nicht ewig „lädt“.
+      _fail(seq, 'Auskunft antwortet nicht wie erwartet');
     }
   }
 
