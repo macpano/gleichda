@@ -166,3 +166,7 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 
 ## v0.4.10 (23.09.2026)
 - ✅ Aus dem Abfahrtsmonitor geöffnet: „Fahrtverlauf“ mit Linie und Ziel oben, „ab … · an …“, Zwischenhalte sofort aufgeklappt
+
+## 0.4.11-vorab.1 (23.09.2026)
+- ✅ Reiter „Karte“ (Suche · Karte · Abfahrten · Meldungen · Mehr): Haltestellen im Ausschnitt ab Zoom 14,5,
+  Tipp zeigt Abfahrten, Tipp auf eine Abfahrt zeigt die Fahrt mit Linienweg und Halten, „Fahrtverlauf“ öffnet sie

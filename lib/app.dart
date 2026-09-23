@@ -8,6 +8,7 @@ import 'state/updates.dart';
 import 'ui/screens/update_screen.dart';
 import 'ui/screens/departures_screen.dart';
 import 'ui/screens/home_screen.dart';
+import 'ui/screens/map_screen.dart';
 import 'ui/screens/messages_screen.dart';
 import 'ui/screens/more_screen.dart';
 import 'ui/theme.dart';
@@ -93,6 +94,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   static const _tabs = [
     (Icons.search, 'Suche'),
+    (Icons.map_outlined, 'Karte'),
     (Icons.schedule, 'Abfahrten'),
     (Icons.notifications_none, 'Meldungen'),
     (Icons.more_horiz, 'Mehr'),
@@ -115,8 +117,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               const HomeScreen(),
               // Erst beim ersten Öffnen aufbauen: keine Standortabfrage und keine
               // Meldungsabfrage, bevor der Tab gebraucht wird.
-              _visited.contains(1) ? const DeparturesScreen() : const SizedBox.shrink(),
-              _visited.contains(2) ? const MessagesScreen() : const SizedBox.shrink(),
+              // Karte erst beim ersten Öffnen (Standort, Kacheln).
+              _visited.contains(1) ? const MapScreen() : const SizedBox.shrink(),
+              _visited.contains(2) ? const DeparturesScreen() : const SizedBox.shrink(),
+              _visited.contains(3) ? const MessagesScreen() : const SizedBox.shrink(),
               const MoreScreen(),
             ],
           ),
