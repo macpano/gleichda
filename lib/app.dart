@@ -522,9 +522,11 @@ class LocationIntroSheet extends StatelessWidget {
   }
 }
 
-/// Reiter wie ein IndexedStack (Zustand bleibt erhalten), aber beim Wechsel
-/// kurz überblendet statt hart umgeschaltet. Verdeckte Reiter laufen nicht
-/// weiter (TickerMode) und nehmen keine Eingaben an.
+/// Reiter wie ein IndexedStack (Zustand bleibt erhalten): Der alte Reiter
+/// verschwindet sofort, der neue blendet kurz ein und rückt dabei ein kleines
+/// Stück nach oben. Nie liegen zwei Reiter übereinander – die Reiter haben
+/// keinen eigenen Hintergrund, eine Überblendung sah deshalb wie ein Fehler
+/// aus (Nutzerbefund 24.09.2026).
 class _FadeTabs extends StatelessWidget {
   const _FadeTabs({required this.index, required this.children});
 
@@ -532,22 +534,49 @@ class _FadeTabs extends StatelessWidget {
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) {
-    final d = Motion.of(context, Motion.short);
-    return Stack(fit: StackFit.expand, children: [
-      for (var i = 0; i < children.length; i++)
-        IgnorePointer(
-          ignoring: i != index,
-          child: TickerMode(
-            enabled: i == index,
-            child: AnimatedOpacity(
-              duration: d,
-              curve: Motion.curve,
-              opacity: i == index ? 1 : 0,
-              child: ExcludeSemantics(excluding: i != index, child: children[i]),
-            ),
+  Widget build(BuildContext context) => Stack(fit: StackFit.expand, children: [
+        for (var i = 0; i < children.length; i++)
+          Offstage(
+            offstage: i != index,
+            child: TickerMode(enabled: i == index, child: _TabFadeIn(active: i == index, child: children[i])),
           ),
-        ),
-    ]);
+      ]);
+}
+
+class _TabFadeIn extends StatefulWidget {
+  const _TabFadeIn({required this.active, required this.child});
+
+  final bool active;
+  final Widget child;
+
+  @override
+  State<_TabFadeIn> createState() => _TabFadeInState();
+}
+
+class _TabFadeInState extends State<_TabFadeIn> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: Motion.medium, value: 1);
+  late final _fade = CurvedAnimation(parent: _c, curve: Motion.curve);
+  late final _slide = Tween(begin: const Offset(0, 0.012), end: Offset.zero).animate(_fade);
+
+  @override
+  void didUpdateWidget(_TabFadeIn old) {
+    super.didUpdateWidget(old);
+    if (widget.active && !old.active) {
+      if (MediaQuery.of(context).disableAnimations) {
+        _c.value = 1;
+      } else {
+        _c.forward(from: 0);
+      }
+    }
   }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      FadeTransition(opacity: _fade, child: SlideTransition(position: _slide, child: widget.child));
 }
