@@ -234,6 +234,11 @@ void main() {
     final onBoard = withCoords(tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first);
     return shot(t, 'karte', const TripMapScreen(), seed: (r) => r.saveLastTrip(onBoard));
   });
+  testWidgets('Fahrtverlauf aus dem Abfahrtsmonitor', (t) {
+    final ride = trips.first.legs.lastWhere((l) => l.type == LegType.ride);
+    final vehicle = Trip(id: 'abfahrt:test', legs: [ride]);
+    return shot(t, 'fahrtverlauf', const TripScreen(), seed: (r) => r.saveLastTrip(vehicle));
+  });
   testWidgets('Alternativen', (t) => shot(t, 'alternativen', AlternativesScreen(trip: trips.first)));
   testWidgets('Neuer Wecker', (t) => shot(t, 'wecker_neu', const AlarmEditScreen()));
   testWidgets('Suche leer', (t) => shot(t, 'suche_leer', const LocationSearchScreen(title: 'Nach'), seed: seedHome));

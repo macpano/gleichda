@@ -163,3 +163,6 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 ## v0.4.9 (23.09.2026)
 - ✅ Unterwegs: Ankunft über 1 min vorbei = erledigt (kein Rücksprung des Balkens), GPS nur wenn plausibel
   (nicht weit hinter der Uhrzeit), Benachrichtigung zeigt bis zum Ende „Angekommen“
+
+## v0.4.10 (23.09.2026)
+- ✅ Aus dem Abfahrtsmonitor geöffnet: „Fahrtverlauf“ mit Linie und Ziel oben, „ab … · an …“, Zwischenhalte sofort aufgeklappt
