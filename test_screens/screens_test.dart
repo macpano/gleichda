@@ -178,6 +178,7 @@ void main() {
       Future<void> Function(Repository)? seed,
       Future<void> Function(WidgetTester)? act,
       List<Override> overrides = const [],
+      List<Trip>? planned,
       bool offline = false}) async {
     tabBarHeight.value = 0; // Reiterleiste eines vorigen Tests vergessen
     tester.view.physicalSize = const Size(390 * 3, 844 * 3);
@@ -192,7 +193,7 @@ void main() {
     });
     final container = ProviderContainer(overrides: [
       databaseProvider.overrideWithValue(db),
-      transitProvider.overrideWithValue(FakeProvider(trips, board, offline: offline)),
+      transitProvider.overrideWithValue(FakeProvider(planned ?? trips, board, offline: offline)),
       ...overrides,
     ]);
     await tester.pumpWidget(UncontrolledProviderScope(
@@ -240,6 +241,24 @@ void main() {
       (t) => shot(t, 'start_dunkel', const HomeShell(), brightness: Brightness.dark, seed: seedHome));
   testWidgets('Verbindungen', (t) => shot(t, 'verbindungen',
       ConnectionsScreen(from: trips.first.origin, to: trips.first.destination, time: null, arriveBy: false)));
+  testWidgets('Verbindungen: nur Fußweg nach Hause', (t) {
+    // Nah an der Zieladresse liefert die Auskunft nur einen Fußweg (live 0–6 min).
+    final now = DateTime.now();
+    const here = Location(id: 'coord', providerId: 'vrr', name: 'Mein Standort', type: LocationType.coordinate,
+        lat: 51.2533, lon: 7.1326);
+    const home = Location(id: 'streetID:1', providerId: 'vrr', name: 'Friedrich-Ebert-Straße 100',
+        type: LocationType.address, lat: 51.2533, lon: 7.1326);
+    final walk = Trip(id: 'zu-fuss', legs: [
+      Leg(
+        type: LegType.walk,
+        from: StopTime(stop: here, departure: EventTime(planned: now.subtract(const Duration(seconds: 20)))),
+        to: StopTime(stop: home, arrival: EventTime(planned: now.add(const Duration(minutes: 4)))),
+        durationMinutes: 4,
+      ),
+    ]);
+    return shot(t, 'verbindungen_fussweg',
+        const ConnectionsScreen(from: here, to: home, time: null, arriveBy: false), planned: [walk]);
+  });
   testWidgets('Fahrt', (t) => shot(t, 'fahrt', const TripScreen(), seed: seedHome));
   testWidgets('Fahrt dunkel',
       (t) => shot(t, 'fahrt_dunkel', const TripScreen(), brightness: Brightness.dark, seed: seedHome));

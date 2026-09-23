@@ -68,6 +68,15 @@ class TriasProvider implements TransitProvider {
 
   @override
   Future<List<Trip>> planTrip(TripQuery query) async {
+    final trips = await _planTrip(query);
+    // Nah am Ziel ist oft nur der Fußweg selbst eine Verbindung – ist er
+    // länger als die Fußweg-Grenze, findet die Auskunft gar nichts. Dann
+    // lieber ohne Grenze suchen als eine leere Liste zeigen.
+    if (trips.isEmpty && query.maxWalkMinutes != null) return _planTrip(query.withoutWalkLimit());
+    return trips;
+  }
+
+  Future<List<Trip>> _planTrip(TripQuery query) async {
     // Nur Busse ausschließen versteht der Server zuverlässig; Bahnen filtert
     // die App zusätzlich selbst (siehe docs/konzept.md).
     final ptModes = <String>{

@@ -456,7 +456,9 @@ List<Trip> parseTrips(String xml) {
       messages: [for (final id in ids) if (byId[id] != null) byId[id]!],
     ));
   }
-  if (trips.isEmpty && codes.isNotEmpty && !codes.any((c) => c.contains('NOTRIPFOUND'))) {
+  // „-4000“ heißt ebenfalls „keine Verbindung“ (gemessen 23.09.2026: Standort
+  // 150 m vor der Zieladresse, Fußweg-Grenze 3 min – der Fußweg selbst ist länger).
+  if (trips.isEmpty && codes.isNotEmpty && !codes.any((c) => c.contains('NOTRIPFOUND') || c.trim() == '-4000')) {
     throw ProviderException('Auskunft meldet: ${codes.join(', ')}');
   }
   return trips;
