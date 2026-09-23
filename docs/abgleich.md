@@ -205,3 +205,9 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Bildmarke in der App: Zug, Straßenbahn und Bus wieder versetzt. flutter_svg verrechnete `skewX` mit den
   verschachtelten `translate` der Fahrzeuge falsch (alle bündig links); jetzt eine `matrix` je Fahrzeug
   (`assets/logo.svg`, `logo-dark.svg`, `appicon.svg`)
+
+## 0.4.11-vorab.7 (23.09.2026)
+- ✅ Karte steiggenau: Ein Tipp auf einen Steig fragt die Abfahrten mit dessen voller Kennung ab
+  (`de:05124:11376:91:2`); TRIAS liefert dann nur diesen Steig (live 15/15). Vorher wurde nach der Steignummer
+  gefiltert – am Hbf gibt es „2“ mehrfach (Busbahnhof `…:2:2`, Gleis `…:91:2`). Gleiswechsel stehen beim geplanten
+  Steig (`test_live/steig_live_test.dart`)
