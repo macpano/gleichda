@@ -405,6 +405,11 @@ Vor der ersten Store-Veröffentlichung müssen die Pflichten aus dem Abschnitt D
 1. Push-Variante: rein lokal, serverlos oder hybrid?
 2. Kostenlos und Open Source (Transitous nutzbar) oder kommerziell (eigenes MOTIS bzw. VRR-Zustimmung nötig)?
 3. Wie gut beschreibt TRIAS Umleitungen und entfallene Halte im VRR, und wo liefert die EFA mehr? Am Testserver beide vergleichen.
+   **Geprüft 23.09.2026 am Testserver** (`dart run tool/fixtures.dart`, Antworten in `test/fixtures/`):
+   - TRIAS (`openservice-test.vrr.de/static02/trias`) beantwortet `LocationInformationRequest`, `StopEventRequest` und `TripRequest` ohne Zugangsschlüssel. **`TripInfoRequest` lehnt der Server mit HTTP 400 ab** (auch mit Version 1.2 und unter `static03`). Den Fahrtverlauf einer gespeicherten Fahrt holt die App deshalb über die EFA (`XML_TRIPSTOPTIMES_REQUEST`, liefert alle Halte mit Plan- und Echtzeit und Koordinaten; die Uhrzeit im Aufruf ist unkritisch). Rückfall: dieselbe Verbindung per `TripRequest` neu suchen und über Linien und Planzeiten wiederfinden.
+   - Die TRIAS-Fahrtreferenz lässt sich direkt in EFA-Kennungen umsetzen: `wsw:66604::R:w25:266` → line `wsw:66604: :R:w25`, tripCode `266`.
+   - Echtzeit: TRIAS liefert `EstimatedTime` je Halt, Meldungen nur als `PtSituation` im Kontext der Antwort (z. B. „Aufzug außer Betrieb“, DB-Meldungen). Die EFA-Abfahrten nennen Umleitungen zusätzlich in der Linienbeschreibung („(Umleitung Rott)“), `XML_ADDINFO_REQUEST` liefert VRR-weit rund 1100 Meldungen mit Klartext – dafür bleibt die EFA die Quelle der Meldungsliste. Haltausfälle (`NotServicedStop`) kamen in den Stichproben nicht vor; der Parser wertet sie aus, geprüft ist das noch nicht.
+   - Eigenheiten: Die Schwebebahn hat in Abfahrten keinen Liniennamen und heißt in Verbindungen „Schwebebahn“ – die Nummer 60 kommt aus der Linienkennung `wsw:64060`. Die Suche liefert Treffer nicht nach Trefferqualität sortiert („Hauptbahnhof (SEV)“ mit 0,25 vor „Wuppertal Hbf“ mit 0,998); die App sortiert selbst.
 4. Lizenzstatus der VRR-GTFS-Dateien klären oder direkt DELFI-GTFS verwenden.
 5. Testfälle sammeln: Wuppertaler Haltestellen mit häufiger Steig-Verwechslung und aktuelle SEV-Situationen.
 6. Name „Gleichda“ steht fest; Verfügbarkeit in App Store, Google Play, Domain und Markenregister (DPMA, EUIPO) prüfen.

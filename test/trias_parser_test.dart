@@ -124,6 +124,13 @@ void main() {
           isTrue);
     });
 
+    test('Schwebebahn heißt auch in Verbindungen „60“', () {
+      final trips = parseTrips(fixture('trias_trip_alter_markt_vohwinkel.xml'));
+      final sb = trips.expand((t) => t.rides).where((r) => r.line!.mode == TransportMode.suspension);
+      expect(sb, isNotEmpty);
+      expect(sb.every((r) => r.line!.name == '60'), isTrue);
+    });
+
     test('Gespeicherte Verbindung wird in neuen Ergebnissen wiedergefunden', () {
       final trips = parseTrips(fixture('trias_trip_alter_markt_vohwinkel.xml'));
       expect(matchTrip(trips[1], trips), same(trips[1]));

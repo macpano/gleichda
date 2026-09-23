@@ -136,7 +136,8 @@ TransportMode _mode(XmlElement? mode) {
 /// („wsw:64060::R“ → „60“), sonst die Verkehrsmittel-Bezeichnung.
 String _lineName(String? published, String? lineRef, String? modeName) {
   final p = published?.trim() ?? '';
-  if (p.isNotEmpty) {
+  // In Verbindungen steht bei der Schwebebahn „Schwebebahn“ statt der Nummer.
+  if (p.isNotEmpty && (RegExp(r'\d').hasMatch(p) || p != modeName)) {
     // „S 8“ → „S8“: Plaketten sind schmal.
     return p.replaceAllMapped(RegExp(r'^([A-Z]{1,3}) (\d)'), (m) => '${m[1]}${m[2]}');
   }
