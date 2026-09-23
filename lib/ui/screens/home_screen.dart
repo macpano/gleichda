@@ -458,7 +458,7 @@ class LastTripCard extends ConsumerWidget {
       borderRadius: BorderRadius.circular(Radii.card),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TripScreen())),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(settings: const RouteSettings(name: 'fahrt'), builder: (_) => const TripScreen())),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

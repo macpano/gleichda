@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gleichda/background.dart';
 import 'package:gleichda/data/db/database.dart';
 import 'package:gleichda/data/efa/efa_client.dart';
+import 'package:gleichda/data/html_text.dart';
 import 'package:gleichda/data/repository.dart';
 import 'package:gleichda/data/transit_provider.dart';
 import 'package:gleichda/data/trias/trias_parser.dart';
@@ -44,6 +45,14 @@ Leg ride(String from, EventTime dep, String to, EventTime arr, {List<StopTime> v
     );
 
 void main() {
+  test('Verspätung in angezeigten Minuten', () {
+    final p = DateTime(2026, 9, 24, 0, 40);
+    EventTime e(int s) => EventTime(planned: p, estimated: p.add(Duration(seconds: s)), quality: TimeQuality.realtime);
+    expect(e(50).delayMinutes, 0); // 00:40:50 – angezeigt 00:40, also pünktlich
+    expect(e(70).delayMinutes, 1);
+    expect(e(-30).delayMinutes, -1); // 00:39:30
+  });
+
   group('Ersatzverkehr', () {
     Trip sev({List<Message> messages = const []}) => Trip(id: 's', messages: messages, legs: [
           Leg(

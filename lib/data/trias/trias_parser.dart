@@ -5,6 +5,7 @@ import 'package:xml/xml.dart';
 
 import '../../domain/models.dart';
 import '../../domain/product.dart';
+import '../html_text.dart';
 import '../transit_provider.dart';
 
 const _provider = 'vrr-trias';
@@ -190,11 +191,13 @@ List<Message> _situations(XmlElement? context) {
     final number = s.el('SituationNumber')?.innerText.trim() ?? '';
     final summary = s.el('Summary')?.innerText.trim() ?? '';
     if (number.isEmpty || summary.isEmpty) continue;
-    final detail = s.el('Detail')?.innerText.trim();
-    final description = s.el('Description')?.innerText.trim();
+    // TRIAS liefert Meldungstexte teils als HTML („<strong>“, „&auml;“,
+    // „&nbsp;“) – als Klartext zeigen (Nutzerbefund 24.09.2026, Moers).
+    final detail = htmlToText(s.el('Detail')?.innerText);
+    final description = htmlToText(s.el('Description')?.innerText);
     out.add(Message(
       id: number,
-      title: summary.replaceAll(RegExp(r'\.$'), ''),
+      title: (htmlToText(summary) ?? summary).replaceAll('\n', ' ').replaceAll(RegExp(r'\.$'), ''),
       text: (detail != null && detail.isNotEmpty) ? detail : description,
       lineIds: s.deep('LineRef').map((e) => e.innerText.trim()).toSet().toList(),
       stopIds: s.deep('StopPointRef').map((e) => e.innerText.trim()).toSet().toList(),

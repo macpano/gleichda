@@ -125,7 +125,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                 Expanded(
                   child: OneLine(
                     vehicleView
-                        ? 'ab ${trip.origin.label} ${hm(trip.departure.best)} · an ${hm(trip.arrival.best)}'
+                        ? '${hm(trip.departure.best)} – ${hm(trip.arrival.best)} · ${durationText(trip.duration)}'
                         : [
                             '${hm(trip.departure.best)} – ${hm(trip.arrival.best)}',
                             durationText(trip.duration),

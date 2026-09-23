@@ -182,19 +182,29 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
     }
   }
 
+  /// Sofort loslegen: nur die Erlaubnis prüfen, die zuletzt bekannte
+  /// Position zeigen und den Positionsstrom starten. Vorher wartete die
+  /// Ansicht auf einen frischen, genauen GPS-Fix (bis zu 12 s), bevor sie
+  /// überhaupt etwas zeigte.
   Future<void> _startLocation() async {
+    final loc = ref.read(locationServiceProvider);
     try {
-      await ref.read(locationServiceProvider).current();
-      _sub = ref.read(locationServiceProvider).watch().listen((p) {
-        if (!mounted) return;
-        setState(() => _pos = p);
-        _fit();
-        if (_follow) _map.move(LatLng(p.latitude, p.longitude), _map.camera.zoom);
-        _maybeRoute();
-      });
+      await loc.ensureAllowed();
     } on LocationException catch (e) {
       if (mounted) setState(() => _error = e.message);
+      return;
     }
+    void take(Position p) {
+      if (!mounted) return;
+      setState(() => _pos = p);
+      _fit();
+      if (_follow) _map.move(LatLng(p.latitude, p.longitude), _map.camera.zoom);
+      _maybeRoute();
+    }
+
+    _sub = loc.watch().listen(take, onError: (Object _) {});
+    final last = await loc.lastKnown();
+    if (last != null && _pos == null) take(last);
   }
 
   void _fit() {

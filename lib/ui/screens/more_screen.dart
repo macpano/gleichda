@@ -6,6 +6,7 @@ import '../../domain/models.dart';
 import '../../domain/settings.dart';
 import '../../state/providers.dart';
 import '../format.dart';
+import '../../data/feedback.dart' show FeedbackKind;
 import '../theme.dart';
 import '../widgets.dart';
 import 'alarms_screen.dart';
@@ -13,6 +14,7 @@ import 'design_demo_screen.dart';
 import 'places_screen.dart';
 import 'profile_screen.dart';
 import 'subscriptions_screen.dart';
+import 'feedback_screen.dart';
 import 'update_screen.dart';
 import '../../state/updates.dart';
 
@@ -81,6 +83,18 @@ class MoreScreen extends ConsumerWidget {
             onChanged: (v) => updateSettings(ref, (x) => x.copyWith(useLocation: v)),
           ),
           _Row(icon: Icons.delete_outline, label: 'Verlauf löschen', color: c.red, chevron: false, onTap: () => _clearHistory(context, ref)),
+        ]),
+        const SizedBox(height: 16),
+        const SectionTitle('Rückmeldung', small: true),
+        ListGroup(children: [
+          _Row(
+              icon: Icons.lightbulb_outline,
+              label: FeedbackKind.feature.title,
+              onTap: () => push(const FeedbackScreen(kind: FeedbackKind.feature))),
+          _Row(
+              icon: Icons.bug_report_outlined,
+              label: FeedbackKind.bug.title,
+              onTap: () => push(const FeedbackScreen(kind: FeedbackKind.bug))),
         ]),
         const SizedBox(height: 16),
         const SectionTitle('Info', small: true),
@@ -278,6 +292,9 @@ class _TextScreen extends StatelessWidget {
   const _TextScreen.privacy()
       : title = 'Datenschutz',
         items = const [
+          ('Rückmeldungen',
+              'Vorschläge und Fehlermeldungen gehen per E-Mail über den Dienst FormSubmit (formsubmit.co) an den '
+                  'Entwickler – nur dein Text, auf Wunsch deine Antwortadresse sowie App- und Android-Version.'),
           ('Kein Konto, kein Tracking',
               'Gleich.da braucht kein Konto, zeigt keine Werbung und enthält keine Analyse- oder Tracking-Bausteine.'),
           ('Was auf dem Gerät bleibt',

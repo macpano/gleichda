@@ -124,7 +124,7 @@ class _AlternativesScreenState extends ConsumerState<AlternativesScreen> {
 
     void open(Trip t) {
       ref.read(lastTripProvider.notifier).open(t);
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const TripScreen()));
+      Navigator.of(context).pushReplacement(MaterialPageRoute(settings: const RouteSettings(name: 'fahrt'), builder: (_) => const TripScreen()));
     }
 
     Widget group(String title, List<ConnectionItem> list) => Column(

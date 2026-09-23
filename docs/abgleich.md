@@ -321,3 +321,14 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Übergänge sauberer: `FadeSwitch` ohne Überblendung (Platzhalter und Ergebnis lagen kurz übereinander) – der neue
   Zustand blendet ein und rückt leicht nach oben, wie beim Reiterwechsel. Zwischenhalte werden auf- und zugezogen
   (`AnimatedAlign` mit `heightFactor`, geklippt), statt erst zu verschwinden und dann Leere schrumpfen zu lassen
+
+## 0.4.12-vorab.10 (24.09.2026)
+- ✅ Verspätung in angezeigten Minuten (`delayMinutes` schneidet auf die Minute ab): 00:40:50 statt 00:40 ist pünktlich –
+  vorher „+1“ und die gleiche Zeit durchgestrichen
+- ✅ Fahrtverlauf-Kopf „00:40 – 00:48 · 8 min“ statt „ab <langer Name> 00:40 · an …“ (Ankunft war abgeschnitten)
+- ✅ Jede Fahrtansicht heißt „fahrt“: Die Unterwegs-Leiste öffnet eine offene Fahrt nicht erneut
+- ✅ Fußweg: sofort die zuletzt bekannte Position, dann der Positionsstrom (`ensureAllowed`, `lastKnown`); vorher bis zu
+  12 s Warten auf einen frischen GPS-Fix
+- ✅ Meldungen aus TRIAS als Klartext (`htmlToText` für Titel und Text; vorher „&auml;“, „<strong>“)
+- ✅ Mehr → Rückmeldung: „Funktion vorschlagen“ und „Fehler melden“ (`FeedbackScreen`), Versand über FormSubmit an eine
+  Kennung statt Adresse (`feedbackEndpoint`) – noch leer, bis die Kennung eingerichtet ist

@@ -3,10 +3,10 @@
 // per XML_TRIPSTOPTIMES_REQUEST, den der TRIAS-Testserver (TripInfoRequest)
 // nicht beantwortet.
 import 'package:dio/dio.dart';
-import 'package:html/parser.dart' show parseFragment;
 
 import '../../domain/models.dart';
 import '../../domain/product.dart';
+import '../html_text.dart';
 import '../transit_provider.dart';
 import '../trias/trias_parser.dart' show stopAreaId;
 
@@ -360,20 +360,6 @@ List<Message> parseAddInfo(Map<String, dynamic> json) {
     ));
   }
   return out;
-}
-
-/// Klartext aus dem HTML der Meldung: Absätze als Zeilen, Entities aufgelöst.
-String? htmlToText(String? html) {
-  if (html == null || html.trim().isEmpty) return null;
-  final doc = parseFragment(html
-      .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
-      .replaceAll(RegExp(r'</p>|</li>|</div>', caseSensitive: false), '\n'));
-  final text = doc.text ?? '';
-  return text
-      .split('\n')
-      .map((l) => l.replaceAll(RegExp(r'\s+'), ' ').trim())
-      .where((l) => l.isNotEmpty)
-      .join('\n');
 }
 
 /// Linienweg eines Fahrtabschnitts aus XML_TRIP_REQUEST2 (`legs[].coords`).

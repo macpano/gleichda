@@ -176,7 +176,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final t = _trip;
     if (t == null) return;
     await ref.read(lastTripProvider.notifier).open(t);
-    if (mounted) Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TripScreen()));
+    if (mounted) Navigator.of(context).push(MaterialPageRoute(settings: const RouteSettings(name: 'fahrt'), builder: (_) => const TripScreen()));
   }
 
   /// Haltestellen an der Mitte ihrer Steige; nah herangezoomt jeder Steig
