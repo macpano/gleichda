@@ -368,3 +368,8 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   (`OperatorScreen`) – abonnieren ist freiwillig
 - ✅ Abo für ein ganzes Unternehmen (`netz:<Kürzel>`, `lib/domain/subscriptions.dart`): gilt für alle seine Linien, in
   „Meine Linien“ und in der Hintergrundprüfung; in der Abo-Liste mit eigenem Zeichen
+
+## 0.4.13 (24.09.2026)
+- ✅ Kopf der Startseite: Leitsatz kleiner (10) und dicht unter dem Namen, etwa so breit wie er; Name und Leitsatz als
+  Block mittig neben dem Logo (42), kleiner als die Kachel. Streifen-Varianten durch den Schriftzug entworfen und
+  verworfen (Nutzerentscheidung: ohne Strich)
