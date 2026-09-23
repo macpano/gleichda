@@ -137,4 +137,10 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 - Benachrichtigung: Android blendet lautlose Benachrichtigungen (Importance.low) oft aus der Statusleiste
   aus – deshalb Kanal `unterwegs_2` mit normaler Wichtigkeit ohne Ton. „Beenden“ läuft über
   `notificationActionInBackground` und den Port `gleichda_unterwegs`, ohne die App zu öffnen.
+- **Lizenz GPL-3.0** (seit 23.09.2026, `LICENSE`) – Voraussetzung für Transitous.
+- **Transitous (MOTIS)** geprüft 23.09.2026, `https://api.transitous.org/api/v1/` (geocode, stoptimes, plan): Echtzeit
+  Wuppertal 10/12, Köln 11/13, München 11/12, Berlin 4/14 (BVG-U-Bahn meist Plan); Antwort 0,1–0,3 s, Linienwege überall.
+  Schwebebahn dort ohne Echtzeit und als FUNICULAR. Bedingungen: Open Source, nicht kommerziell, ressourcenschonend,
+  User-Agent mit Name/Version/Kontakt (Repo-Adresse), sichtbarer Link auf https://transitous.org/sources/, OSM-Namensnennung.
+  Plan: im VRR weiter TRIAS/EFA, außerhalb Transitous (`MotisProvider`).
 - Kartenkacheln vorläufig FOSSGIS (`tile.openstreetmap.de`), offene Entscheidung im Konzept.
