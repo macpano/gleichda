@@ -120,7 +120,8 @@ class CompanionBar extends StatelessWidget {
                             TextSpan(
                                 text: countdown(step.when!.best, now),
                                 style: context.t.time(14).copyWith(color: whenColor)),
-                            TextSpan(text: ' · ${hm(step.when!.best)}', style: context.t.number(13)),
+                            if (!countdownHasTime(step.when!.best, now))
+                              TextSpan(text: ' · ${hm(step.when!.best)}', style: context.t.number(13)),
                           ],
                           for (final d in detail) TextSpan(text: ' · $d'),
                         ]),

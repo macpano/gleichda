@@ -287,7 +287,7 @@ final companionProvider = NotifierProvider<CompanionController, CompanionState>(
   final header = [if (lineText.isNotEmpty) lineText, if (leg?.direction != null) leg!.direction!].join(' · ');
   final t = step.when?.best;
   final mins = t == null ? '' : countdown(t, now);
-  final when = t == null ? '' : '$mins · ${hm(t)}';
+  final when = t == null ? '' : countdownWithTime(t, now);
   switch (step.phase) {
     case CompanionPhase.onBoard:
       final n = step.stopsLeft ?? 0;

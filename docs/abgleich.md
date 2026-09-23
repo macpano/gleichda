@@ -378,3 +378,9 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Leitsatz wieder etwas vom Namen abgerückt (zu nah in 0.4.13)
 - GitHub aufgeräumt: nur die zwei neuesten regulären Versionen bleiben; `tool/release.sh` löscht bei jedem regulären
   Release die Vorabversionen samt Kennzeichen
+
+## 0.4.15 (24.09.2026)
+- ✅ Benachrichtigung/Leiste: „um 02:56 · 02:56“ – der Countdown enthält ab einer Stunde Vorlauf die Uhrzeit schon.
+  `countdownWithTime`/`countdownHasTime` hängen sie nur noch an, wenn sie fehlt
+- ✅ Animationen flotter: Seite 250 ms (vorher 320), Einblenden 170 ms (220), Zustand 120 ms (150)
+- ✅ `tool/release.sh` räumt nach jedem regulären Release auf: Vorabversionen weg, nur die zwei neuesten regulären bleiben
