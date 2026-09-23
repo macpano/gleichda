@@ -149,7 +149,8 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
   Wuppertal 10/12, Köln 11/13, München 11/12, Berlin 4/14 (BVG-U-Bahn meist Plan); Antwort 0,1–0,3 s, Linienwege überall.
   Schwebebahn dort ohne Echtzeit und als FUNICULAR. Bedingungen: Open Source, nicht kommerziell, ressourcenschonend,
   User-Agent mit Name/Version/Kontakt (Repo-Adresse), sichtbarer Link auf https://transitous.org/sources/, OSM-Namensnennung.
-  Plan: im VRR weiter TRIAS/EFA, außerhalb Transitous (`MotisProvider`).
+  **Umgesetzt (0.4.12):** `MotisProvider` + `AutoProvider` (NRW → VRR, sonst bzw. als Rückfall Transitous). Kennungen
+  aus Transitous tragen `providerId` „motis“ bzw. das Präfix `motis:` (Fahrten, Abfahrten), danach richtet sich die Quelle.
 - Karte: Steige mit genauer Lage über EFA `XML_COORD_REQUEST` `type_1=BUS_POINT` (Kennung `de:05124:11376:91:2`,
   Nummer = letzter Teil, `parent.id` = Haltestelle). Die TRIAS-Koordinate ist die Haltestellenmitte, an großen
   Haltestellen bis 120 m daneben. Unterwegs-Leiste: auf der Startseite über den Reitern (`homeOnTop`), sonst unten.
