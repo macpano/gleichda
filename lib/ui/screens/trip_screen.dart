@@ -11,7 +11,7 @@ import '../theme.dart';
 import '../trip_status.dart';
 import '../widgets.dart';
 import 'alternatives_screen.dart';
-import 'companion_screen.dart';
+import 'companion_card.dart';
 import 'walk_screen.dart';
 
 /// Fahrtdetail der zuletzt geöffneten Fahrt, mit Fahrtverlauf nach
@@ -47,6 +47,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     final fav = ref.watch(_isFavorite((trip.origin, trip.destination))).value ?? false;
     final companion = ref.watch(companionProvider);
     final arrived = trip.arrival.best.isBefore(now);
+    final following = companion.active && companion.tripId == trip.id;
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: () => ref.read(lastTripProvider.notifier).refresh(),
@@ -82,6 +83,10 @@ class _TripScreenState extends ConsumerState<TripScreen> {
               ]),
             ),
             const SizedBox(height: 14),
+            if (following) ...[
+              CompanionCard(trip: trip, now: now, issue: issue),
+              const SizedBox(height: 14),
+            ],
             if (issue != null) ...[
               IssueBanner(issue, onAlternatives: () => openAlternatives(context, trip)),
               const SizedBox(height: 14),
@@ -118,28 +123,35 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: arrived
+      bottomNavigationBar: arrived && !following
           ? null
           : Container(
               decoration: BoxDecoration(color: c.bar, border: Border(top: BorderSide(color: c.hair))),
               padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + MediaQuery.of(context).padding.bottom),
               child: SizedBox(
                 height: 50,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: c.accent,
-                    foregroundColor: c.onAccent,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.card)),
-                  ),
-                  onPressed: () async {
-                    if (!companion.active) await ref.read(companionProvider.notifier).start();
-                    if (context.mounted) {
-                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CompanionScreen()));
-                    }
-                  },
-                  child: Text(companion.active ? 'Unterwegs anzeigen' : 'Losfahren',
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-                ),
+                child: following
+                    ? OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: c.ink,
+                          side: BorderSide(color: c.hair),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.card)),
+                        ),
+                        onPressed: () => ref.read(companionProvider.notifier).stop(),
+                        child: const Text('Begleitung beenden',
+                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                      )
+                    : FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: c.accent,
+                          foregroundColor: c.onAccent,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.card)),
+                        ),
+                        // Startet die Begleitung in der Benachrichtigung; die
+                        // Fahrt bleibt offen und zeigt oben den nächsten Schritt.
+                        onPressed: () => ref.read(companionProvider.notifier).start(),
+                        child: const Text('Losfahren', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                      ),
               ),
             ),
     );
