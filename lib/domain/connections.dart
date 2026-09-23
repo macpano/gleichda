@@ -4,7 +4,10 @@ import 'models.dart';
 enum TransferState { safe, tight, missed, staySeated, guaranteed }
 
 class TransferCheck {
-  const TransferCheck(this.state, this.slackMinutes, this.at);
+  const TransferCheck(this.state, this.slackMinutes, this.at, {this.next});
+
+  /// Abfahrt des Anschlusses (für „steht der Umstieg noch bevor?“).
+  final DateTime? next;
 
   final TransferState state;
 
@@ -61,6 +64,7 @@ List<TransferCheck> checkTransfers(Trip trip, {int transferMinutes = 3, Set<int>
               : TransferState.safe,
       slack,
       legs[i].to.stop,
+      next: dep,
     ));
   }
   return out;
@@ -76,3 +80,10 @@ bool isPassed(StopTime s, DateTime now) {
   final t = (s.departure ?? s.arrival)?.best;
   return t != null && t.isBefore(now);
 }
+
+/// Der nächste noch bevorstehende Umstieg, der nicht erreichbar ist (bzw.
+/// dessen Anschluss ausfällt) – oder null.
+TransferCheck? upcomingMissed(Trip trip, DateTime now, {int transferMinutes = 3, Set<int> guaranteed = const {}}) =>
+    checkTransfers(trip, transferMinutes: transferMinutes, guaranteed: guaranteed)
+        .where((c) => c.state == TransferState.missed && (c.next?.isAfter(now) ?? false))
+        .firstOrNull;

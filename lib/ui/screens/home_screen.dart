@@ -100,7 +100,7 @@ class _Brand extends StatelessWidget {
   /// so hoch wie das Logo – oben bündig mit der Kachel, unten bündig mit ihr
   /// (Nutzervorgabe 24.09.2026). Die Schrift hat über den Großbuchstaben und
   /// unter der Grundlinie Luft; die Verschiebungen gleichen das aus.
-  static const _logo = 46.0;
+  static const _logo = 44.0;
 
   @override
   Widget build(BuildContext context) {
@@ -113,16 +113,16 @@ class _Brand extends StatelessWidget {
         SizedBox(
           height: _logo,
           child: Stack(clipBehavior: Clip.none, children: [
-            const Positioned(left: 0, top: _wordTop, child: Wordmark(size: 32)),
+            const Positioned(left: 0, top: _wordTop, child: Wordmark(size: 35)),
             Positioned(
               left: 2,
               bottom: _tagBottom,
               child: Text('Bus und Bahn in Echtzeit',
                   textScaler: TextScaler.noScaling,
-                  style: TextStyle(fontSize: 13, letterSpacing: 0.2, color: c.muted, height: 1)),
+                  style: TextStyle(fontSize: 13.5, letterSpacing: 0.2, color: c.muted, height: 1)),
             ),
             // Breite für den Stack: so breit wie der Schriftzug.
-            const Opacity(opacity: 0, child: Wordmark(size: 32)),
+            const Opacity(opacity: 0, child: Wordmark(size: 35)),
           ]),
         ),
       ]),
@@ -130,10 +130,10 @@ class _Brand extends StatelessWidget {
   }
 
   /// Oberkante „G“ auf Höhe der Kachel (Rubik: Luft über den Versalien).
-  static const _wordTop = -3.7;
+  static const _wordTop = -3.3;
 
   /// Unterkante des Leitsatzes auf Höhe der Kachel (Luft unter der Grundlinie).
-  static const _tagBottom = -2.0;
+  static const _tagBottom = -3.0;
 }
 
 // --- Suchfelder ---

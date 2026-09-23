@@ -6,9 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../domain/companion.dart';
+import '../domain/connections.dart';
 import '../domain/models.dart';
 import '../domain/product.dart';
 import '../ui/format.dart';
+import '../ui/screens/connections_screen.dart' show buildQuery;
 import '../ui/theme.dart';
 import '../ui/trip_status.dart';
 import '../domain/settings.dart';
@@ -45,6 +47,14 @@ class CompanionController extends Notifier<CompanionState> {
   bool _shown = false;
   DateTime? _gpsUpdated;
 
+  /// Überwachung: welches Problem zuletzt gemeldet wurde und welche
+  /// Alternative dazu gefunden ist.
+  String? _problemKey;
+  String? _alertedKey;
+  Trip? _alternative;
+  DateTime? _altAt;
+  bool _searching = false;
+
   final _port = ReceivePort();
 
   @override
@@ -65,7 +75,26 @@ class CompanionController extends Notifier<CompanionState> {
     ref.listen(lastTripProvider, (_, next) {
       if (state.active) _update();
     });
+    Future.microtask(_resume);
     return const CompanionState();
+  }
+
+  /// Nach einem Neustart der App (Android hat sie beendet): eine laufende
+  /// Begleitung fortsetzen, solange die Fahrt nicht vorbei ist.
+  Future<void> _resume() async {
+    try {
+      final repo = ref.read(repositoryProvider);
+      final id = await repo.setting('unterwegs');
+      if (id == null || id.isEmpty || state.active) return;
+      final s = await ref.read(lastTripProvider.future);
+      if (s == null || s.trip.id != id || arrivedLongAgo(s.trip, DateTime.now())) {
+        await repo.setSetting('unterwegs', '');
+        return;
+      }
+      await start();
+    } catch (_) {
+      // Ohne Datenbank (Tests) nichts fortzusetzen.
+    }
   }
 
   Future<void> start() async {
@@ -73,6 +102,12 @@ class CompanionController extends Notifier<CompanionState> {
     if (trip == null) return;
     await Notifications.requestPermission();
     state = CompanionState(active: true, tripId: trip.id);
+    _problemKey = _alertedKey = null;
+    _alternative = null;
+    // Merken: übersteht, dass Android die App beendet.
+    try {
+      await ref.read(repositoryProvider).setSetting('unterwegs', trip.id);
+    } catch (_) {}
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 15), (_) => _update());
     // Während der Begleitung auch im Hintergrund aktualisieren.
@@ -112,6 +147,11 @@ class CompanionController extends Notifier<CompanionState> {
     _gpsSub = null;
     _lastKey = null;
     state = const CompanionState();
+    _problemKey = _alertedKey = null;
+    _alternative = null;
+    try {
+      await ref.read(repositoryProvider).setSetting('unterwegs', '');
+    } catch (_) {}
     ref.read(lastTripProvider.notifier).keepAlive = false;
     await Notifications.stopCompanion();
   }
@@ -147,7 +187,8 @@ class CompanionController extends Notifier<CompanionState> {
       return;
     }
     final text = companionTexts(s.trip, step, now);
-    final issue = tripIssue(s.trip, lost: s.lost);
+    final problem = await _watch(s.trip, now);
+    final issue = problem ?? tripIssue(s.trip, lost: s.lost);
     final percent = (step.progress * 100).round();
     _arrivedAt = null;
     final key = '${text.where}|${text.when}|$percent|${issue?.title}|${step.walking}';
@@ -165,6 +206,73 @@ class CompanionController extends Notifier<CompanionState> {
       reason: issue?.title,
     );
     _shown = true;
+  }
+
+  /// Überwacht die Verbindung: Ist der nächste Umstieg nicht mehr erreichbar
+  /// oder fällt eine Fahrt aus, sucht sie im Hintergrund eine Alternative ab
+  /// dem nächsten Halt bzw. dem Standort (höchstens alle 2 min neu) und
+  /// meldet sie einmal je Problem mit Ton.
+  Future<TripIssue?> _watch(Trip trip, DateTime now) async {
+    final settings = ref.read(settingsProvider).value ?? const AppSettings();
+    final p = ref.read(transitProvider);
+    Set<int> guaranteed = const {};
+    try {
+      guaranteed = await p.guaranteedConnections(trip);
+    } catch (_) {}
+    final missed = upcomingMissed(trip, now,
+        transferMinutes: settings.transferPace.transferMinutes, guaranteed: guaranteed);
+    final cancelled = tripIssue(trip)?.level == IssueLevel.cancelled ? tripIssue(trip) : null;
+    if (missed == null && cancelled == null) {
+      _problemKey = null;
+      _alternative = null;
+      return null;
+    }
+    final title = missed != null ? 'Anschluss in ${missed.at.name} nicht erreichbar' : cancelled!.title;
+    final key = '${trip.id}|$title';
+    if (key != _problemKey) {
+      _problemKey = key;
+      _alternative = null;
+      _altAt = null;
+    }
+    if (!_searching && (_altAt == null || now.difference(_altAt!) > const Duration(minutes: 2))) {
+      _searching = true;
+      _altAt = now;
+      _findAlternative(trip, now).then((alt) {
+        _searching = false;
+        if (!state.active || _problemKey != key) return;
+        _alternative = alt;
+        if (alt != null && _alertedKey != key) {
+          _alertedKey = key;
+          Notifications.showMessage(
+            id: 4711,
+            title: title,
+            body: 'Alternative: ${alternativeText(alt)}. Tippen für alle Alternativen.',
+            payload: 'alternativen',
+          );
+        }
+        _lastKey = null;
+        _update();
+      }, onError: (Object _) {
+        _searching = false;
+      });
+    }
+    final alt = _alternative;
+    return TripIssue(IssueLevel.cancelled, alt == null ? title : '$title · Alternative ${alternativeShort(alt)}');
+  }
+
+  Future<Trip?> _findAlternative(Trip trip, DateTime now) async {
+    final start = alternativeStart(trip, now, gps: state.freshGps(now));
+    if (start == null) return null;
+    final settings = ref.read(settingsProvider).value ?? const AppSettings();
+    // Dieselben Einstellungen wie die normale Suche (Profil, Fußweg).
+    final found = await ref
+        .read(transitProvider)
+        .planTrip(buildQuery(from: start.from, to: trip.destination, time: start.time, settings: settings));
+    final ok = found.where((t) =>
+        !t.departure.best.isBefore(start.time.subtract(const Duration(minutes: 1))) &&
+        upcomingMissed(t, now, transferMinutes: settings.transferPace.transferMinutes) == null);
+    if (ok.isEmpty) return null;
+    return ok.reduce((a, b) => a.arrival.best.isBefore(b.arrival.best) ? a : b);
   }
 }
 
@@ -210,4 +318,19 @@ final companionProvider = NotifierProvider<CompanionController, CompanionState>(
     case CompanionPhase.arrived:
       return (header: header, where: 'Angekommen: ${step.where.stop.name}', when: '', headline: 'Angekommen');
   }
+}
+
+/// „604 um 18:42 ab Alter Markt, an 19:10“ – die erste Fahrt der Alternative.
+String alternativeText(Trip t) {
+  final r = t.rides.firstOrNull;
+  if (r == null) return 'zu Fuß, an ${hm(t.arrival.best)}';
+  final dep = r.from.departure?.best ?? t.departure.best;
+  return '${lineTitle(r.line!)} um ${hm(dep)} ab ${r.from.stop.name}, an ${hm(t.arrival.best)}';
+}
+
+/// Kurzform für die laufende Benachrichtigung: „604 18:42“.
+String alternativeShort(Trip t) {
+  final r = t.rides.firstOrNull;
+  if (r == null) return 'zu Fuß';
+  return '${r.line?.name ?? ''} ${hm(r.from.departure?.best ?? t.departure.best)}';
 }

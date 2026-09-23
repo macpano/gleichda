@@ -181,6 +181,34 @@ void main() {
       expect(filled.legs.first.from.stop.lat, isNull); // Fahrt beginnt an der Haltestelle
     });
 
+    test('bevorstehender verpasster Umstieg; vorbei oder gesichert zählt nicht', () {
+      final t = trip(delay: 5); // 0 min am selben Halt → nicht erreichbar
+      expect(upcomingMissed(t, at(14, 5).planned)?.at.id, 'B');
+      expect(upcomingMissed(t, at(14, 16).planned), isNull); // Anschluss schon weg
+      expect(upcomingMissed(t, at(14, 5).planned, guaranteed: {1}), isNull);
+      expect(upcomingMissed(trip(), at(14, 5).planned), isNull);
+    });
+
+    test('Alternativen: im Fahrzeug ab dem nächsten Halt, beim Umsteigen ab dem Halt, vorher ab Standort', () {
+      final t = Trip(id: 'a', legs: [
+        Leg(
+          type: LegType.walk,
+          from: StopTime(stop: const Location(id: 'home', providerId: 't', name: 'Start', type: LocationType.coordinate), departure: at(13, 50)),
+          to: StopTime(stop: stop('A'), arrival: at(13, 58)),
+          durationMinutes: 8,
+        ),
+        ride('A', at(14, 0), 'C', at(14, 20), via: [StopTime(stop: stop('B'), arrival: at(14, 10), departure: at(14, 10))]),
+        ride('C', at(14, 25), 'D', at(14, 40)),
+      ]);
+      expect(alternativeStart(t, at(14, 5).planned)!.from.id, 'B'); // unterwegs, nächster Halt B
+      expect(alternativeStart(t, at(14, 5).planned)!.time, at(14, 10).planned);
+      expect(alternativeStart(t, at(14, 22).planned)!.from.id, 'C'); // Umstieg in C
+      const gps = (lat: 51.25, lon: 7.15);
+      final before = alternativeStart(t, at(13, 52).planned, gps: gps)!;
+      expect(before.from.type, LocationType.coordinate); // vor dem Einsteigen: eigener Standort
+      expect(before.from.lat, 51.25);
+    });
+
     test('mit Umsteigeweg zählt die Gehzeit statt der persönlichen Umsteigezeit', () {
       expect(checkTransfers(trip(walk: 4)).single.state, TransferState.tight); // 5 − 4 = 1
       expect(checkTransfers(trip(walk: 6)).single.state, TransferState.missed);
