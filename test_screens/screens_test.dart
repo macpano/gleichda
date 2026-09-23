@@ -252,6 +252,14 @@ void main() {
         ProviderScope.containerOf(t.element(find.byType(HomeShell))).read(searchTimeProvider.notifier).set(
             SearchTime(time: DateTime(now.year, now.month, now.day + 1, 11, 38), arriveBy: true));
       }));
+  testWidgets('Reiterwechsel mittendrin', (t) => shot(t, 'reiterwechsel', const HomeShell(),
+      seed: seedHome,
+      act: (t) async {
+        await t.tap(find.text('Abfahrten').last);
+        await t.pump();
+        await t.pump(const Duration(milliseconds: 80));
+      },
+      settle: false));
   testWidgets('Start dunkel',
       (t) => shot(t, 'start_dunkel', const HomeShell(), brightness: Brightness.dark, seed: seedHome));
   testWidgets('Verbindungen', (t) => shot(t, 'verbindungen',

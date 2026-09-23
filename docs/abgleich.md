@@ -311,3 +311,8 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 ## 0.4.12-vorab.7 (24.09.2026)
 - ✅ Startseite: Die Messung der Suchzeile nutzte nicht die Schrift der Umgebung und zeigte „Optionen“ schon bei „Jetzt“
   nur als Symbol. `tool/release.sh` lässt jetzt auch die Bildschirmfoto-Tests laufen (fehlte – so rutschte das durch)
+
+## 0.4.12-vorab.8 (24.09.2026)
+- ✅ Reiterwechsel ohne Überlagerung: Die Überblendung ließ zwei Reiter halbdurchsichtig übereinander stehen (Reiter haben
+  keinen eigenen Hintergrund). Jetzt „fade through“: der alte verschwindet sofort, der neue blendet ein und rückt leicht
+  nach oben (`_FadeTabs`, Bildschirmfoto `reiterwechsel` mitten im Wechsel)
