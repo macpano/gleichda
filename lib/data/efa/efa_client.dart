@@ -135,7 +135,36 @@ class EfaClient {
 
   /// Gemeindeschlüssel (OMC) der Haltestellen nahe einer Koordinate
   /// (XML_COORD_REQUEST): „placeID:5954020:2“ → „5954020“ (Herdecke).
-  Future<Set<String>> placesNear(double lat, double lon, {int radiusMeters = 1500}) async {
+  Future<Set<String>> placesNear(double lat, double lon, {int radiusMeters = 1500}) async =>
+      {for (final s in await stopsNear(lat, lon, radiusMeters: radiusMeters)) ?s.omc};
+
+  /// Steige (Haltepunkte) im Umkreis mit genauer Lage (XML_COORD_REQUEST,
+  /// BUS_POINT). Die Haltestellenmitte aus TRIAS liegt an großen Haltestellen
+  /// bis zu 120 m daneben (gemessen 23.09.2026, Hist. Stadthalle).
+  Future<List<Platform>> platformsNear(double lat, double lon, {int radiusMeters = 800}) async {
+    final json = await _get('XML_COORD_REQUEST', {
+      'coord': '${lon.toStringAsFixed(5)}:${lat.toStringAsFixed(5)}:WGS84[dd.ddddd]',
+      'inclFilter': '1',
+      'type_1': 'BUS_POINT',
+      'radius_1': '$radiusMeters',
+      'max': '300',
+    });
+    return [
+      for (final l in (json['locations'] as List?) ?? const [])
+        if (l is Map && l['id'] is String && l['coord'] is List && (l['coord'] as List).length == 2)
+          Platform(
+            id: l['id'] as String,
+            stopId: ((l['parent'] as Map?)?['id'] as String?) ?? stopAreaIdOf(l['id'] as String),
+            name: (l['id'] as String).split(':').last,
+            direction: l['name'] as String?,
+            lat: ((l['coord'] as List)[0] as num).toDouble(),
+            lon: ((l['coord'] as List)[1] as num).toDouble(),
+          ),
+    ];
+  }
+
+  /// Nächste Haltestellen (Kennung und Gemeinde) nahe einer Koordinate.
+  Future<List<({String id, String? omc})>> stopsNear(double lat, double lon, {int radiusMeters = 1500}) async {
     final json = await _get('XML_COORD_REQUEST', {
       'coord': '${lon.toStringAsFixed(5)}:${lat.toStringAsFixed(5)}:WGS84[dd.ddddd]',
       'inclFilter': '1',
@@ -143,10 +172,19 @@ class EfaClient {
       'radius_1': '$radiusMeters',
       'max': '3',
     });
-    return {
+    return [
       for (final l in (json['locations'] as List?) ?? const [])
-        if (l is Map) ?omcFromPlaceId(((l['parent'] as Map?)?['id']) as String?),
-    };
+        if (l is Map && l['id'] is String)
+          (id: l['id'] as String, omc: omcFromPlaceId(((l['parent'] as Map?)?['id']) as String?)),
+    ];
+  }
+
+  /// Alle aktuellen Meldungen im VRR (gut 1000, rund 4 MB) – nur für eine
+  /// einzelne Linie, weil die EFA nicht nach Linie filtern kann (geprüft
+  /// 23.09.2026: filterLine, filterPNLineDir u. a. wirkungslos).
+  Future<List<Message>> allMessages() async {
+    final json = await _get('XML_ADDINFO_REQUEST', {'filterPublicationStatus': 'current'});
+    return parseAddInfo(json);
   }
 
   /// Linien zum Suchbegriff (Liniennummer), deutschlandweit.
@@ -415,4 +453,10 @@ List<Line> parseServingLines(Map<String, dynamic> json) {
 String? omcFromPlaceId(String? id) {
   final m = RegExp(r'^placeID:(\d{6,8}):').firstMatch(id ?? '');
   return m?.group(1);
+}
+
+/// „de:05124:11376:91:2“ → „de:05124:11376“.
+String stopAreaIdOf(String id) {
+  final p = id.split(':');
+  return p.length >= 3 ? p.take(3).join(':') : id;
 }

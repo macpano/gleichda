@@ -17,17 +17,33 @@ enum _Filter { all, myLines, myStops }
 /// Gilt erst in der Zukunft (z. B. „ab 25.09.“).
 bool _upcoming(Message m, DateTime now) => m.validFrom != null && m.validFrom!.isAfter(now);
 
-/// Abschnitte der Liste: „In deiner Nähe“, „Weitere in der Umgebung“,
-/// „Demnächst“. Ohne Standort (keine Linien in der Nähe) eine Liste ohne Titel.
+/// Abschnitte der Liste: „In deiner Nähe“ (Linien, die hier halten), dann je
+/// Verkehrsunternehmen der Umgebung, allgemeine Meldungen, zuletzt
+/// „Demnächst“. Ohne Standort eine Liste ohne Titel.
 List<(String?, List<Message>)> _sections(List<Message> list, MessagesState state, DateTime now) {
   final current = list.where((m) => !_upcoming(m, now)).toList();
   final upcoming = list.where((m) => _upcoming(m, now)).toList()
     ..sort((a, b) => a.validFrom!.compareTo(b.validFrom!));
+  if (state.nearLines.isEmpty && state.areaNetworks.isEmpty) {
+    return [(null, current), ('Demnächst', upcoming)];
+  }
   final near = current.where(state.isNear).toList();
   final rest = current.where((m) => !state.isNear(m)).toList();
+  final byNetwork = <String, List<Message>>{};
+  final general = <Message>[];
+  for (final m in rest) {
+    final net = state.networkOf(m);
+    if (net == null) {
+      general.add(m);
+    } else {
+      byNetwork.putIfAbsent(net, () => []).add(m);
+    }
+  }
+  final nets = byNetwork.keys.toList()..sort((a, b) => byNetwork[b]!.length.compareTo(byNetwork[a]!.length));
   return [
-    if (near.isNotEmpty) ('In deiner Nähe', near),
-    (near.isEmpty ? null : 'Weitere in der Umgebung', rest),
+    ('In deiner Nähe', near),
+    for (final n in nets) (state.operators[n] ?? n.toUpperCase(), byNetwork[n]!),
+    ('Allgemein', general),
     ('Demnächst', upcoming),
   ];
 }
@@ -154,7 +170,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
           if (state != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text('Quelle: VRR-Auskunft (EFA). „In deiner Nähe“: Linien, die an Haltestellen im Umkreis von 1,5 km halten.',
+              child: Text('Quelle: VRR-Auskunft (EFA). „In deiner Nähe“: Linien an Haltestellen im Umkreis von 1,5 km; darunter die Verkehrsunternehmen der Umgebung.',
                   style: TextStyle(fontSize: 12, color: c.muted)),
             ),
         ],

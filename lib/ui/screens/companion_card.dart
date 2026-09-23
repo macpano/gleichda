@@ -21,7 +21,11 @@ class CompanionBar extends StatelessWidget {
     required this.onOpen,
     this.issue,
     this.gps,
+    this.bottomPadding = true,
   });
+
+  /// Unteren Bildschirmrand einrechnen (ganz unten), nicht über den Reitern.
+  final bool bottomPadding;
 
   final Trip trip;
   final DateTime now;
@@ -70,7 +74,7 @@ class CompanionBar extends StatelessWidget {
     const line = TextStyle(height: 1.25);
     return Container(
       decoration: BoxDecoration(color: c.bar, border: Border(top: BorderSide(color: c.hair, width: 0.5))),
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
+      padding: EdgeInsets.only(bottom: bottomPadding ? MediaQuery.of(context).padding.bottom : 0),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         // Fortschritt bis zum Ausstieg bzw. zur Abfahrt.
         LinearProgressIndicator(

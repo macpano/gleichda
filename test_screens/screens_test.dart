@@ -14,7 +14,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gleichda/app.dart';
 import 'package:gleichda/data/db/database.dart';
-import 'package:gleichda/data/efa/efa_client.dart' show parseAddInfo;
+import 'package:gleichda/data/efa/efa_client.dart' show parseAddInfo, lineKey;
 import 'package:gleichda/data/repository.dart';
 import 'package:gleichda/data/transit_provider.dart';
 import 'package:gleichda/data/trias/trias_parser.dart';
@@ -28,6 +28,7 @@ import 'package:gleichda/ui/screens/alarms_screen.dart';
 import 'package:gleichda/ui/screens/alternatives_screen.dart';
 import 'package:gleichda/state/companion.dart';
 import 'package:gleichda/ui/screens/location_search_screen.dart';
+import 'package:gleichda/ui/screens/line_screen.dart';
 import 'package:gleichda/ui/screens/map_screen.dart';
 import 'package:gleichda/ui/screens/messages_screen.dart';
 import 'package:gleichda/ui/screens/more_screen.dart';
@@ -98,6 +99,19 @@ class FakeProvider implements TransitProvider {
 
   @override
   Future<List<Line>> linesNear(GeoPoint near) async => const [];
+
+  @override
+  Future<List<m.Platform>> platformsNear(GeoPoint near, {int radiusMeters = 800}) async => const [
+        m.Platform(id: 'de:05124:11376:91:2', stopId: 'de:05124:11376', name: '2', lat: 51.25453, lon: 7.14995),
+        m.Platform(id: 'de:05124:11376:91:3', stopId: 'de:05124:11376', name: '3', lat: 51.25442, lon: 7.15001),
+      ];
+
+  @override
+  Future<List<Line>> linesAround(GeoPoint near) async => const [];
+
+  @override
+  Future<List<Message>> messagesForLine(String lineKey) async =>
+      board.messages.where((m) => m.lineIds.contains(lineKey)).toList();
 
   @override
   Future<List<Line>> searchLines(String query, {GeoPoint? near}) async => const [
@@ -258,6 +272,18 @@ void main() {
   testWidgets('Karte (Reiter)', (t) => shot(t, 'karte_reiter', const Scaffold(body: MapScreen())));
   testWidgets('Karte: Haltestelle angetippt', (t) => shot(t, 'karte_haltestelle', const Scaffold(body: MapScreen()),
       act: (t) async => t.tap(find.text('H').first)));
+  testWidgets('Karte: Steige nah', (t) => shot(t, 'karte_steige', const Scaffold(body: MapScreen()),
+      act: (t) async {
+        final state = t.state(find.byType(MapScreen)) as dynamic;
+        state.debugZoom(17.5);
+        await t.pump(const Duration(seconds: 1));
+      }));
+  testWidgets('Linie ohne Abo', (t) {
+    final d = board.departures.firstWhere(
+        (d) => board.messages.any((m) => m.lineIds.contains(lineKey(d.line.id))),
+        orElse: () => board.departures.first);
+    return shot(t, 'linie', LineScreen(line: d.line));
+  });
   testWidgets('Alternativen', (t) => shot(t, 'alternativen', AlternativesScreen(trip: trips.first)));
   testWidgets('Neuer Wecker', (t) => shot(t, 'wecker_neu', const AlarmEditScreen()));
   testWidgets('Suche leer', (t) => shot(t, 'suche_leer', const LocationSearchScreen(title: 'Nach'), seed: seedHome));

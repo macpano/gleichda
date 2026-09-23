@@ -11,6 +11,7 @@ import '../../state/location.dart';
 import '../../state/providers.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'line_screen.dart';
 
 /// Linie suchen und abonnieren: Nummer eingeben („604“, „CE64“, „S8“),
 /// Treffer mit Linienverlauf, rechts abonnieren.
@@ -100,7 +101,10 @@ class _LineSearchScreenState extends ConsumerState<LineSearchScreen> {
                   ? Padding(
                       padding: const EdgeInsets.all(14),
                       child: SizedBox(
-                          width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: c.muted)),
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: c.muted),
+                      ),
                     )
                   : null,
             ),
@@ -110,24 +114,28 @@ class _LineSearchScreenState extends ConsumerState<LineSearchScreen> {
             Notice(_error!)
           else if (results == null)
             Text(
-              'Gesucht wird deutschlandweit; Linien in deiner Nähe stehen oben. Abonnierte Linien melden sich, '
-              'sobald es neue Störungen oder Umleitungen gibt.',
+              'Gesucht wird deutschlandweit; Linien in deiner Nähe stehen oben. Ein Tipp auf eine Linie zeigt '
+              'ihre aktuellen Störungen. Abonnierte Linien melden sich, sobald es neue Störungen oder Umleitungen gibt.',
               style: context.t.secondary.copyWith(color: c.muted, height: 1.4),
             )
           else if (results.isEmpty && !_loading)
             const Notice('Keine Linie gefunden.')
           else
-            ListGroup(children: [
-              for (final l in results)
-                _LineRow(
-                  line: l,
-                  subscribed: subKeys.contains(lineKey(l.id)),
-                  onToggle: (on) => on
-                      ? ref.read(repositoryProvider).subscribe(
-                          Subscription(lineId: lineKey(l.id), providerId: 'vrr', lineName: l.name))
-                      : ref.read(repositoryProvider).unsubscribe(lineKey(l.id)),
-                ),
-            ]),
+            ListGroup(
+              children: [
+                for (final l in results)
+                  _LineRow(
+                    line: l,
+                    subscribed: subKeys.contains(lineKey(l.id)),
+                    onToggle: (on) => on
+                        ? ref
+                              .read(repositoryProvider)
+                              .subscribe(Subscription(lineId: lineKey(l.id), providerId: 'vrr', lineName: l.name))
+                        : ref.read(repositoryProvider).unsubscribe(lineKey(l.id)),
+                    onOpen: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => LineScreen(line: l))),
+                  ),
+              ],
+            ),
         ],
       ),
     );
@@ -135,11 +143,12 @@ class _LineSearchScreenState extends ConsumerState<LineSearchScreen> {
 }
 
 class _LineRow extends StatelessWidget {
-  const _LineRow({required this.line, required this.subscribed, required this.onToggle});
+  const _LineRow({required this.line, required this.subscribed, required this.onToggle, required this.onOpen});
 
   final Line line;
   final bool subscribed;
   final ValueChanged<bool> onToggle;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -152,36 +161,25 @@ class _LineRow extends StatelessWidget {
       else if (line.operator != null)
         line.operator!,
     ].join(' · ');
-    return SizedBox(
-      height: 56,
-      child: Padding(
-        padding: const EdgeInsets.only(left: 16, right: 8),
-        child: Row(children: [
-          LineBadge(line),
-          const SizedBox(width: 12),
-          Expanded(child: OneLine(sub, style: TextStyle(fontSize: 14, color: c.ink2))),
-          const SizedBox(width: 8),
-          // Umschalter: abonniert = gefüllt mit Haken, ein Tipp bestellt ab.
-          SizedBox(
-            width: 120,
-            height: 34,
-            child: TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: subscribed ? c.onAccent : c.accent,
-                backgroundColor: subscribed ? c.accent : Colors.transparent,
-                side: subscribed ? null : BorderSide(color: c.accent.withValues(alpha: 0.5)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17)),
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+    // Tipp auf die Zeile zeigt die Störungen der Linie, ohne abonnieren zu müssen.
+    return InkWell(
+      onTap: onOpen,
+      child: SizedBox(
+        height: 56,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 16, right: 8),
+          child: Row(
+            children: [
+              LineBadge(line),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OneLine(sub, style: TextStyle(fontSize: 14, color: c.ink2)),
               ),
-              onPressed: () => onToggle(!subscribed),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(subscribed ? Icons.check : Icons.add, size: 16),
-                const SizedBox(width: 4),
-                Text(subscribed ? 'Abonniert' : 'Abonnieren', style: const TextStyle(fontSize: 13.5)),
-              ]),
-            ),
+              const SizedBox(width: 8),
+              SubscribeButton(subscribed: subscribed, onToggle: onToggle),
+            ],
           ),
-        ]),
+        ),
       ),
     );
   }

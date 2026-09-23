@@ -179,3 +179,14 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Meldungen nach Nähe: „In deiner Nähe“ = Linien an Haltestellen im Umkreis von 1,5 km, „Weitere in der Umgebung“ =
   Linien derselben Verkehrsbetriebe; fremde Betriebe (unter Hagen z. B. MVG aus Iserlohn/Hemer) und Nachbarorte ohne
   Bezug fallen weg. Gemessen Hagen-Boele: 82 → 2 Meldungen (539 und 518/519 Herdecke)
+
+## 0.4.11-vorab.4 (23.09.2026)
+- ✅ Meldungen je Verkehrsunternehmen der Umgebung: „In deiner Nähe“, dann ein Abschnitt je Betrieb, dessen Linien im
+  Umkreis von 2,5 km halten (Gemeinden weiter aus 5 km), dann „Allgemein“ und „Demnächst“
+- ✅ Linie suchen: Tipp auf eine Linie zeigt ihre aktuellen und angekündigten Störungen, ohne sie zu abonnieren
+  (Abonnieren oben rechts). Alle Meldungen (EFA ohne Ortsfilter, ≈ 4 MB) höchstens alle 10 min
+- ✅ Karte: Haltestellen an der Mitte ihrer echten Steige (EFA `XML_COORD_REQUEST` `type_1=BUS_POINT`); die
+  TRIAS-Mitte lag an großen Haltestellen bis zu 120 m daneben. Ab Zoom 16,5 jeder Steig einzeln mit Nummer,
+  Tipp zeigt nur dessen Abfahrten
+- ✅ Reiter unten verschieben sich nie: Auf der Startseite steht die Unterwegs-Leiste über den Reitern, in
+  Unterseiten ganz unten

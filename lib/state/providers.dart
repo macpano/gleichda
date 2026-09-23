@@ -264,7 +264,12 @@ final alarmsProvider = StreamProvider<List<Alarm>>((ref) => ref.watch(repository
 /// Meldungsliste mit Zeitpunkt des Abrufs.
 class MessagesState {
   const MessagesState(this.messages, this.at,
-      {this.failed = false, this.error, this.nearLines = const {}, this.homeRegion});
+      {this.failed = false,
+      this.error,
+      this.nearLines = const {},
+      this.homeRegion,
+      this.areaNetworks = const {},
+      this.operators = const {}});
 
   final List<Message> messages;
   final DateTime at;
@@ -277,21 +282,32 @@ class MessagesState {
   /// Eigener Ort (Gemeindeschlüssel).
   final String? homeRegion;
 
+  /// Verkehrsunternehmen der Umgebung (Netzkürzel wie „hst“, „wsw“, „ddb“).
+  final Set<String> areaNetworks;
+
+  /// Name je Netzkürzel („hst“ → „Hagener Straßenbahn“).
+  final Map<String, String> operators;
+
   /// Betrifft eine Linie, die in der Nähe hält.
   bool isNear(Message m) => m.lineIds.any(nearLines.contains);
 
-  /// Verkehrsbetriebe der Linien in der Nähe („hst“, „wsw“, „ddb“ …).
-  Set<String> get nearNetworks => {for (final k in nearLines) k.split(':').first};
+  /// Verkehrsunternehmen der Umgebung; ohne Umgebungsdaten die der Linien
+  /// in der Nähe.
+  Set<String> get networks =>
+      areaNetworks.isNotEmpty ? areaNetworks : {for (final k in nearLines) k.split(':').first};
+
+  /// Erstes Unternehmen der Umgebung, das die Meldung betrifft.
+  String? networkOf(Message m) =>
+      m.lineIds.map((k) => k.split(':').first).where(networks.contains).firstOrNull;
 
   /// Gehört in die Liste „Alle“: betrifft eine Linie in der Nähe, eine Linie
-  /// derselben Verkehrsbetriebe oder ist eine allgemeine Meldung des eigenen
-  /// Orts. Die EFA führt unter einer Stadt auch fremde Betriebe (unter Hagen
-  /// z. B. MVG-Meldungen aus Iserlohn und Hemer) – die fallen so heraus.
+  /// eines Verkehrsunternehmens der Umgebung oder ist eine allgemeine Meldung
+  /// des eigenen Orts. Fremde Netze fallen heraus.
   bool isRelevant(Message m) {
-    if (nearLines.isEmpty) return true; // ohne Standort: alles
+    if (nearLines.isEmpty && areaNetworks.isEmpty) return true; // ohne Standort: alles
     if (isNear(m)) return true;
     if (m.lineIds.isEmpty) return homeRegion == null || m.regions.contains(homeRegion);
-    return m.lineIds.any((k) => nearNetworks.contains(k.split(':').first));
+    return networkOf(m) != null;
   }
 }
 
@@ -313,19 +329,27 @@ class MessagesController extends AsyncNotifier<MessagesState> {
     final repo = ref.read(repositoryProvider);
     var regions = <String>[];
     var near = <String>{};
+    final networks = <String>{};
+    final operators = <String, String>{};
     try {
       final here = await ref.read(locationServiceProvider).current(preferRecent: true);
       final at = (lat: here.lat, lon: here.lon);
-      final results = await Future.wait([p.regionsOf(at), p.linesNear(at)]);
+      final results = await Future.wait([p.regionsOf(at), p.linesNear(at), p.linesAround(at)]);
       regions = results[0] as List<String>;
       near = {for (final l in results[1] as List<Line>) lineKey(l.id)};
+      for (final l in [...results[1] as List<Line>, ...results[2] as List<Line>]) {
+        final net = lineKey(l.id).split(':').first;
+        networks.add(net);
+        operators.putIfAbsent(net, () => net == 'ddb' ? 'Deutsche Bahn' : (l.operator ?? net.toUpperCase()));
+      }
       if (regions.isNotEmpty) await repo.setSetting('messagesRegions', regions.join(','));
     } catch (_) {
       // Ohne Standort: zuletzt genutzte Gebiete.
     }
     if (regions.isEmpty) regions = await savedMessageRegions(repo);
     final list = await p.messages(regions: regions);
-    return MessagesState(list, DateTime.now(), nearLines: near, homeRegion: regions.firstOrNull);
+    return MessagesState(list, DateTime.now(),
+        nearLines: near, homeRegion: regions.firstOrNull, areaNetworks: networks, operators: operators);
   }
 
   Future<void> refresh() async {
@@ -336,7 +360,12 @@ class MessagesController extends AsyncNotifier<MessagesState> {
       state = old == null
           ? AsyncError(e, StackTrace.current)
           : AsyncData(MessagesState(old.messages, old.at,
-              failed: true, error: e.message, nearLines: old.nearLines, homeRegion: old.homeRegion));
+              failed: true,
+              error: e.message,
+              nearLines: old.nearLines,
+              homeRegion: old.homeRegion,
+              areaNetworks: old.areaNetworks,
+              operators: old.operators));
     }
   }
 }

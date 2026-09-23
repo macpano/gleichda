@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../data/efa/efa_client.dart' show stopAreaIdOf;
 import '../../data/transit_provider.dart';
 import '../../domain/models.dart';
 import '../../state/location.dart';
@@ -31,6 +32,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   final _map = MapController();
   Timer? _debounce;
   List<Location> _stops = const [];
+
+  /// Steige mit genauer Lage (EFA); die Haltestelle steht an deren Mitte.
+  List<Platform> _platforms = const [];
   bool _loadingStops = false;
   LatLng? _me;
 
@@ -40,6 +44,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   /// Ab dieser Zoomstufe werden Haltestellen geladen (sonst zu viele).
   static const _minZoom = 14.5;
+
+  /// Ab dieser Zoomstufe jeder Steig einzeln statt einer Haltestelle.
+  static const _platformZoom = 16.5;
+  bool _detail = false;
 
   /// Wuppertal Hbf, bis der Standort da ist.
   static const _fallback = LatLng(51.2544, 7.1495);
@@ -85,10 +93,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final radius = math.min(3000, const Distance().as(LengthUnit.Meter, center, corner)).round();
     setState(() => _loadingStops = true);
     try {
-      final list = await ref
-          .read(transitProvider)
-          .searchLocations('', near: (lat: center.latitude, lon: center.longitude), limit: 60, radiusMeters: radius);
-      if (mounted) setState(() => _stops = list.where((l) => l.lat != null).toList());
+      final p = ref.read(transitProvider);
+      final at = (lat: center.latitude, lon: center.longitude);
+      final results = await Future.wait([
+        p.searchLocations('', near: at, limit: 60, radiusMeters: radius),
+        p.platformsNear(at, radiusMeters: radius).catchError((Object _) => <Platform>[]),
+      ]);
+      if (mounted) {
+        setState(() {
+          _stops = (results[0] as List<Location>).where((l) => l.lat != null).toList();
+          _platforms = results[1] as List<Platform>;
+        });
+      }
     } on ProviderException {
       // Netz weg: vorhandene Haltestellen bleiben stehen.
     } finally {
@@ -96,12 +112,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
-  Future<void> _showStop(Location stop) async {
+  /// Für Bildschirmfotos: auf Zoomstufe [zoom] springen und nachladen.
+  @visibleForTesting
+  void debugZoom(double zoom) {
+    _map.move(_map.camera.center, zoom);
+    _scheduleStops();
+  }
+
+  Future<void> _showStop(Location stop, {String? platform}) async {
     final d = await showModalBottomSheet<Departure>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      builder: (_) => _StopSheet(stop: stop),
+      builder: (_) => _StopSheet(stop: stop, platform: platform),
     );
     if (d != null) await _showDeparture(d);
   }
@@ -139,6 +162,48 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (mounted) Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TripScreen()));
   }
 
+  /// Haltestellen an der Mitte ihrer Steige; nah herangezoomt jeder Steig
+  /// einzeln mit Nummer. Haltestellen ohne bekannte Steige an der
+  /// TRIAS-Position.
+  List<Marker> _stopMarkers(Color color) {
+    final byStop = <String, List<Platform>>{};
+    for (final p in _platforms) {
+      byStop.putIfAbsent(p.stopId, () => []).add(p);
+    }
+    final names = {for (final s in _stops) stopAreaIdOf(s.id): s};
+    final out = <Marker>[];
+    final ids = {...names.keys, ...byStop.keys};
+    for (final id in ids) {
+      final pf = byStop[id] ?? const <Platform>[];
+      final stop = names[id] ??
+          Location(id: id, providerId: 'vrr-efa', name: pf.first.direction ?? 'Haltestelle', type: LocationType.stop);
+      if (_detail && pf.isNotEmpty) {
+        for (final p in pf) {
+          out.add(Marker(
+            point: LatLng(p.lat, p.lon),
+            width: 34,
+            height: 24,
+            child: GestureDetector(
+              onTap: () => _showStop(stop, platform: p.name),
+              child: _PlatformMarker(label: p.name ?? '', color: color),
+            ),
+          ));
+        }
+        continue;
+      }
+      final lat = pf.isEmpty ? stop.lat : pf.map((p) => p.lat).reduce((a, b) => a + b) / pf.length;
+      final lon = pf.isEmpty ? stop.lon : pf.map((p) => p.lon).reduce((a, b) => a + b) / pf.length;
+      if (lat == null || lon == null) continue;
+      out.add(Marker(
+        point: LatLng(lat, lon),
+        width: 28,
+        height: 28,
+        child: GestureDetector(onTap: () => _showStop(stop), child: _StopMarker(color: color)),
+      ));
+    }
+    return out;
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
@@ -159,8 +224,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           initialCenter: _me ?? _fallback,
           initialZoom: 15.5,
           interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
-          onPositionChanged: (_, gesture) {
+          onPositionChanged: (camera, gesture) {
             if (gesture) _scheduleStops();
+            final detail = camera.zoom >= _platformZoom;
+            if (detail != _detail) setState(() => _detail = detail);
           },
           onMapReady: _scheduleStops,
         ),
@@ -171,13 +238,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               Polyline(points: tripLine, color: color, strokeWidth: 5, borderColor: c.surface, borderStrokeWidth: 1.5),
             ]),
           MarkerLayer(markers: [
-            for (final s in _stops)
-              Marker(
-                point: LatLng(s.lat!, s.lon!),
-                width: 28,
-                height: 28,
-                child: GestureDetector(onTap: () => _showStop(s), child: _StopMarker(color: c.accent)),
-              ),
+            ..._stopMarkers(c.accent),
             for (final s in tripStops)
               if (s.stop.lat != null)
                 Marker(
@@ -299,6 +360,32 @@ class _StopMarker extends StatelessWidget {
       );
 }
 
+/// Einzelner Steig: kleines Schild mit Nummer.
+class _PlatformMarker extends StatelessWidget {
+  const _PlatformMarker({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Container(
+          constraints: const BoxConstraints(minWidth: 22),
+          height: 20,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(5),
+            border: Border.all(color: context.c.surface, width: 1.5),
+          ),
+          child: Text(label.length > 4 ? label.substring(0, 4) : label,
+              textScaler: TextScaler.noScaling,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white, height: 1)),
+        ),
+      );
+}
+
 class _Pill extends StatelessWidget {
   const _Pill({required this.text, this.bold = false});
 
@@ -324,9 +411,12 @@ class _Pill extends StatelessWidget {
 /// Abfahrten einer Haltestelle von unten; Tipp auf eine Abfahrt gibt sie
 /// an die Karte zurück.
 class _StopSheet extends ConsumerStatefulWidget {
-  const _StopSheet({required this.stop});
+  const _StopSheet({required this.stop, this.platform});
 
   final Location stop;
+
+  /// Nur Abfahrten dieses Steigs (nach Tipp auf einen einzelnen Steig).
+  final String? platform;
 
   @override
   ConsumerState<_StopSheet> createState() => _StopSheetState();
@@ -344,11 +434,19 @@ class _StopSheetState extends ConsumerState<_StopSheet> {
 
   Future<void> _load() async {
     try {
-      final b = await ref.read(transitProvider).departures(widget.stop, limit: 12);
+      final b = await ref.read(transitProvider).departures(widget.stop, limit: widget.platform == null ? 12 : 30);
       if (mounted) setState(() => _board = b);
     } on ProviderException catch (e) {
       if (mounted) setState(() => _error = e.message);
     }
+  }
+
+  /// Mit Steig: nur dessen Abfahrten (falls die Auskunft Steige nennt).
+  List<Departure> _shown(List<Departure> all) {
+    final p = widget.platform;
+    if (p == null) return all;
+    final mine = all.where((d) => d.platform == p || d.plannedPlatform == p).toList();
+    return mine.isEmpty ? all : mine.take(12).toList();
   }
 
   @override
@@ -362,7 +460,9 @@ class _StopSheetState extends ConsumerState<_StopSheet> {
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: SheetHeader(widget.stop.label, done: 'Schließen'),
+            child: SheetHeader(
+                widget.platform == null ? widget.stop.label : '${widget.stop.label} · Steig ${widget.platform}',
+                done: 'Schließen'),
           ),
           Flexible(
             child: board == null
@@ -380,7 +480,7 @@ class _StopSheetState extends ConsumerState<_StopSheet> {
                         child: Text('Keine Abfahrten in der nächsten Zeit.', style: TextStyle(color: c.muted)),
                       )
                     : ListView(shrinkWrap: true, children: [
-                        for (final d in board.departures)
+                        for (final d in _shown(board.departures))
                           DepartureRow(d, now: now, onSelect: (d) => Navigator.pop(context, d)),
                       ]),
           ),

@@ -33,31 +33,75 @@ class VrrProvider implements TransitProvider {
   /// Gemeindeschlüssel; aus der Haltestellenkennung („de:05954:…“) ergäbe
   /// sich nur der Kreis, und der liefert keine Meldungen.
   @override
-  Future<List<String>> regionsOf(GeoPoint near) async {
-    final last = _regionsAt;
-    if (_regions != null && last != null && _distance(last, near) < 1000) return _regions!;
-    final k = math.cos(near.lat * math.pi / 180);
-    final points = [
-      near,
-      for (var a = 0; a < 360; a += 45)
-        (
-          lat: near.lat + 5000 * math.cos(a * math.pi / 180) / 110540,
-          lon: near.lon + 5000 * math.sin(a * math.pi / 180) / (111320 * k),
-        ),
-    ];
-    final sets = await Future.wait(points.map((p) => efa.placesNear(p.lat, p.lon).catchError((Object _) => <String>{})));
-    final out = <String>[];
-    for (final s in sets) {
-      for (final omc in s) {
-        if (!out.contains(omc)) out.add(omc);
+  Future<List<String>> regionsOf(GeoPoint near) async => (await _area(near)).regions;
+
+  @override
+  Future<List<Line>> linesAround(GeoPoint near) async => (await _area(near)).lines;
+
+  GeoPoint? _areaAt;
+  Future<({List<String> regions, List<Line> lines})>? _areaResult;
+
+  /// Umgebung eines Orts: Haltestellen an der Mitte und an acht Punkten im
+  /// Abstand von 5 km – daraus die Gemeinden (für Meldungen) und die Linien
+  /// an diesen Haltestellen (für die Verkehrsunternehmen vor Ort). Je Ort
+  /// einmal, neu erst nach über 1 km Ortswechsel.
+  Future<({List<String> regions, List<Line> lines})> _area(GeoPoint near) {
+    final last = _areaAt;
+    if (_areaResult != null && last != null && _distance(last, near) < 1000) return _areaResult!;
+    _areaAt = near;
+    return _areaResult = () async {
+      final k = math.cos(near.lat * math.pi / 180);
+      List<GeoPoint> ring(double m) => [
+            for (var a = 0; a < 360; a += 45)
+              (
+                lat: near.lat + m * math.cos(a * math.pi / 180) / 110540,
+                lon: near.lon + m * math.sin(a * math.pi / 180) / (111320 * k),
+              ),
+          ];
+      // Gemeinden aus 5 km (Sperrungen im Nachbarort betreffen oft die
+      // eigenen Linien), Verkehrsunternehmen nur aus 2,5 km – sonst zählt in
+      // Hagen-Boele schon ganz Dortmund mit (gemessen: 45 DSW-Meldungen).
+      final wide = [near, ...ring(5000)];
+      final close = ring(2500);
+      Future<List<({String id, String? omc})>> find(GeoPoint p) =>
+          efa.stopsNear(p.lat, p.lon).catchError((Object _) => <({String id, String? omc})>[]);
+      final found = await Future.wait([...wide, ...close].map(find));
+      final regions = <String>[];
+      final stops = <String>{};
+      for (var i = 0; i < found.length; i++) {
+        final list = found[i];
+        if (i < wide.length) {
+          for (final s in list) {
+            if (s.omc != null && !regions.contains(s.omc)) regions.add(s.omc!);
+          }
+        }
+        // Linien: Mitte und der enge Kreis.
+        if (list.isNotEmpty && (i == 0 || i >= wide.length)) stops.add(stopAreaId(list.first.id));
       }
-    }
-    _regionsAt = near;
-    return _regions = out.take(6).toList();
+      final lineLists =
+          await Future.wait(stops.map((id) => efa.linesAt(id).catchError((Object _) => <Line>[])));
+      final lines = <String, Line>{
+        for (final l in lineLists.expand((x) => x)) lineKey(l.id): l,
+      };
+      return (regions: regions.take(6).toList(), lines: lines.values.toList());
+    }();
   }
 
-  GeoPoint? _regionsAt;
-  List<String>? _regions;
+  Future<List<Message>>? _all;
+  DateTime? _allAt;
+
+  @override
+  Future<List<Message>> messagesForLine(String key) async {
+    // Alle Meldungen (≈ 4 MB) höchstens alle 10 min; gleichzeitige Aufrufe teilen sich den Abruf.
+    if (_all == null || _allAt == null || DateTime.now().difference(_allAt!) > const Duration(minutes: 10)) {
+      _allAt = DateTime.now();
+      _all = efa.allMessages()..catchError((Object _) {
+          _all = null;
+          return <Message>[];
+        });
+    }
+    return (await _all!).where((m) => m.lineIds.contains(key)).toList();
+  }
 
   static double _distance(GeoPoint a, GeoPoint b) =>
       distanceBetween(Location(id: '', providerId: '', name: '', lat: a.lat, lon: a.lon), b) ?? double.infinity;
@@ -236,6 +280,10 @@ class VrrProvider implements TransitProvider {
 
   @override
   Future<List<Line>> linesNear(GeoPoint near) => _linesNear(near);
+
+  @override
+  Future<List<Platform>> platformsNear(GeoPoint near, {int radiusMeters = 800}) =>
+      efa.platformsNear(near.lat, near.lon, radiusMeters: radiusMeters);
 
   GeoPoint? _nearAt;
   Future<List<Line>>? _near;
