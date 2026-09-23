@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Ablage der heruntergeladenen Update-APK (ota_update). -->
+<!-- Ablage der im Hintergrund geladenen Update-APK (lib/state/updates.dart). -->
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <files-path name="internal_apk_storage" path="ota_update/"/>
+    <files-path name="updates" path="updates/"/>
 </paths>

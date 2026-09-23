@@ -64,3 +64,11 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Produkte: Bus, Schnellbus (SB), CityExpress (CE), Nachtexpress, AST, SEV, Schwebebahn, Straßenbahn, U-Bahn, S-Bahn, RE/RB, IC/ICE mit Zugnummer (`lib/domain/product.dart`)
 - ✅ Fortschrittsbalken in der App wie in der Benachrichtigung
 - ✅ Fußweg höchstens 5–30 min (Profil, Suchoptionen); bestimmt auch den Umkreis „In der Nähe“; Fußwege in der Verbindungsleiste mit Minuten
+
+## v0.2.2 (23.09.2026)
+- ✅ Unterwegs ohne eigenen Bildschirm: „Losfahren“ startet die Benachrichtigung, die Fahrt zeigt oben den nächsten Schritt mit Karte
+- ✅ Karte der Fahrt (Symbol oben in der Fahrt): Linien über die Haltestellen, Fahrzeug geschätzt aus Fahrplan/Echtzeit, eigener Standort
+- ✅ Positionspunkt statt Bus im Haltestellenverlauf
+- ✅ Verbindungen: Abfahrt – Ankunft ohne Lücke, Linien in kurzen Abschnitten mit voller Nummer
+- ✅ Selbst-Aktualisierung: lädt beim Öffnen im Hintergrund, Meldung „Update verfügbar“ mit „Installieren“
+- ☐ Echter Linienverlauf auf der Karte (VRR liefert keinen; später OSM oder Transitous)

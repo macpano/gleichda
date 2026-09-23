@@ -2,14 +2,18 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ota_update/ota_update.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'providers.dart';
 
 /// Neueste Veröffentlichung auf GitHub (öffentliches Repository, kein Token).
 const releasesUrl = 'https://api.github.com/repos/macpano/gleichda/releases/latest';
+
+/// Übergabe an den Android-Installer (MainActivity.kt).
+const _channel = MethodChannel('de.gleichda/update');
 
 /// Vergleicht Versionen wie „0.2.0“ und „v0.10.1“: negativ, wenn [a] älter ist.
 int compareVersions(String a, String b) {
@@ -27,10 +31,13 @@ int compareVersions(String a, String b) {
 }
 
 class UpdateInfo {
-  const UpdateInfo({required this.version, required this.apkUrl, this.notes, this.pageUrl});
+  const UpdateInfo({required this.version, required this.apkUrl, this.size, this.notes, this.pageUrl});
 
   final String version;
   final String apkUrl;
+
+  /// Größe der APK in Bytes laut GitHub; dient zur Prüfung des Downloads.
+  final int? size;
   final String? notes;
   final String? pageUrl;
 
@@ -43,13 +50,14 @@ class UpdateInfo {
     return UpdateInfo(
       version: tag.replaceFirst(RegExp(r'^[vV]'), ''),
       apkUrl: apk['browser_download_url'] as String,
+      size: (apk['size'] as num?)?.toInt(),
       notes: json['body'] as String?,
       pageUrl: json['html_url'] as String?,
     );
   }
 }
 
-enum UpdatePhase { idle, checking, upToDate, available, downloading, installing, failed }
+enum UpdatePhase { idle, checking, upToDate, available, downloading, ready, installing, failed }
 
 class UpdateState {
   const UpdateState({
@@ -59,6 +67,7 @@ class UpdateState {
     this.checkedAt,
     this.progress,
     this.error,
+    this.apkPath,
   });
 
   final String current;
@@ -70,7 +79,13 @@ class UpdateState {
   final int? progress;
   final String? error;
 
+  /// Fertig geladene und geprüfte APK der neuesten Version.
+  final String? apkPath;
+
   bool get hasUpdate => latest != null && compareVersions(latest!.version, current) > 0;
+
+  /// Bereit zum Installieren: Die Meldung „Update verfügbar“ erscheint.
+  bool get ready => hasUpdate && apkPath != null;
 
   UpdateState copyWith({
     UpdatePhase? phase,
@@ -78,6 +93,7 @@ class UpdateState {
     DateTime? checkedAt,
     int? progress,
     String? error,
+    String? apkPath,
   }) =>
       UpdateState(
         current: current,
@@ -86,15 +102,18 @@ class UpdateState {
         checkedAt: checkedAt ?? this.checkedAt,
         progress: progress,
         error: error,
+        apkPath: apkPath ?? this.apkPath,
       );
 }
 
-/// Prüft beim Start und danach alle 6 Stunden, ob es eine neuere Version
-/// gibt. Einspielen nur auf Tipp: Die APK wird geladen und dem
-/// Android-Installer übergeben.
+/// Prüft beim Öffnen und danach alle 6 Stunden, ob es eine neuere Version
+/// gibt, und lädt sie gleich im Hintergrund. Erst wenn die APK vollständig
+/// da und geprüft ist, erscheint die Meldung „Update verfügbar“; ein Tipp auf
+/// „Installieren“ übergibt sie dem Android-Installer (der immer selbst noch
+/// einmal fragt).
 class UpdateController extends Notifier<UpdateState> {
   Timer? _timer;
-  StreamSubscription<OtaEvent>? _download;
+  CancelToken? _download;
 
   static const interval = Duration(hours: 6);
 
@@ -108,6 +127,8 @@ class UpdateController extends Notifier<UpdateState> {
     return const UpdateState(current: '');
   }
 
+  Future<bool> get _auto async => await ref.read(repositoryProvider).setting('updateAuto') != 'false';
+
   Future<void> _init() async {
     try {
       final info = await PackageInfo.fromPlatform();
@@ -116,20 +137,29 @@ class UpdateController extends Notifier<UpdateState> {
       return; // Tests ohne Plattform
     }
     if (!Platform.isAndroid) return;
-    final auto = await ref.read(repositoryProvider).setting('updateAuto');
-    if (auto == 'false') return;
-    await check();
-    _timer = Timer.periodic(interval, (_) => check());
+    if (!await _auto) return;
+    await check(download: true);
+    _timer = Timer.periodic(interval, (_) => check(download: true));
   }
 
-  /// Nach längerer Pause im Hintergrund erneut prüfen.
-  void resume() {
+  /// Beim Zurückkehren in die App: nach längerer Pause erneut prüfen, eine
+  /// unterbrochene Übertragung fortsetzen.
+  Future<void> resume() async {
+    if (!await _auto) return;
     final at = state.checkedAt;
-    if (at != null && DateTime.now().difference(at) > interval) check();
+    if (at != null && DateTime.now().difference(at) > interval) {
+      await check(download: true);
+    } else if (state.phase == UpdatePhase.failed && state.hasUpdate) {
+      await download();
+    }
   }
 
-  Future<void> check() async {
-    if (state.current.isEmpty || state.phase == UpdatePhase.downloading) return;
+  Future<void> check({bool download = false}) async {
+    if (state.current.isEmpty ||
+        state.phase == UpdatePhase.downloading ||
+        state.phase == UpdatePhase.checking) {
+      return;
+    }
     state = state.copyWith(phase: UpdatePhase.checking);
     try {
       final res = await ref.read(dioProvider).get<Map<String, dynamic>>(
@@ -141,37 +171,95 @@ class UpdateController extends Notifier<UpdateState> {
       state = next.copyWith(phase: next.hasUpdate ? UpdatePhase.available : UpdatePhase.upToDate);
     } catch (_) {
       state = state.copyWith(phase: UpdatePhase.failed, error: 'Keine Verbindung zu GitHub', checkedAt: DateTime.now());
+      return;
+    }
+    await _cleanup();
+    if (download && state.hasUpdate) await this.download();
+  }
+
+  /// Unter Android `files/updates` – dieser Ordner ist im FileProvider
+  /// freigegeben (res/xml/filepaths.xml).
+  Future<Directory> _dir() async => Directory('${(await getApplicationSupportDirectory()).path}/updates');
+
+  File _fileFor(Directory dir, UpdateInfo info) => File('${dir.path}/gleichda-${info.version}.apk');
+
+  /// Vollständig und wirklich eine APK (ZIP-Kopf „PK“), keine Fehlerseite.
+  Future<bool> _valid(File f, UpdateInfo info) async {
+    if (!await f.exists()) return false;
+    final len = await f.length();
+    if (info.size != null && len != info.size) return false;
+    if (len < 1024 * 1024) return false;
+    final head = await f.openRead(0, 2).first;
+    return head.length == 2 && head[0] == 0x50 && head[1] == 0x4B;
+  }
+
+  /// Ältere geladene Fassungen entfernen.
+  Future<void> _cleanup() async {
+    try {
+      final dir = await _dir();
+      if (!await dir.exists()) return;
+      final keep = state.hasUpdate ? _fileFor(dir, state.latest!).path : null;
+      await for (final f in dir.list()) {
+        if (f is File && f.path != keep) await f.delete();
+      }
+    } catch (_) {}
+  }
+
+  /// Lädt die neueste Fassung im Hintergrund.
+  Future<void> download() async {
+    final info = state.latest;
+    if (info == null || !state.hasUpdate || state.phase == UpdatePhase.downloading) return;
+    try {
+      final dir = await _dir();
+      await dir.create(recursive: true);
+      final file = _fileFor(dir, info);
+      if (await _valid(file, info)) {
+        state = state.copyWith(phase: UpdatePhase.ready, apkPath: file.path);
+        return;
+      }
+      final part = File('${file.path}.part');
+      state = state.copyWith(phase: UpdatePhase.downloading, progress: 0);
+      _download = CancelToken();
+      await ref.read(dioProvider).download(
+        info.apkUrl,
+        part.path,
+        cancelToken: _download,
+        options: Options(receiveTimeout: const Duration(minutes: 10)),
+        onReceiveProgress: (got, total) {
+          if (total <= 0) return;
+          final p = (got * 100 / total).floor();
+          if (p != state.progress) state = state.copyWith(phase: UpdatePhase.downloading, progress: p);
+        },
+      );
+      if (await file.exists()) await file.delete();
+      await part.rename(file.path);
+      if (!await _valid(file, info)) {
+        await file.delete();
+        state = state.copyWith(phase: UpdatePhase.failed, error: 'Download unvollständig, wird erneut versucht.');
+        return;
+      }
+      state = state.copyWith(phase: UpdatePhase.ready, apkPath: file.path);
+    } catch (_) {
+      state = state.copyWith(phase: UpdatePhase.failed, error: 'Download fehlgeschlagen, wird erneut versucht.');
     }
   }
 
-  void install() {
-    final info = state.latest;
-    if (info == null) return;
-    _download?.cancel();
-    state = state.copyWith(phase: UpdatePhase.downloading, progress: 0);
+  /// Übergibt die geladene APK dem Android-Installer; lädt vorher, falls
+  /// nötig.
+  Future<void> install() async {
+    if (state.apkPath == null) {
+      await download();
+      if (state.apkPath == null) return;
+    }
     try {
-      _download = OtaUpdate()
-          .execute(info.apkUrl, destinationFilename: 'gleichda-${info.version}.apk')
-          .listen((e) {
-        switch (e.status) {
-          case OtaStatus.DOWNLOADING:
-            state = state.copyWith(phase: UpdatePhase.downloading, progress: int.tryParse(e.value ?? ''));
-          case OtaStatus.INSTALLING:
-          case OtaStatus.INSTALLATION_DONE:
-            state = state.copyWith(phase: UpdatePhase.installing);
-          default:
-            state = state.copyWith(
-              phase: UpdatePhase.failed,
-              error: e.status == OtaStatus.PERMISSION_NOT_GRANTED_ERROR
-                  ? 'Installation nicht erlaubt. Bitte „Unbekannte Apps installieren“ für Gleichda zulassen.'
-                  : 'Aktualisierung fehlgeschlagen (${e.status.name}).',
-            );
-        }
-      }, onError: (Object _) {
-        state = state.copyWith(phase: UpdatePhase.failed, error: 'Download fehlgeschlagen.');
-      });
-    } catch (_) {
-      state = state.copyWith(phase: UpdatePhase.failed, error: 'Aktualisierung nicht möglich.');
+      final r = await _channel.invokeMethod<String>('install', {'path': state.apkPath});
+      state = r == 'permission'
+          ? state.copyWith(
+              phase: UpdatePhase.ready,
+              error: 'Bitte „Apps aus dieser Quelle zulassen“ einschalten und dann erneut auf Installieren tippen.')
+          : state.copyWith(phase: UpdatePhase.installing);
+    } on PlatformException catch (e) {
+      state = state.copyWith(phase: UpdatePhase.failed, error: 'Installation nicht möglich (${e.message}).');
     }
   }
 
@@ -179,8 +267,8 @@ class UpdateController extends Notifier<UpdateState> {
     await ref.read(repositoryProvider).setSetting('updateAuto', '$on');
     _timer?.cancel();
     if (on) {
-      await check();
-      _timer = Timer.periodic(interval, (_) => check());
+      await check(download: true);
+      _timer = Timer.periodic(interval, (_) => check(download: true));
     }
   }
 }

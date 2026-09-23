@@ -750,3 +750,67 @@ class ValueRow extends StatelessWidget {
     );
   }
 }
+
+/// Aktuelle Position (Haltestellenverlauf und Karte): Punkt in Linienfarbe mit weißem Rand und
+/// ruhigem Puls (still bei „Bewegung reduzieren“).
+class PositionDot extends StatefulWidget {
+  const PositionDot({super.key, required this.color});
+
+  final Color color;
+
+  @override
+  State<PositionDot> createState() => _PositionDotState();
+}
+
+class _PositionDotState extends State<PositionDot> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 2));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.of(context).disableAnimations) {
+      _c.stop();
+      _c.value = 0.35;
+    } else if (!_c.isAnimating) {
+      _c.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: 24,
+        height: 24,
+        child: AnimatedBuilder(
+          animation: _c,
+          builder: (context, _) => CustomPaint(
+            painter: _PositionDotPainter(widget.color, context.c.surface, _c.value),
+          ),
+        ),
+      );
+}
+
+class _PositionDotPainter extends CustomPainter {
+  _PositionDotPainter(this.color, this.ring, this.t);
+
+  final Color color;
+  final Color ring;
+  final double t;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final o = size.center(Offset.zero);
+    canvas.drawCircle(o, 7 + 5 * t, Paint()..color = color.withValues(alpha: 0.28 * (1 - t)));
+    canvas.drawCircle(o, 8, Paint()..color = ring);
+    canvas.drawCircle(o, 6, Paint()..color = color);
+    canvas.drawCircle(o, 2.2, Paint()..color = ring);
+  }
+
+  @override
+  bool shouldRepaint(_PositionDotPainter old) => old.t != t || old.color != color;
+}

@@ -56,7 +56,6 @@ dependencies:
   html: ^0.15.7
   url_launcher: ^6.3.2
   package_info_plus: ^10.2.1
-  ota_update: ^7.1.0
 
 dev_dependencies:
   flutter_test:
