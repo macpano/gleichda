@@ -13,7 +13,9 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Suchoptionen: Zwischenhalt, Profil, Verkehrsmittel, barrierefreie Wege
 - ✅ Zuletzt angesehene Fahrt: sofort aus dem Speicher, 30 s live (EFA TripStopTimes)
 - ✅ Favoriten und Zuletzt gesucht, Wischen: links löschen, rechts Favorit
-- ☐ Live-Abfahrten direkt an Favoriten, gelernte Gewohnheiten
+- ✅ Live-Abfahrten an Favoriten: Verbindungen zeigen die nächste Abfahrt, Lieblingshaltestellen (Stern im Abfahrtsmonitor)
+  die nächsten drei Abfahrten auf der Startseite (0.4.12)
+- ☐ Gelernte Gewohnheiten
 
 ## Verbindungen
 - ✅ Liste mit Zeitleisten-Balken, Echtzeit farbig, „nur Fahrplan“
@@ -22,7 +24,7 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Früher und Später
 - ✅ Zeitraster wie in Öffi, Umschalter Liste/Zeitraster, Wahl dauerhaft gespeichert
 - ✅ Anschlussprüfung: sicher/knapp/nicht erreichbar, nicht erreichbare ausgegraut am Ende mit Hinweis
-- ☐ Endloses Scrollen statt Knöpfen
+- ✅ Endloses Scrollen: spätere Verbindungen laden kurz vor dem Listenende von selbst (0.4.12)
 
 ## Fahren
 - ✅ Fahrtverlauf: Plan/Ist, Steig und Steigwechsel, Zwischenhalte einklappbar, entfällt/Umleitung
@@ -251,3 +253,12 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   `-4000` als „keine Verbindung“, und ohne Treffer sucht die App einmal ohne Fußweg-Grenze – der Fußweg erscheint.
   „Erneut versuchen“ bekam vorher jedes Mal dieselbe Fehlantwort
 - Bildschirmfoto `verbindungen_fussweg`: reiner Fußweg in der Verbindungsliste
+
+## 0.4.12-vorab.1 (23.09.2026)
+- ✅ Begleitung zu Fuß bis zur Zieladresse (Phase `toDestination`): nach dem letzten Ausstieg „Zu Fuß zum Ziel“ mit
+  Laufsymbol und Weg; angekommen per GPS ≤ 40 m an der Adresse (höchstens 10 min Nachlauf), ohne GPS nach Uhrzeit.
+  Auch reine Fußwege. Die Fahrt bleibt währenddessen auf der Startseite
+- ✅ Gesicherte Anschlüsse in der Verbindungsliste („Anschluss wartet“): eine EFA-Anfrage je Paar aus erstem Einstieg
+  und letztem Ausstieg (höchstens drei), live geprüft
+- ✅ Endloses Scrollen in der Verbindungsliste
+- ✅ Lieblingshaltestellen mit Live-Abfahrten auf der Startseite

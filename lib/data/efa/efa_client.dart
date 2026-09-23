@@ -8,6 +8,7 @@ import 'package:html/parser.dart' show parseFragment;
 import '../../domain/models.dart';
 import '../../domain/product.dart';
 import '../transit_provider.dart';
+import '../trias/trias_parser.dart' show stopAreaId;
 
 const _provider = 'vrr-efa';
 
@@ -173,7 +174,7 @@ class EfaClient {
         if (l is Map && l['id'] is String && l['coord'] is List && (l['coord'] as List).length == 2)
           Platform(
             id: l['id'] as String,
-            stopId: ((l['parent'] as Map?)?['id'] as String?) ?? stopAreaIdOf(l['id'] as String),
+            stopId: ((l['parent'] as Map?)?['id'] as String?) ?? stopAreaId(l['id'] as String),
             name: (l['id'] as String).split(':').last,
             direction: l['name'] as String?,
             lat: ((l['coord'] as List)[0] as num).toDouble(),
@@ -525,10 +526,4 @@ List<Line> parseServingLines(Map<String, dynamic> json) {
 String? omcFromPlaceId(String? id) {
   final m = RegExp(r'^placeID:(\d{6,8}):').firstMatch(id ?? '');
   return m?.group(1);
-}
-
-/// „de:05124:11376:91:2“ → „de:05124:11376“.
-String stopAreaIdOf(String id) {
-  final p = id.split(':');
-  return p.length >= 3 ? p.take(3).join(':') : id;
 }

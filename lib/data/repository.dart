@@ -150,6 +150,19 @@ class Repository {
         ));
   }
 
+  /// Haltestelle als Favorit an/aus (je Haltestelle, nicht je Steig).
+  Future<void> toggleFavoriteStop(Location stop) async {
+    final key = 'stop:${stopAreaId(stop.id)}';
+    final n = await (db.delete(db.favorites)..where((t) => t.ref.equals(key))).go();
+    if (n > 0) return;
+    await db.into(db.favorites).insert(FavoritesCompanion.insert(
+          kind: 'stop',
+          ref: key,
+          name: stop.name,
+          payload: _enc(stop.copyWith(id: stopAreaId(stop.id)).toJson()),
+        ));
+  }
+
   Future<void> deleteFavorite(int id) =>
       (db.delete(db.favorites)..where((t) => t.id.equals(id))).go();
 

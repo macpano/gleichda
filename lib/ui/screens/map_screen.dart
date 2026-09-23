@@ -6,7 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../data/efa/efa_client.dart' show stopAreaIdOf;
+import '../../data/trias/trias_parser.dart' show stopAreaId;
 import '../../data/transit_provider.dart';
 import '../../domain/models.dart';
 import '../../state/location.dart';
@@ -186,7 +186,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     for (final p in _platforms) {
       byStop.putIfAbsent(p.stopId, () => []).add(p);
     }
-    final names = {for (final s in _stops) stopAreaIdOf(s.id): s};
+    final names = {for (final s in _stops) stopAreaId(s.id): s};
     final out = <Marker>[];
     final ids = {...names.keys, ...byStop.keys};
     for (final id in ids) {

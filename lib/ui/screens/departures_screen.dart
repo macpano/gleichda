@@ -29,10 +29,13 @@ class _StopBoard {
 /// Abfahrten: mehrere Haltestellen in der Nähe untereinander, nach
 /// Entfernung, mit Zeitwahl und Filter nach Verkehrsmitteln.
 class DeparturesScreen extends ConsumerStatefulWidget {
-  const DeparturesScreen({super.key, this.initialStop});
+  const DeparturesScreen({super.key, this.initialStop, this.standalone = false});
 
   /// Vorgewählte Haltestelle, z. B. aus einem Favoriten.
   final Location? initialStop;
+
+  /// Als eigene Seite geöffnet (von der Startseite): mit Zurück-Pfeil.
+  final bool standalone;
 
   @override
   ConsumerState<DeparturesScreen> createState() => _DeparturesScreenState();
@@ -181,6 +184,14 @@ class _DeparturesScreenState extends ConsumerState<DeparturesScreen> {
         padding: pagePadding(context),
         children: [
           Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
+            if (widget.standalone) ...[
+              IconButton(
+                tooltip: 'Zurück',
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+              const SizedBox(width: 4),
+            ],
             Expanded(child: Text('Abfahrten', style: context.t.screenTitle)),
             if (stops != null && stops.isNotEmpty)
               FreshnessStamp(updatedAt: _updatedAt, now: now, refreshing: _loading,
@@ -271,14 +282,18 @@ class _StopSection extends ConsumerWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       SectionTitle(
         data.stop.name,
-        trailing: Text(
-          [
-            if (data.distance != null) distanceText(data.distance!),
-            if (walkMinutes != null) '$walkMinutes min',
-            if (data.distance == null && data.stop.place != null) data.stop.place!,
-          ].join(' · '),
-          style: context.t.number(13).copyWith(color: c.muted),
-        ),
+        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+          Text(
+            [
+              if (data.distance != null) distanceText(data.distance!),
+              if (walkMinutes != null) '$walkMinutes min',
+              if (data.distance == null && data.stop.place != null) data.stop.place!,
+            ].join(' · '),
+            style: context.t.number(13).copyWith(color: c.muted),
+          ),
+          // Stern: Haltestelle mit Abfahrten auf die Startseite.
+          _StopStar(stop: data.stop),
+        ]),
       ),
       ListGroup(children: [
         if (data.board == null && data.error == null)
@@ -564,4 +579,27 @@ class _DepartureSkeleton extends StatelessWidget {
           ]),
         ),
       );
+}
+
+/// Stern an einer Haltestelle: als Favorit auf die Startseite.
+class _StopStar extends ConsumerWidget {
+  const _StopStar({required this.stop});
+
+  final Location stop;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.c;
+    final on = isFavoriteStop(ref.watch(favoritesProvider).value ?? const [], stop);
+    return SizedBox(
+      width: 36,
+      height: 28,
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        tooltip: on ? 'Von der Startseite nehmen' : 'Auf die Startseite',
+        icon: Icon(on ? Icons.star : Icons.star_border, size: 20, color: on ? c.accent : c.muted),
+        onPressed: () => ref.read(repositoryProvider).toggleFavoriteStop(stop),
+      ),
+    );
+  }
 }
