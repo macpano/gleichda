@@ -52,37 +52,12 @@ class LocationService {
   LatLon? get last => _last;
 
   Future<LatLon> current({Duration maxAge = const Duration(seconds: 30), bool preferRecent = false}) async {
-    final settings = ref.read(settingsProvider).value;
-    if (settings != null && !settings.useLocation) {
-      throw const LocationException(LocationProblem.off);
-    }
+    // Standort in den Einstellungen aus: auch keine gemerkte Position.
+    if (ref.read(settingsProvider).value?.useLocation == false) throw const LocationException(LocationProblem.off);
     if (_last != null && _at != null && DateTime.now().difference(_at!) < maxAge) {
       return _last!;
     }
-    LocationPermission p;
-    try {
-      if (!await Geolocator.isLocationServiceEnabled()) {
-        throw const LocationException(LocationProblem.disabled);
-      }
-      p = await Geolocator.checkPermission();
-      if (p == LocationPermission.denied) {
-        final gate = introGate;
-        if (gate != null && !gate.isCompleted) {
-          await gate.future;
-          p = await Geolocator.checkPermission();
-        }
-      }
-      if (p == LocationPermission.denied) p = await Geolocator.requestPermission();
-    } on LocationException {
-      rethrow;
-    } catch (_) {
-      // Plattform ohne Standortdienst (z. B. Tests).
-      throw const LocationException(LocationProblem.disabled);
-    }
-    if (p == LocationPermission.denied) throw const LocationException(LocationProblem.denied);
-    if (p == LocationPermission.deniedForever) {
-      throw const LocationException(LocationProblem.deniedForever);
-    }
+    await ensureAllowed();
     if (preferRecent) {
       // Für die Suche genügt eine frische letzte Position (unter 2 min, auf
       // 100 m genau) – die Suche wartet dann nicht auf einen neuen GPS-Fix.
@@ -118,6 +93,41 @@ class LocationService {
   }
 
   /// Laufende Positionen, z. B. für „Weg zum Steig“.
+  /// Erlaubnis und Standortdienst prüfen (fragt beim ersten Mal), ohne auf
+  /// eine Position zu warten.
+  Future<void> ensureAllowed() async {
+    final settings = ref.read(settingsProvider).value;
+    if (settings != null && !settings.useLocation) throw const LocationException(LocationProblem.off);
+    LocationPermission p;
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) throw const LocationException(LocationProblem.disabled);
+      p = await Geolocator.checkPermission();
+      if (p == LocationPermission.denied) {
+        final gate = introGate;
+        if (gate != null && !gate.isCompleted) await gate.future;
+        p = await Geolocator.checkPermission();
+      }
+      if (p == LocationPermission.denied) p = await Geolocator.requestPermission();
+    } on LocationException {
+      rethrow;
+    } catch (_) {
+      throw const LocationException(LocationProblem.disabled);
+    }
+    if (p == LocationPermission.denied) throw const LocationException(LocationProblem.denied);
+    if (p == LocationPermission.deniedForever) throw const LocationException(LocationProblem.deniedForever);
+  }
+
+  /// Zuletzt bekannte Position (sofort, evtl. ungenau), sonst null.
+  Future<Position?> lastKnown({Duration maxAge = const Duration(minutes: 10)}) async {
+    try {
+      final p = await Geolocator.getLastKnownPosition();
+      if (p == null || DateTime.now().difference(p.timestamp) > maxAge) return null;
+      return p;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Stream<Position> watch() => Geolocator.getPositionStream(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.best,

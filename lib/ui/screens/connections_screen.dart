@@ -378,7 +378,7 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
 
   void _open(Trip t) {
     ref.read(lastTripProvider.notifier).open(t, updatedAt: _updatedAt);
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TripScreen()));
+    Navigator.of(context).push(MaterialPageRoute(settings: const RouteSettings(name: 'fahrt'), builder: (_) => const TripScreen()));
   }
 
   @override

@@ -59,9 +59,14 @@ abstract class EventTime with _$EventTime {
   DateTime get best => estimated ?? planned;
 
   /// Abweichung in ganzen Minuten; null ohne Echtzeit.
-  int? get delayMinutes => estimated == null
-      ? null
-      : (estimated!.difference(planned).inSeconds / 60).round();
+  /// Verspätung in Minuten, wie die Uhrzeiten angezeigt werden (auf die
+  /// Minute abgeschnitten): 00:40:50 statt 00:40 ist pünktlich – vorher
+  /// stand „+1“ neben zwei gleichen Uhrzeiten, die geplante durchgestrichen.
+  int? get delayMinutes {
+    if (estimated == null) return null;
+    DateTime m(DateTime t) => DateTime.utc(t.year, t.month, t.day, t.hour, t.minute);
+    return m(estimated!.toUtc()).difference(m(planned.toUtc())).inMinutes;
+  }
 
   bool get hasRealtime => quality != TimeQuality.planned && estimated != null;
 }

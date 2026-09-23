@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gleichda/data/html_text.dart';
 import 'package:gleichda/data/transit_provider.dart';
 import 'package:gleichda/data/trias/trias_parser.dart';
 import 'package:gleichda/data/trias/trias_provider.dart';
@@ -171,5 +172,12 @@ void main() {
         '<trias:Text><trias:Text>no trip</trias:Text></trias:Text></trias:ErrorMessage></trias:TripResponse>'
         '</trias:DeliveryPayload></trias:ServiceDelivery></trias:Trias>';
     expect(parseTrips(xml), isEmpty);
+  });
+
+  test('Meldungstext aus HTML wird Klartext', () {
+    expect(htmlToText('<div>Aufgrund einer&nbsp;l&auml;nger dauernden Vollsperrung der Rheinberger Stra&szlig;e '
+            'kommt es <strong>ab dem 29.03.2026</strong> zu &Auml;nderungen.<br />Die&nbsp;Taktung</div>'),
+        'Aufgrund einer länger dauernden Vollsperrung der Rheinberger Straße kommt es ab dem 29.03.2026 zu Änderungen.\n'
+        'Die Taktung');
   });
 }

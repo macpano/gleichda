@@ -28,6 +28,8 @@ import 'package:gleichda/ui/screens/alarms_screen.dart';
 import 'package:gleichda/ui/screens/alternatives_screen.dart';
 import 'package:gleichda/state/companion.dart';
 import 'package:gleichda/ui/screens/location_search_screen.dart';
+import 'package:gleichda/data/feedback.dart' show FeedbackKind;
+import 'package:gleichda/ui/screens/feedback_screen.dart';
 import 'package:gleichda/ui/screens/line_screen.dart';
 import 'package:gleichda/ui/screens/map_screen.dart';
 import 'package:gleichda/ui/screens/messages_screen.dart';
@@ -291,6 +293,7 @@ void main() {
   testWidgets('Große Schrift: Fahrt', (t) => shot(t, 'gross_fahrt', const TripScreen(), seed: seedHome, textScale: 1.5));
   testWidgets('Große Schrift: Abfahrten',
       (t) => shot(t, 'gross_abfahrten', Scaffold(body: DeparturesScreen(initialStop: hbf)), textScale: 1.5));
+  testWidgets('Fehler melden', (t) => shot(t, 'fehler_melden', const FeedbackScreen(kind: FeedbackKind.bug)));
   testWidgets('Fahrt', (t) => shot(t, 'fahrt', const TripScreen(), seed: seedHome));
   testWidgets('Zwischenhalte klappen auf (mittendrin)', (t) => shot(t, 'zwischenhalte_auf', const TripScreen(),
       seed: seedHome,

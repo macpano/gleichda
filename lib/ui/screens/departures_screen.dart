@@ -374,7 +374,7 @@ class DepartureRowState extends ConsumerState<DepartureRow> {
         return;
       }
       await ref.read(lastTripProvider.notifier).open(trip);
-      nav.push(MaterialPageRoute(builder: (_) => const TripScreen()));
+      nav.push(MaterialPageRoute(settings: const RouteSettings(name: 'fahrt'), builder: (_) => const TripScreen()));
     } on ProviderException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
     } finally {

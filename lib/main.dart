@@ -81,7 +81,7 @@ Future<void> handleNotification(ProviderContainer container, String? payload, St
         if (trips.isNotEmpty) {
           await container.read(lastTripProvider.notifier).open(trips.first);
           await container.read(companionProvider.notifier).start();
-          nav?.push(MaterialPageRoute(builder: (_) => const TripScreen()));
+          nav?.push(MaterialPageRoute(settings: const RouteSettings(name: 'fahrt'), builder: (_) => const TripScreen()));
           return;
         }
       } catch (_) {}
