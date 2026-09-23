@@ -267,6 +267,27 @@ void main() {
     expect(sortConnections(items, ConnectionSort.fewChanges).first.trip.id, 'slow');
   });
 
+  test('Nach der Ankunft zählt nicht mehr das GPS am Anfang der Strecke', () {
+    StopTime st(String id, double lon, EventTime t, {bool dep = true}) => StopTime(
+        stop: Location(id: id, providerId: 't', name: id, lat: 51.25, lon: lon),
+        departure: dep ? t : null,
+        arrival: dep ? null : t);
+    final leg = Leg(
+      type: LegType.ride,
+      from: st('A', 7.10, at(14, 0)),
+      intermediates: [st('B', 7.11, at(14, 2))],
+      to: st('C', 7.12, at(14, 4), dep: false),
+    );
+    final trip = Trip(id: 'x', legs: [leg]);
+    // 2 min nach der Ankunft, GPS noch an A: angekommen, nicht wieder bei 0.
+    final after = nextStep(trip, DateTime(2026, 9, 23, 14, 6), gps: (lat: 51.25, lon: 7.1));
+    expect(after.phase, CompanionPhase.arrived);
+    // Unterwegs, GPS weit hinter der Uhrzeit: Uhrzeit gilt.
+    final behind = nextStep(trip, DateTime(2026, 9, 23, 14, 3, 30), gps: (lat: 51.25, lon: 7.1));
+    expect(behind.byGps, isFalse);
+    expect(behind.progress, greaterThan(0.8));
+  });
+
   group('Verbindungsliste', () {
     Trip t(String id, int h, int m) => Trip(id: id, legs: [ride('A', at(h, m), 'B', at(h, m + 20))]);
 

@@ -124,7 +124,16 @@ class CompanionController extends Notifier<CompanionState> {
     final now = DateTime.now();
     final step = nextStep(s.trip, now, gps: state.freshGps(now));
     if (step.phase == CompanionPhase.arrived) {
-      if (now.difference(s.trip.arrival.best) > const Duration(minutes: 1)) await stop();
+      if (now.difference(s.trip.arrival.best) > const Duration(minutes: 1)) {
+        await stop();
+        return;
+      }
+      // Bis zum Ende: „Angekommen“ mit vollem Balken statt des alten Stands.
+      final text = companionTexts(s.trip, step, now);
+      if (_lastKey == 'angekommen') return;
+      _lastKey = 'angekommen';
+      await Notifications.showCompanion(header: text.header, where: text.where, when: text.when, progress: 100);
+      _shown = true;
       return;
     }
     // Über die Benachrichtigung beendet (Knopf „Beenden“ ohne App): Die
