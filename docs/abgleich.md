@@ -98,3 +98,7 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 ## v0.3.2 (23.09.2026)
 - ✅ Unterwegs als schmale Zeile mit feinem Fortschrittsstrich, ausblendbar
 - ✅ Eigene Symbole für Liste/Zeitraster
+
+## v0.3.3 (23.09.2026)
+- ✅ Unterwegs als feste Leiste am unteren Rand mit „Beenden“ und Fortschrittsstrich (statt Karte oben, die
+  den Verlauf verschob und wegscrollte); Inhalt mittig ausgerichtet

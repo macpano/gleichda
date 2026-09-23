@@ -28,7 +28,6 @@ class TripScreen extends ConsumerStatefulWidget {
 class _TripScreenState extends ConsumerState<TripScreen> {
   final _expanded = <int>{};
   final _openMessages = <String>{};
-  bool _companionHidden = false;
 
   @override
   Widget build(BuildContext context) {
@@ -94,19 +93,6 @@ class _TripScreenState extends ConsumerState<TripScreen> {
               ]),
             ),
             const SizedBox(height: 14),
-            if (following) ...[
-              if (_companionHidden)
-                CompanionCollapsed(onShow: () => setState(() => _companionHidden = false))
-              else
-                CompanionCard(
-                  trip: trip,
-                  now: now,
-                  issue: issue,
-                  gps: companion.freshGps(now),
-                  onHide: () => setState(() => _companionHidden = true),
-                ),
-              const SizedBox(height: 12),
-            ],
             if (issue != null) ...[
               IssueBanner(issue, onAlternatives: () => openAlternatives(context, trip)),
               const SizedBox(height: 14),
@@ -161,37 +147,34 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: arrived && !following
-          ? null
-          : Container(
-              decoration: BoxDecoration(color: c.bar, border: Border(top: BorderSide(color: c.hair))),
-              padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + MediaQuery.of(context).padding.bottom),
-              child: SizedBox(
-                height: 46,
-                child: following
-                    ? OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: c.ink,
-                          side: BorderSide(color: c.hair),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.card)),
-                        ),
-                        onPressed: () => ref.read(companionProvider.notifier).stop(),
-                        child: const Text('Begleitung beenden',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                      )
-                    : FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: c.accent,
-                          foregroundColor: c.onAccent,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.card)),
-                        ),
-                        // Startet die Begleitung in der Benachrichtigung; die
-                        // Fahrt bleibt offen und zeigt oben den nächsten Schritt.
-                        onPressed: () => ref.read(companionProvider.notifier).start(),
-                        child: const Text('Losfahren', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+      bottomNavigationBar: following
+          ? CompanionBar(
+              trip: trip,
+              now: now,
+              issue: issue,
+              gps: companion.freshGps(now),
+              onStop: () => ref.read(companionProvider.notifier).stop(),
+            )
+          : arrived
+              ? null
+              : Container(
+                  decoration: BoxDecoration(color: c.bar, border: Border(top: BorderSide(color: c.hair, width: 0.5))),
+                  padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + MediaQuery.of(context).padding.bottom),
+                  child: SizedBox(
+                    height: 46,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: c.accent,
+                        foregroundColor: c.onAccent,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.card)),
                       ),
-              ),
-            ),
+                      // Startet die Begleitung in der Benachrichtigung; die
+                      // Fahrt bleibt offen, unten steht dann der nächste Schritt.
+                      onPressed: () => ref.read(companionProvider.notifier).start(),
+                      child: const Text('Losfahren', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ),
     );
   }
 
