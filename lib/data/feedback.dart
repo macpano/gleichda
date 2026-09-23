@@ -41,7 +41,13 @@ class FeedbackSender {
           if (reply != null && reply.isNotEmpty) ...{'Antwort an': reply, '_replyto': reply},
           'App und Gerät': ?device,
         },
-        options: Options(headers: {'Accept': 'application/json'}, contentType: Headers.jsonContentType),
+        // FormSubmit nimmt nur Anfragen „von einer Webseite“ an; die Freischaltung
+        // gilt für diese Herkunft (eingerichtet 24.09.2026).
+        options: Options(headers: {
+          'Accept': 'application/json',
+          'Origin': 'https://github.com',
+          'Referer': 'https://github.com/macpano/gleich.da',
+        }, contentType: Headers.jsonContentType),
       );
       final ok = res.data?['success'];
       if (ok != true && ok != 'true') throw const ProviderException('Die Nachricht wurde nicht angenommen.');
