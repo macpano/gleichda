@@ -45,7 +45,7 @@ class LocationService {
 
   LatLon? get last => _last;
 
-  Future<LatLon> current({Duration maxAge = const Duration(seconds: 30)}) async {
+  Future<LatLon> current({Duration maxAge = const Duration(seconds: 30), bool preferRecent = false}) async {
     final settings = ref.read(settingsProvider).value;
     if (settings != null && !settings.useLocation) {
       throw const LocationException(LocationProblem.off);
@@ -69,6 +69,19 @@ class LocationService {
     if (p == LocationPermission.denied) throw const LocationException(LocationProblem.denied);
     if (p == LocationPermission.deniedForever) {
       throw const LocationException(LocationProblem.deniedForever);
+    }
+    if (preferRecent) {
+      // Für die Suche genügt eine frische letzte Position (unter 2 min, auf
+      // 100 m genau) – die Suche wartet dann nicht auf einen neuen GPS-Fix.
+      try {
+        final known = await Geolocator.getLastKnownPosition();
+        if (known != null &&
+            DateTime.now().difference(known.timestamp) < const Duration(minutes: 2) &&
+            known.accuracy < 100) {
+          _remember(known);
+          return _last!;
+        }
+      } catch (_) {}
     }
     try {
       final pos = await Geolocator.getCurrentPosition(
@@ -102,7 +115,7 @@ class LocationService {
   /// „Mein Standort“ mit aktueller Koordinate.
   Future<Location> resolve(Location l) async {
     if (!isHere(l)) return l;
-    final p = await current();
+    final p = await current(preferRecent: true);
     return l.copyWith(lat: p.lat, lon: p.lon);
   }
 }

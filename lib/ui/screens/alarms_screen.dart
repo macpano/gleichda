@@ -208,7 +208,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
 
   Future<void> _pick(bool from) async {
     final l = await Navigator.of(context).push<Location>(MaterialPageRoute(
-        builder: (_) => LocationSearchScreen(title: from ? 'Von' : 'Nach', allowHere: false)));
+        builder: (_) => LocationSearchScreen(title: from ? 'Von' : 'Nach', allowHere: false, showNearby: from)));
     if (l != null) setState(() => from ? _from = l : _to = l);
   }
 

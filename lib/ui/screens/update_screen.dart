@@ -148,7 +148,7 @@ class UpdateScreen extends ConsumerWidget {
           ListGroup(children: [
             SwitchListTile(
               title: const Text('Automatisch laden'),
-              subtitle: const Text('Beim Öffnen und alle 6 Stunden prüfen, neue Version im Hintergrund laden'),
+              subtitle: const Text('Bei jedem Öffnen prüfen, neue Version im Hintergrund laden'),
               value: auto,
               onChanged: (v) => ref.read(updateProvider.notifier).setAuto(v),
             ),

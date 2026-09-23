@@ -6,52 +6,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../domain/companion.dart';
 import '../domain/connections.dart';
 import '../domain/models.dart';
 import '../domain/settings.dart';
+import '../state/companion.dart';
 import '../state/location.dart';
 import '../state/providers.dart';
 import 'screens/walk_screen.dart' show tileUrl;
 import 'theme.dart';
 import 'widgets.dart';
 
-/// Geschätzte Position eines Fahrzeugs auf einem Abschnitt: zwischen dem
-/// zuletzt passierten und dem nächsten Halt, anteilig nach Zeit (Echtzeit,
-/// sonst Fahrplan). Null, wenn der Abschnitt noch nicht begonnen hat oder
-/// vorbei ist, oder Koordinaten fehlen.
-({LatLng point, Leg leg})? estimateVehicle(Trip trip, DateTime now) {
-  for (final l in trip.rides) {
-    final stops = [l.from, ...l.intermediates, l.to];
-    if (!isPassed(l.from, now) || isPassed(l.to, now)) continue;
-    var k = 0;
-    for (var i = 0; i < stops.length; i++) {
-      if (isPassed(stops[i], now)) k = i;
-    }
-    if (k >= stops.length - 1) return null;
-    final a = stops[k], b = stops[k + 1];
-    if (a.stop.lat == null || b.stop.lat == null) return null;
-    final t0 = (a.departure ?? a.arrival)?.best;
-    final t1 = (b.arrival ?? b.departure)?.best;
-    var f = 0.0;
-    if (t0 != null && t1 != null && t1.isAfter(t0)) {
-      f = (now.difference(t0).inSeconds / t1.difference(t0).inSeconds).clamp(0.0, 1.0);
-    }
-    return (
-      point: LatLng(
-        a.stop.lat! + (b.stop.lat! - a.stop.lat!) * f,
-        a.stop.lon! + (b.stop.lon! - a.stop.lon!) * f,
-      ),
-      leg: l,
-    );
-  }
-  return null;
-}
-
 LatLng? _ll(StopTime s) => s.stop.lat == null || s.stop.lon == null ? null : LatLng(s.stop.lat!, s.stop.lon!);
 
-/// Karte einer Verbindung: Linien in Linienfarbe über die Haltestellen,
-/// Fußwege gepunktet, das Fahrzeug an der geschätzten Position und – wenn
-/// freigegeben – der eigene Standort.
+/// Karte einer Verbindung: Linienwege in Linienfarbe, Fußwege gepunktet und –
+/// wenn freigegeben – der eigene Standort. Während der Begleitung im
+/// Fahrzeug ist der eigene Standort das Fahrzeug (Punkt in Linienfarbe).
 ///
 /// Der VRR liefert keinen Linienverlauf (TRIAS ohne LegProjection, geprüft
 /// 23.09.2026); die Linie verbindet deshalb die Haltestellen gerade.
@@ -116,7 +86,13 @@ class _TripMapState extends ConsumerState<TripMap> {
             textAlign: TextAlign.center, style: TextStyle(color: c.muted)),
       );
     }
-    final vehicle = estimateVehicle(trip, widget.now);
+    // Fahrzeug = eigene GPS-Position, wenn man mit „Losfahren“ in einem
+    // Fahrzeug unterwegs ist (Fahrzeugdaten der Betriebe sind nicht offen).
+    final companion = ref.watch(companionProvider);
+    final following = companion.active && companion.tripId == trip.id;
+    final me = _me == null ? null : (lat: _me!.latitude, lon: _me!.longitude);
+    final step = following && me != null ? nextStep(trip, widget.now, gps: me) : null;
+    final riding = step?.phase == CompanionPhase.onBoard ? step!.leg : null;
     // Linienwege aus der EFA; bis sie da sind (oder wo sie fehlen), verbindet
     // die Karte die Haltestellen gerade.
     final paths = ref.watch(legPathsProvider(TripPathKey(trip))).value;
@@ -175,25 +151,21 @@ class _TripMapState extends ConsumerState<TripMap> {
         PolylineLayer(polylines: lines),
         MarkerLayer(markers: [
           ...stops,
-          if (vehicle != null)
-            Marker(
-              point: vehicle.point,
-              width: 30,
-              height: 30,
-              child: Center(child: PositionDot(color: lineColor(context, vehicle.leg.line))),
-            ),
           if (_me != null)
             Marker(
               point: _me!,
-              width: 22,
-              height: 22,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1D5FD1),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
-                ),
-              ),
+              width: 30,
+              height: 30,
+              child: riding != null
+                  ? Center(child: PositionDot(color: lineColor(context, riding.line)))
+                  : Container(
+                      margin: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1D5FD1),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
+                      ),
+                    ),
             ),
         ]),
         const MapCredit(),
@@ -211,7 +183,6 @@ class TripMapScreen extends ConsumerWidget {
     final c = context.c;
     final s = ref.watch(lastTripProvider).value;
     final now = ref.watch(clockProvider).value ?? DateTime.now();
-    final vehicle = s == null ? null : estimateVehicle(s.trip, now);
     return Scaffold(
       body: Column(children: [
         Padding(
@@ -223,20 +194,6 @@ class TripMapScreen extends ConsumerWidget {
           child: s == null
               ? Center(child: Text('Keine Fahrt geöffnet.', style: TextStyle(color: c.muted)))
               : TripMap(trip: s.trip, now: now),
-        ),
-        Container(
-          color: c.surface,
-          padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.of(context).padding.bottom),
-          child: Row(children: [
-            Expanded(
-              child: Text(
-                vehicle == null
-                    ? 'Fahrzeugposition erscheint, sobald die Fahrt läuft.'
-                    : 'Fahrzeug geschätzt aus Fahrplan und Echtzeit, nicht per GPS.',
-                style: TextStyle(fontSize: 13, color: c.muted, height: 1.35),
-              ),
-            ),
-          ]),
         ),
       ]),
     );

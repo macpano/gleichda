@@ -82,3 +82,15 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   Uhrzeiten brechen bei großer Schrift nicht mehr um, Karte nur über das Kartensymbol
 - ✅ Benachrichtigung kompakt, nur der Android-Fortschrittsbalken
 - ✅ Feineres Design: kleinere Titel und Knöpfe, schmalere Liniennummern, Haarlinien, niedrigere Leiste
+
+## v0.3.1 (23.09.2026)
+- ✅ Unterwegs per GPS: nächster Halt, Halte bis zum Ausstieg und Fortschritt aus der eigenen Position
+  (`locateOnLeg`), sonst Uhrzeit; „nächster Halt“ nie, wenn er der Ausstieg ist
+- ✅ Karte: Fahrzeug = eigene GPS-Position während der Begleitung (keine Schätzung mehr)
+- ✅ Benachrichtigung mit Symbol in der Statusleiste (Kanal `unterwegs_2`, normale Wichtigkeit ohne Ton),
+  „Beenden“ ohne die App zu öffnen, Vordergrunddienst auch als Standortdienst
+- ✅ Verbindungssuche: schnellste Suche sofort, andere Profile nur im gleichen Zeitraum, keine
+  begonnenen Verbindungen, Standort aus letzter Position (< 2 min)
+- ✅ Zielsuche ohne „In der Nähe“, Suchtreffer nach Entfernung sortiert
+- ✅ Fußnavigation entlang von Gehwegen (FOSSGIS-Router) mit Abbiegehinweisen, neu berechnet bei Abweichung
+- ✅ Hinweise in der Fahrt eingeklappt, Streifen hinter der Statusleiste, Versionsabgleich bei jedem Öffnen

@@ -8,6 +8,7 @@ import '../data/db/database.dart';
 import '../data/efa/efa_client.dart';
 import '../data/repository.dart';
 import '../data/transit_provider.dart';
+import '../data/walk_route.dart';
 import '../data/trias/trias_provider.dart';
 import '../data/vrr_provider.dart';
 import '../domain/models.dart';
@@ -291,3 +292,6 @@ class TripPathKey {
 /// Linienwege je Abschnitt; null, wo keiner bekannt ist.
 final legPathsProvider = FutureProvider.family<List<List<GeoPoint>?>, TripPathKey>(
     (ref, key) => ref.watch(transitProvider).legPaths(key.trip));
+
+/// Fußwege entlang von Gehwegen (FOSSGIS-Router).
+final walkRouterProvider = Provider((ref) => WalkRouter(ref.watch(dioProvider)));

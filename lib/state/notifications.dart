@@ -1,3 +1,5 @@
+import 'dart:ui' show IsolateNameServer;
+
 import 'package:flutter/services.dart' show Color;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -40,8 +42,12 @@ class Notifications {
           ),
         ),
         onDidReceiveNotificationResponse: (r) => onResponse?.call(r.payload, r.actionId),
+        onDidReceiveBackgroundNotificationResponse: notificationActionInBackground,
       );
       _ready = true;
+      try {
+        await _android?.deleteNotificationChannel(channelId: 'unterwegs');
+      } catch (_) {}
     } catch (_) {
       // Tests, Plattformen ohne Benachrichtigungen oder fehlendes Symbol:
       // Die App läuft ohne Benachrichtigungen weiter, statt zu hängen.
@@ -69,6 +75,10 @@ class Notifications {
 
   static bool _serviceRunning = false;
 
+  /// Standort erlaubt: Der Vordergrunddienst läuft dann zusätzlich als
+  /// Standortdienst, damit GPS auch bei ausgeschaltetem Bildschirm weiterläuft.
+  static bool locationAllowed = false;
+
   /// Zeigt bzw. aktualisiert die laufende Unterwegs-Benachrichtigung.
   /// Kompakt: Linie und Ziel in der Kopfzeile, wo aussteigen, wann, und der
   /// Fortschrittsbalken von Android (kein eigenes Bild mehr – das ergab
@@ -82,12 +92,19 @@ class Notifications {
     String? reason,
   }) async {
     if (!_ready) return;
+    // Eigener Kanal mit normaler Wichtigkeit, aber ohne Ton: Android zeigt
+    // „lautlose“ Benachrichtigungen (Importance.low) oft ohne Symbol in der
+    // Statusleiste. Kanal-Wichtigkeit lässt sich nachträglich nicht ändern,
+    // deshalb ein neuer Kanal.
     final details = AndroidNotificationDetails(
-      'unterwegs',
+      'unterwegs_2',
       'Unterwegs',
       channelDescription: 'Begleitung während der Fahrt',
-      importance: Importance.low,
-      priority: Priority.low,
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+      playSound: false,
+      enableVibration: false,
+      icon: _icon,
       ongoing: true,
       autoCancel: false,
       onlyAlertOnce: true,
@@ -101,7 +118,8 @@ class Notifications {
       maxProgress: 100,
       progress: progress,
       actions: const [
-        AndroidNotificationAction('stop', 'Beenden', showsUserInterface: true, cancelNotification: true),
+        // Ohne die App zu öffnen: läuft in notificationActionInBackground.
+        AndroidNotificationAction('stop', 'Beenden', showsUserInterface: false, cancelNotification: true),
       ],
     );
     final body = reason == null ? when : '$when · $reason';
@@ -113,7 +131,10 @@ class Notifications {
           body: body,
           notificationDetails: details,
           payload: 'companion',
-          foregroundServiceTypes: {AndroidServiceForegroundType.foregroundServiceTypeSpecialUse},
+          foregroundServiceTypes: {
+            AndroidServiceForegroundType.foregroundServiceTypeSpecialUse,
+            if (locationAllowed) AndroidServiceForegroundType.foregroundServiceTypeLocation,
+          },
         );
         _serviceRunning = true;
         return;
@@ -198,4 +219,28 @@ class Notifications {
       ),
     );
   }
+}
+
+/// Name, unter dem die laufende App ihren Empfänger für „Beenden“ anmeldet.
+const companionPortName = 'gleichda_unterwegs';
+
+/// „Beenden“ in der Unterwegs-Benachrichtigung, ohne die App zu öffnen.
+/// Läuft in einem eigenen Hintergrund-Isolate: Läuft die App noch, erfährt
+/// sie es über ihren Port und beendet die Begleitung selbst (sonst würde ihr
+/// Zeitgeber die Benachrichtigung neu zeigen); sonst hält der Isolate den
+/// Dienst direkt an.
+@pragma('vm:entry-point')
+Future<void> notificationActionInBackground(NotificationResponse r) async {
+  if (r.actionId != 'stop') return;
+  final port = IsolateNameServer.lookupPortByName(companionPortName);
+  if (port != null) {
+    port.send('stop');
+    return;
+  }
+  final plugin = FlutterLocalNotificationsPlugin();
+  final android = plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+  try {
+    await android?.stopForegroundService();
+  } catch (_) {}
+  await plugin.cancel(id: Notifications.companionId);
 }

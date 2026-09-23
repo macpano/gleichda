@@ -16,6 +16,7 @@ import 'package:gleichda/domain/models.dart';
 import 'package:gleichda/domain/settings.dart';
 import 'package:gleichda/state/alarm_planner.dart';
 import 'package:gleichda/ui/connection_views.dart';
+import 'package:gleichda/ui/screens/connections_screen.dart' show mergeTrips, dropStarted;
 
 String fixture(String n) => File('test/fixtures/$n').readAsStringSync();
 
@@ -188,6 +189,54 @@ void main() {
   test('Fahrtverlauf-Parser übernimmt EFA-Koordinaten in die Fahrt', () {
     final trips = parseTrips(fixture('trias_trip_alter_markt_vohwinkel.xml'));
     expect(trips.first.rides.first.from.stop.lat, isNull); // TRIAS liefert in Verbindungen keine Koordinaten
+  });
+
+  group('Unterwegs per GPS', () {
+    // Vier Halte auf einer Linie nach Osten, je etwa 700 m auseinander.
+    StopTime st(String id, double lon, EventTime t, {bool dep = true}) => StopTime(
+        stop: Location(id: id, providerId: 't', name: id, lat: 51.25, lon: lon),
+        departure: dep ? t : null,
+        arrival: dep ? null : t);
+    final leg = Leg(
+      type: LegType.ride,
+      from: st('A', 7.10, at(14, 0)),
+      intermediates: [st('B', 7.11, at(14, 2)), st('C', 7.12, at(14, 4))],
+      to: st('D', 7.13, at(14, 6), dep: false),
+      line: const Line(id: 'wsw:66640::H', name: '640', mode: TransportMode.bus),
+    );
+    final trip = Trip(id: 'g', legs: [leg]);
+
+    test('Lage auf der Strecke: passierter Halt und Fortschritt', () {
+      final fix = locateOnLeg(leg, (lat: 51.2501, lon: 7.115))!;
+      expect(fix.passed, 1); // zwischen B und C
+      expect(fix.progress, closeTo(0.5, 0.05));
+      expect(locateOnLeg(leg, (lat: 51.26, lon: 7.115)), isNull, reason: 'über 1 km neben der Strecke');
+    });
+
+    test('GPS schlägt die Uhrzeit: nächster Halt und Halte bis zum Ausstieg', () {
+      // Laut Uhr erst an B, per GPS schon hinter C.
+      final step = nextStep(trip, DateTime(2026, 9, 23, 14, 2, 30), gps: (lat: 51.25, lon: 7.125));
+      expect(step.phase, CompanionPhase.onBoard);
+      expect(step.byGps, isTrue);
+      expect(step.stopsLeft, 1);
+      expect(step.nextBeforeExit, isNull, reason: 'nächster Halt ist der Ausstieg');
+      final early = nextStep(trip, DateTime(2026, 9, 23, 14, 1), gps: (lat: 51.25, lon: 7.105));
+      expect(early.nextBeforeExit?.stop.id, 'B');
+    });
+  });
+
+  group('Verbindungsliste', () {
+    Trip t(String id, int h, int m) => Trip(id: id, legs: [ride('A', at(h, m), 'B', at(h, m + 20))]);
+
+    test('andere Profile nur im Zeitraum der Hauptsuche', () {
+      final merged = mergeTrips([t('a', 14, 0), t('b', 14, 30)], [t('c', 14, 15), t('d', 16, 0)]);
+      expect(merged.map((x) => x.id), ['a', 'c', 'b']);
+    });
+
+    test('begonnene Verbindungen fallen weg', () {
+      final list = dropStarted([t('a', 13, 50), t('b', 14, 0), t('c', 14, 10)], DateTime(2026, 9, 23, 14, 0));
+      expect(list.map((x) => x.id), ['b', 'c']);
+    });
   });
 }
 
