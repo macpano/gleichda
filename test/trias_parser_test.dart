@@ -163,4 +163,13 @@ void main() {
     expect(displayName('Velbert Neviges Markt/Bahnhof', 'Velbert'),
         'Neviges Markt/Bahnhof');
   });
+
+  test('Fehlercode -4000 heißt „keine Verbindung“, kein Fehler', () {
+    const xml = '<?xml version="1.0" encoding="UTF-8"?>'
+        '<trias:Trias xmlns:trias="http://www.vdv.de/trias" version="1.1"><trias:ServiceDelivery>'
+        '<trias:DeliveryPayload><trias:TripResponse><trias:ErrorMessage><trias:Code>-4000</trias:Code>'
+        '<trias:Text><trias:Text>no trip</trias:Text></trias:Text></trias:ErrorMessage></trias:TripResponse>'
+        '</trias:DeliveryPayload></trias:ServiceDelivery></trias:Trias>';
+    expect(parseTrips(xml), isEmpty);
+  });
 }

@@ -244,3 +244,10 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   zwei Minuten danach stand mitten in der Ansicht „Keine Fahrt geöffnet“
 - Geprüft: Die Auskunft liefert bei gleicher Anfrage stabil Ergebnisse (27/27), eine leere Liste ließ sich nicht
   nachstellen (`test_live/verbindungen_wiederholt_live_test.dart`)
+
+## 0.4.11-vorab.12 (23.09.2026)
+- ✅ Vom Standort nach Hause fand die Suche teils gar nichts: Liegt man nah am Ziel und ist der Fußweg länger als die
+  Fußweg-Grenze, antwortet TRIAS mit Code `-4000` statt mit einem Fußweg (live: 150 m, Grenze 3 min). Jetzt gilt
+  `-4000` als „keine Verbindung“, und ohne Treffer sucht die App einmal ohne Fußweg-Grenze – der Fußweg erscheint.
+  „Erneut versuchen“ bekam vorher jedes Mal dieselbe Fehlantwort
+- Bildschirmfoto `verbindungen_fussweg`: reiner Fußweg in der Verbindungsliste

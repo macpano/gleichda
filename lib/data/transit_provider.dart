@@ -45,6 +45,21 @@ class TripQuery {
   /// Längster Fußweg zum ersten und vom letzten Halt, in Minuten.
   final int? maxWalkMinutes;
 
+  /// Dieselbe Anfrage ohne Grenze für den Fußweg.
+  TripQuery withoutWalkLimit() => TripQuery(
+        from: from,
+        to: to,
+        time: time,
+        arriveBy: arriveBy,
+        maxResults: maxResults,
+        via: via,
+        optimization: optimization,
+        excludedModes: excludedModes,
+        accessible: accessible,
+        walkSpeedPercent: walkSpeedPercent,
+        maxInterchanges: maxInterchanges,
+      );
+
   TripQuery copyWith({DateTime? time, bool? arriveBy, TripOptimization? optimization, int? maxResults}) =>
       TripQuery(
         from: from,

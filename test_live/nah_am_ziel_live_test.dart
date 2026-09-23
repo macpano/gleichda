@@ -14,10 +14,10 @@ void main() {
     final dio = Dio();
     final p = VrrProvider(TriasProvider(dio), EfaClient(dio));
     final addr = (await p.searchLocations('Wuppertal Friedrich-Ebert-Straße 100')).firstWhere((l) => l.type == LocationType.address);
-    for (final m in [0, 30, 150, 400, 900]) {
+    for (final m in [0, 150, 300]) {
       final here = Location(id: 'coord', providerId: 'vrr', name: 'Mein Standort', type: LocationType.coordinate,
           lat: addr.lat! + m / 111000, lon: addr.lon!);
-      for (final walk in [null, 10]) {
+      for (final walk in [3, 5]) {
         final at = DateTime.now();
         try {
           final t = await p.planTrip(TripQuery(from: here, to: addr, time: at, maxWalkMinutes: walk));
