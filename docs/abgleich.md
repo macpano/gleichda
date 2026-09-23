@@ -159,3 +159,7 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Schnellziele Zuhause/Arbeit unter der Suche
 - ✅ Verbindungen: Zeitzeile („Heute ab …“) antippbar, öffnet das Zeitfenster und sucht neu
 - ✅ Schalter „Vorabversionen erhalten“ (Mehr → Aktualisierung), Lizenz GPL-3.0
+
+## v0.4.9 (23.09.2026)
+- ✅ Unterwegs: Ankunft über 1 min vorbei = erledigt (kein Rücksprung des Balkens), GPS nur wenn plausibel
+  (nicht weit hinter der Uhrzeit), Benachrichtigung zeigt bis zum Ende „Angekommen“
