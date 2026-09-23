@@ -92,8 +92,13 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
   „Installieren“ an. Kein App-Store und kein weiteres Werkzeug nötig.
 - Commits nur mit der anonymen Adresse 325691885+macpano@users.noreply.github.com
   (in der Repo-Konfiguration gesetzt) – keine private E-Mail im öffentlichen Verlauf.
-- Neue Version: `bash tool/release.sh <Version> "<Neuerungen>"` – erhöht die
-  Build-Nummer, prüft, baut die signierte APK, taggt `v<Version>` und legt das Release an.
+- **Veröffentlichen nur auf Zuruf** (Nutzervorgabe 23.09.2026): Änderungen werden eingecheckt und gepusht,
+  ein reguläres Release (= Update für alle) entsteht erst, wenn der Nutzer „veröffentlichen“ sagt.
+  `bash tool/release.sh <Version> "<Neuerungen>"` erhöht die Build-Nummer, prüft, baut die signierte APK,
+  taggt `v<Version>` und legt das Release an.
+- **Zwischenstände als Vorabversion:** `VORAB=1 bash tool/release.sh 0.4.9-vorab.1 "<Neuerungen>"` legt ein
+  GitHub-Pre-release an. Das bekommen nur Geräte mit „Mehr → Aktualisierung → Vorabversionen erhalten“
+  (liest `/releases` statt `/releases/latest`); `0.4.9-vorab.N` gilt als älter als `0.4.9`.
 - Signiert mit demselben Schlüssel wie Linienlog (`android/key.properties`, nicht im Repo).
   Ohne diesen Schlüssel lassen sich Updates nicht über die installierte App spielen.
 
