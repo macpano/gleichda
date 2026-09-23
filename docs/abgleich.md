@@ -124,3 +124,7 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 ## v0.4.2 (23.09.2026)
 - ✅ Fahrtverlauf: Linie und volles Ziel in einer eigenen Zeile, Zwischenhalte und Echtzeit darunter (vorher abgeschnitten)
 - ✅ Über eine Abfahrt geöffnete Fahrt zeigt Linie und Ziel oben im Kopf
+
+## v0.4.3 (23.09.2026)
+- ✅ Abfahrten: drei Knöpfe ohne Scrollen – Haltestelle (öffnet immer die Suche, „Mein Standort“ = in der Nähe), Zeit,
+  Verkehrsmittel; vorher ließ sich nach Wahl einer Haltestelle keine andere mehr suchen

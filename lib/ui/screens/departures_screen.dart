@@ -119,11 +119,13 @@ class _DeparturesScreenState extends ConsumerState<DeparturesScreen> {
     });
   }
 
+  /// Haltestelle wählen – oder über „Mein Standort“ zurück zu den
+  /// Haltestellen in der Nähe.
   Future<void> _pickStop() async {
     final l = await Navigator.of(context).push<Location>(MaterialPageRoute(
-        builder: (_) => const LocationSearchScreen(title: 'Haltestellen', stopsOnly: true)));
+        builder: (_) => const LocationSearchScreen(title: 'Haltestelle', stopsOnly: true)));
     if (l == null) return;
-    _chosen = l;
+    _chosen = isHere(l) ? null : l;
     await _load();
   }
 
@@ -185,38 +187,36 @@ class _DeparturesScreenState extends ConsumerState<DeparturesScreen> {
                   failed: stops.every((s) => s.error != null)),
           ]),
           const SizedBox(height: 16),
-          SizedBox(
-            height: 36,
-            child: ListView(scrollDirection: Axis.horizontal, children: [
-              ChoiceChipX(
-                icon: Icons.schedule,
-                label: _time == null ? 'Jetzt' : '${relativeDay(_time!, now) == 'Heute' ? '' : '${relativeDay(_time!, now)} '}ab ${hm(_time!)}',
+          // Drei feste Knöpfe nebeneinander, ohne Scrollen: Haltestelle, Zeit,
+          // Verkehrsmittel. Die Haltestelle öffnet immer die Suche (dort auch
+          // „Mein Standort“ für die Haltestellen in der Nähe).
+          Row(children: [
+            Expanded(
+              child: ChoiceChipX(
+                icon: _chosen == null ? Icons.near_me_outlined : null,
+                label: _chosen?.label ?? 'In der Nähe',
                 selected: false,
-                onTap: _pickTime,
+                onTap: _pickStop,
               ),
-              const SizedBox(width: 8),
-              ChoiceChipX(
-                icon: Icons.filter_list,
-                label: _hidden.isEmpty ? 'Alle Verkehrsmittel' : 'ohne ${_hidden.map((g) => g.label).join(', ')}',
+            ),
+            const SizedBox(width: 8),
+            ChoiceChipX(
+              icon: Icons.schedule,
+              label: _time == null ? 'Jetzt' : '${relativeDay(_time!, now) == 'Heute' ? '' : '${relativeDay(_time!, now)} '}${hm(_time!)}',
+              selected: false,
+              onTap: _pickTime,
+            ),
+            const SizedBox(width: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 150),
+              child: ChoiceChipX(
+                icon: _hidden.isEmpty ? null : Icons.filter_list,
+                label: _hidden.isEmpty ? 'Verkehrsmittel' : 'ohne ${_hidden.map((g) => g.label).join(', ')}',
                 selected: false,
                 onTap: _pickModes,
               ),
-              const SizedBox(width: 8),
-              ChoiceChipX(
-                icon: _chosen == null ? Icons.search : Icons.my_location,
-                label: _chosen == null ? 'Haltestelle wählen' : 'In der Nähe',
-                selected: false,
-                onTap: () {
-                  if (_chosen == null) {
-                    _pickStop();
-                  } else {
-                    _chosen = null;
-                    _load();
-                  }
-                },
-              ),
-            ]),
-          ),
+            ),
+          ]),
           const SizedBox(height: 16),
           if (stops == null)
             for (var i = 0; i < 2; i++) ...[
