@@ -209,7 +209,7 @@ bool companionShown(WidgetRef ref) {
   return companion.active && s != null && s.trip.id == companion.tripId;
 }
 
-/// Fünf feste Reiter: Suche, Karte, Abfahrten, Meldungen, Mehr.
+/// Fünf feste Reiter: Suche, Abfahrten, Karte, Meldungen, Mehr (Nutzervorgabe 23.09.2026).
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
 
@@ -277,8 +277,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   static const _tabs = [
     (Icons.search, 'Suche'),
-    (Icons.map_outlined, 'Karte'),
     (Icons.schedule, 'Abfahrten'),
+    (Icons.map_outlined, 'Karte'),
     (Icons.notifications_none, 'Meldungen'),
     (Icons.more_horiz, 'Mehr'),
   ];
@@ -301,8 +301,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               // Erst beim ersten Öffnen aufbauen: keine Standortabfrage und keine
               // Meldungsabfrage, bevor der Tab gebraucht wird.
               // Karte erst beim ersten Öffnen (Standort, Kacheln).
-              _visited.contains(1) ? const MapScreen() : const SizedBox.shrink(),
-              _visited.contains(2) ? const DeparturesScreen() : const SizedBox.shrink(),
+              _visited.contains(1) ? const DeparturesScreen() : const SizedBox.shrink(),
+              _visited.contains(2) ? const MapScreen() : const SizedBox.shrink(),
               _visited.contains(3) ? const MessagesScreen() : const SizedBox.shrink(),
               const MoreScreen(),
             ],
