@@ -142,12 +142,13 @@ class UpdateController extends Notifier<UpdateState> {
     _timer = Timer.periodic(interval, (_) => check(download: true));
   }
 
-  /// Beim Zurückkehren in die App: nach längerer Pause erneut prüfen, eine
-  /// unterbrochene Übertragung fortsetzen.
+  /// Bei jedem Öffnen der App (auch aus dem Hintergrund) neu abgleichen –
+  /// höchstens einmal pro Minute, damit schnelles Hin- und Herwechseln
+  /// GitHub nicht mit Anfragen überhäuft.
   Future<void> resume() async {
     if (!await _auto) return;
     final at = state.checkedAt;
-    if (at != null && DateTime.now().difference(at) > interval) {
+    if (at == null || DateTime.now().difference(at) > const Duration(minutes: 1)) {
       await check(download: true);
     } else if (state.phase == UpdatePhase.failed && state.hasUpdate) {
       await download();

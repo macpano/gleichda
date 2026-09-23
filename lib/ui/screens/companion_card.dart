@@ -13,16 +13,21 @@ import 'walk_screen.dart';
 /// Fahrtverlauf, Umstieg und Alternativen stehen direkt darunter, die Karte
 /// hinter dem Kartensymbol oben (docs/konzept.md, „Unterwegs-Modus“).
 class CompanionCard extends StatelessWidget {
-  const CompanionCard({super.key, required this.trip, required this.now, this.issue});
+  const CompanionCard({super.key, required this.trip, required this.now, this.issue, this.gps});
 
   final Trip trip;
   final DateTime now;
   final TripIssue? issue;
 
+  /// Eigene Position während der Begleitung; bestimmt nächsten Halt und
+  /// Fortschritt, sonst die Uhrzeit.
+  final GeoPoint? gps;
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    final step = nextStep(trip, now);
+    final step = nextStep(trip, now, gps: gps);
+    final next = step.nextBeforeExit;
     final leg = step.leg;
     final late = (step.when?.delayMinutes ?? 0) > 0;
     final whenColor = issue?.level == IssueLevel.cancelled
@@ -76,9 +81,8 @@ class CompanionCard extends StatelessWidget {
           FadeText(step.when == null ? '' : hm(step.when!.best),
               style: context.t.number(16).copyWith(color: c.ink2)),
           const Spacer(),
-          if (step.phase == CompanionPhase.onBoard && (step.stopsLeft ?? 0) > 0)
-            Text(step.stopsLeft == 1 ? 'nächster Halt' : 'noch ${step.stopsLeft} Halte',
-                style: TextStyle(fontSize: 15, color: c.muted)),
+          if (step.phase == CompanionPhase.onBoard && (step.stopsLeft ?? 0) > 1)
+            Text('noch ${step.stopsLeft} Halte', style: TextStyle(fontSize: 14, color: c.muted)),
           if (boarding)
             TextButton(
               style: TextButton.styleFrom(
@@ -93,6 +97,13 @@ class CompanionCard extends StatelessWidget {
               child: const Text('Weg zum Steig', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
             ),
         ]),
+        if (next != null) ...[
+          const SizedBox(height: 6),
+          Row(children: [
+            Text('Nächster Halt ', style: TextStyle(fontSize: 14, color: c.muted)),
+            Expanded(child: OneLine(next.stop.name, style: TextStyle(fontSize: 14, color: c.ink2))),
+          ]),
+        ],
       ]),
     );
   }

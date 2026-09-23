@@ -52,16 +52,29 @@ Future<List<Trip>> searchMerged(TransitProvider p, List<TripQuery> queries) asyn
         if (identical(q, queries.first)) throw e;
         return <Trip>[];
       })));
+  return mergeTrips(results.first, results.skip(1).expand((l) => l));
+}
+
+/// Ergänzt die Hauptsuche um Treffer anderer Profile – aber nur innerhalb
+/// ihres Zeitraums. Die anderen Profile reichen oft weiter in die Zukunft;
+/// ohne diese Grenze entstanden Lücken, weil dort nur noch einzelne
+/// Verbindungen standen.
+List<Trip> mergeTrips(List<Trip> main, Iterable<Trip> extra) {
   final seen = <String>{};
-  final out = <Trip>[];
-  for (final list in results) {
-    for (final t in list) {
-      if (seen.add(tripSignature(t))) out.add(t);
-    }
+  final out = <Trip>[for (final t in main) if (seen.add(tripSignature(t))) t];
+  final until = main.isEmpty ? null : main.map((t) => t.departure.planned).reduce((a, b) => a.isAfter(b) ? a : b);
+  for (final t in extra) {
+    if (until != null && t.departure.planned.isAfter(until)) continue;
+    if (seen.add(tripSignature(t))) out.add(t);
   }
   out.sort((a, b) => a.departure.best.compareTo(b.departure.best));
   return out;
 }
+
+/// Verbindungen, die schon begonnen haben, fallen weg: Die Auskunft liefert
+/// teils Verbindungen, deren Fußweg vor der gesuchten Zeit beginnt.
+List<Trip> dropStarted(List<Trip> trips, DateTime from) =>
+    trips.where((t) => !t.departure.best.isBefore(from.subtract(const Duration(minutes: 1)))).toList();
 
 String tripSignature(Trip t) =>
     '${t.departure.planned.toIso8601String()}|${t.arrival.planned.toIso8601String()}|${t.rides.map((r) => r.line?.id).join(',')}';
@@ -155,16 +168,33 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
         );
     final p = ref.read(transitProvider);
     return switch (_profile) {
-      SearchProfile.all => searchMerged(p, [
-          q(TripOptimization.fastest),
-          q(TripOptimization.minChanges),
-          q(TripOptimization.leastWalking),
-        ]),
+      SearchProfile.all => _allProfiles(p, q(TripOptimization.fastest),
+          [q(TripOptimization.minChanges), q(TripOptimization.leastWalking)], time, arriveBy),
       SearchProfile.fastest => p.planTrip(q(TripOptimization.fastest)),
       SearchProfile.fewChanges => p.planTrip(q(TripOptimization.minChanges)),
       SearchProfile.lessWalking => p.planTrip(q(TripOptimization.leastWalking)),
       SearchProfile.accessible => p.planTrip(q(TripOptimization.fastest, accessible: true)),
     };
+  }
+
+  /// „Alle“: die schnellste Suche erscheint, sobald sie da ist; die Profile
+  /// „wenig Umstiege“ und „wenig Fußweg“ ergänzen die Liste danach.
+  Future<List<Trip>> _allProfiles(
+      TransitProvider p, TripQuery main, List<TripQuery> extra, DateTime time, bool arriveBy) async {
+    final seq = _seq;
+    final others = [for (final q in extra) p.planTrip(q).catchError((Object _) => <Trip>[])];
+    final first = await p.planTrip(main);
+    final shown = arriveBy ? first : dropStarted(first, time);
+    if (mounted && seq == _seq && (_trips == null || _fromCache || _trips!.isEmpty)) {
+      setState(() {
+        _trips = shown;
+        _updatedAt = DateTime.now();
+        _fromCache = false;
+      });
+    }
+    final rest = await Future.wait(others);
+    final merged = mergeTrips(first, rest.expand((l) => l));
+    return arriveBy ? merged : dropStarted(merged, time);
   }
 
   Future<void> _load({bool quiet = false}) async {
@@ -174,7 +204,9 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
       if (!quiet) _error = null;
     });
     try {
-      final trips = await _query(widget.time ?? DateTime.now(), arriveBy: widget.arriveBy);
+      final at = widget.time ?? DateTime.now();
+      final found = await _query(at, arriveBy: widget.arriveBy);
+      final trips = widget.arriveBy ? found : dropStarted(found, at);
       if (!mounted || seq != _seq) return;
       setState(() {
         _trips = trips;

@@ -89,7 +89,7 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 - Signiert mit demselben Schlüssel wie Linienlog (`android/key.properties`, nicht im Repo).
   Ohne diesen Schlüssel lassen sich Updates nicht über die installierte App spielen.
 
-## Stand (v0.3.0, 23.09.2026)
+## Stand (v0.3.1, 23.09.2026)
 
 - Umgesetzt sind die Schritte 1–15 in Grundform; was fehlt, steht in `docs/abgleich.md`.
 - Der geteilte Chat liegt nur lokal als `docs/chat-verlauf.txt` (in .gitignore, persönliche Angaben – nie einchecken).
@@ -118,4 +118,12 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 - Liniensuche: `XML_SERVINGLINES_REQUEST mode=line` sucht deutschlandweit; begrenzt auf WSW,
   „Wuppertal“ in der Beschreibung und DB-Züge im NRW-Bereich (Kennung `9xE..`), dazu alle Linien an
   Hbf, Vohwinkel, Oberbarmen. `XML_LINELIST_REQUEST` liefert auf dem Testserver nichts.
+- Unterwegs per GPS (`locateOnLeg` in `lib/domain/companion.dart`): Position auf die Haltestellenfolge
+  gelegt, ≤ 250 m sonst Uhrzeit. Fahrzeugpositionen der Betriebe sind nicht offen – das Fahrzeug ist die
+  eigene Position.
+- Fußwege: FOSSGIS-OSRM `routing.openstreetmap.de/routed-foot/route/v1/driving/…` (Pfad heißt „driving“,
+  gerechnet wird für Fußgänger), `lib/data/walk_route.dart`.
+- Benachrichtigung: Android blendet lautlose Benachrichtigungen (Importance.low) oft aus der Statusleiste
+  aus – deshalb Kanal `unterwegs_2` mit normaler Wichtigkeit ohne Ton. „Beenden“ läuft über
+  `notificationActionInBackground` und den Port `gleichda_unterwegs`, ohne die App zu öffnen.
 - Kartenkacheln vorläufig FOSSGIS (`tile.openstreetmap.de`), offene Entscheidung im Konzept.

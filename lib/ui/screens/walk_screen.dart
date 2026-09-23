@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/transit_provider.dart';
+import '../../data/walk_route.dart';
 import '../../domain/models.dart';
 import '../../domain/settings.dart';
 import '../../state/location.dart';
@@ -46,6 +47,43 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
   final _map = MapController();
   bool _fitted = false;
 
+  /// Gehweg zum Steig; neu berechnet, wenn man mehr als 35 m davon abweicht.
+  WalkRoute? _route;
+  DateTime? _routedAt;
+  bool _routing = false;
+
+  Future<void> _maybeRoute() async {
+    final t = _target, p = _pos;
+    if (t == null || p == null || _routing) return;
+    final here = (lat: p.latitude, lon: p.longitude);
+    final r = _route;
+    final off = r == null ? double.infinity : r.locate(here).off;
+    final recent = _routedAt != null && DateTime.now().difference(_routedAt!) < const Duration(seconds: 15);
+    if (off <= 35 || (r != null && recent)) return;
+    _routing = true;
+    try {
+      final route = await ref.read(walkRouterProvider).route(here, (lat: t.lat, lon: t.lon));
+      if (mounted && route != null) setState(() => _route = route);
+    } on ProviderException {
+      // Ohne Router bleibt die Luftlinie.
+    } finally {
+      _routing = false;
+      _routedAt = DateTime.now();
+    }
+  }
+
+  static IconData _maneuverIcon(WalkStep s) => switch ((s.type, s.modifier)) {
+        ('arrive', _) => Icons.place_outlined,
+        (_, 'left') => Icons.turn_left,
+        (_, 'right') => Icons.turn_right,
+        (_, 'slight left') => Icons.turn_slight_left,
+        (_, 'slight right') => Icons.turn_slight_right,
+        (_, 'sharp left') => Icons.turn_sharp_left,
+        (_, 'sharp right') => Icons.turn_sharp_right,
+        (_, 'uturn') => Icons.u_turn_left,
+        _ => Icons.straight,
+      };
+
   @override
   void initState() {
     super.initState();
@@ -82,6 +120,7 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
         _target = t;
       });
       _fit();
+      _maybeRoute();
     } on ProviderException catch (e) {
       if (mounted) setState(() => _error = e.message);
     }
@@ -94,6 +133,7 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
         if (!mounted) return;
         setState(() => _pos = p);
         _fit();
+        _maybeRoute();
       });
     } on LocationException catch (e) {
       if (mounted) setState(() => _error = e.message);
@@ -145,13 +185,26 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
     double? dist;
     String? direction;
     double? bearing;
+    // Mit Gehweg: Restweg entlang des Wegs und das nächste Abbiegen.
+    final route = _route;
+    final at = route != null && p != null ? route.locate((lat: p.latitude, lon: p.longitude)) : null;
+    final turn = at == null ? null : route!.nextStep(at.index);
     if (t != null && p != null) {
-      dist = _dist(p.latitude, p.longitude, t.lat, t.lon);
+      dist = at != null ? route!.remainingFrom(at.index) + at.off : _dist(p.latitude, p.longitude, t.lat, t.lon);
       bearing = _bearing(p.latitude, p.longitude, t.lat, t.lon);
-      direction = p.speed > 0.6 && p.heading > 0 ? _relative(bearing, p.heading) : 'Richtung ${_compass(bearing)}';
+      direction = turn != null
+          ? (turn.step.type == 'arrive'
+              ? 'Ziel in ${distanceText(turn.meters)}'
+              : 'In ${distanceText(turn.meters)}: ${turn.step.text}')
+          : p.speed > 0.6 && p.heading > 0
+              ? _relative(bearing, p.heading)
+              : 'Richtung ${_compass(bearing)}';
     }
-    // Gehzeit: Luftlinie × 1,3 bei 1,3 m/s, angepasst an die Gehgeschwindigkeit.
-    final walkMinutes = dist == null ? null : (dist * 1.3 / (1.3 * settings.walkPace.walkPercent / 100) / 60).ceil();
+    // Gehzeit: Weg (sonst Luftlinie × 1,3) bei 1,3 m/s, angepasst an die
+    // Gehgeschwindigkeit.
+    final walkMinutes = dist == null
+        ? null
+        : ((at != null ? dist : dist * 1.3) / (1.3 * settings.walkPace.walkPercent / 100) / 60).ceil();
     final dep = widget.departure?.best;
     final leave = (dep != null && walkMinutes != null)
         ? dep.subtract(Duration(minutes: walkMinutes)).difference(now).inMinutes
@@ -168,7 +221,7 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
       if (leave != null)
         leave <= 0 ? 'Jetzt loslaufen, $walkMinutes min zu Fuß.' : 'Loslaufen in $leave min, $walkMinutes min zu Fuß.'
       else if (walkMinutes != null)
-        'Etwa $walkMinutes min zu Fuß, gepunktet die Luftlinie.',
+        route != null ? 'Etwa $walkMinutes min zu Fuß.' : 'Etwa $walkMinutes min zu Fuß, gepunktet die Luftlinie.',
     ].join(' ');
     return Scaffold(
       backgroundColor: c.bg,
@@ -203,7 +256,17 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
                       ),
                       children: [
                         TileLayer(urlTemplate: tileUrl, userAgentPackageName: 'de.gleichda.app', maxZoom: 19),
-                        if (p != null)
+                        if (route != null)
+                          PolylineLayer(polylines: [
+                            Polyline(
+                              points: [for (final q in route.points) LatLng(q.lat, q.lon)],
+                              color: c.accent,
+                              strokeWidth: 5,
+                              borderColor: c.surface,
+                              borderStrokeWidth: 1.5,
+                            ),
+                          ])
+                        else if (p != null)
                           PolylineLayer(polylines: [
                             Polyline(
                               points: [LatLng(p.latitude, p.longitude), LatLng(t.lat, t.lon)],
@@ -258,7 +321,9 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(color: c.fill, borderRadius: BorderRadius.circular(Radii.card)),
-                child: arrow == null
+                child: turn != null
+                    ? Icon(_maneuverIcon(turn.step), size: 30, color: c.ink)
+                    : arrow == null
                     ? Icon(Icons.near_me_outlined, color: c.muted)
                     : Transform.rotate(
                         angle: arrow * math.pi / 180,

@@ -33,6 +33,22 @@ class GleichDaApp extends ConsumerWidget {
       supportedLocales: const [Locale('de')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       home: const HomeShell(),
+      // Die Statusleiste ist durchsichtig; ein Streifen in Hintergrundfarbe
+      // darunter verhindert, dass beim Scrollen Inhalte hinter Uhrzeit und
+      // Symbolen durchscheinen.
+      builder: (context, child) {
+        final top = MediaQuery.paddingOf(context).top;
+        return Stack(children: [
+          child!,
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: top,
+            child: IgnorePointer(child: ColoredBox(color: Theme.of(context).scaffoldBackgroundColor)),
+          ),
+        ]);
+      },
     );
   }
 }

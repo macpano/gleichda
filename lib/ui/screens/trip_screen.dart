@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/companion.dart';
 import '../../domain/connections.dart';
 import '../../domain/models.dart';
 import '../../domain/settings.dart';
@@ -26,6 +27,7 @@ class TripScreen extends ConsumerStatefulWidget {
 
 class _TripScreenState extends ConsumerState<TripScreen> {
   final _expanded = <int>{};
+  final _openMessages = <String>{};
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +94,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
             ),
             const SizedBox(height: 14),
             if (following) ...[
-              CompanionCard(trip: trip, now: now, issue: issue),
+              CompanionCard(trip: trip, now: now, issue: issue, gps: companion.freshGps(now)),
               const SizedBox(height: 14),
             ],
             if (issue != null) ...[
@@ -109,22 +111,40 @@ class _TripScreenState extends ConsumerState<TripScreen> {
             Container(
               decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(Radii.card)),
               padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
-              child: Column(children: _rows(context, trip, checks, now, following: following)),
+              child: Column(children: _rows(context, trip, checks, now, following: following, gps: companion.freshGps(now))),
             ),
             if (trip.messages.isNotEmpty) ...[
               const SizedBox(height: 24),
               const SectionTitle('Hinweise'),
+              // Eingeklappt: nur die Überschriften; ein Tipp zeigt den Text.
               ListGroup(children: [
                 for (final m in trip.messages)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                      Text(m.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                      if (m.text != null && m.text != m.title) ...[
-                        const SizedBox(height: 4),
-                        Text(m.text!, style: context.t.secondary.copyWith(color: c.ink2, height: 1.4)),
-                      ],
-                    ]),
+                  InkWell(
+                    onTap: m.text == null || m.text == m.title
+                        ? null
+                        : () => setState(() => _openMessages.contains(m.id)
+                            ? _openMessages.remove(m.id)
+                            : _openMessages.add(m.id)),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Expanded(
+                            child: Text(m.title,
+                                maxLines: _openMessages.contains(m.id) ? null : 2,
+                                overflow: _openMessages.contains(m.id) ? null : TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                          ),
+                          if (m.text != null && m.text != m.title)
+                            Icon(_openMessages.contains(m.id) ? Icons.expand_less : Icons.expand_more,
+                                size: 20, color: c.muted),
+                        ]),
+                        if (_openMessages.contains(m.id) && m.text != null && m.text != m.title) ...[
+                          const SizedBox(height: 4),
+                          Text(m.text!, style: context.t.secondary.copyWith(color: c.ink2, height: 1.4)),
+                        ],
+                      ]),
+                    ),
                   ),
               ]),
             ],
@@ -166,7 +186,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
   }
 
   List<Widget> _rows(BuildContext context, Trip trip, List<TransferCheck> checks, DateTime now,
-      {required bool following}) {
+      {required bool following, GeoPoint? gps}) {
     final c = context.c;
     final walkColor = c.walkText.withValues(alpha: 0.5);
     final rows = <Widget>[];
@@ -272,24 +292,32 @@ class _TripScreenState extends ConsumerState<TripScreen> {
       for (var k = 0; k < stops.length; k++) {
         if (isPassed(stops[k], now)) lastPassed = k;
       }
+      // Mit GPS: die Lage auf der Strecke statt der Uhrzeit.
+      final fix = following && gps != null ? locateOnLeg(l, gps) : null;
+      final onLeg = fix != null ? fix.passed < stops.length - 1 : onBoard;
+      if (fix != null) lastPassed = fix.passed;
+      // Direkt vor dem Ausstieg keine Beschriftung – der Ausstieg steht
+      // gleich darunter.
       Widget position(StopTime next) => _Row(
             height: 36,
             rail: _Rail(color: color),
             marker: PositionDot(color: color),
-            child: OneLine('nächster Halt ${next.stop.name}', style: TextStyle(fontSize: 13, color: c.muted)),
+            child: identical(next, l.to)
+                ? const SizedBox.shrink()
+                : OneLine('nächster Halt ${next.stop.name}', style: TextStyle(fontSize: 13, color: c.muted)),
           );
       final shown = open
           ? l.intermediates
           : l.intermediates.where((s) => s.status != StopStatus.normal).toList();
       var placed = false;
-      if (onBoard && (lastPassed == 0 || !open)) {
+      if (onLeg && lastPassed >= 0 && (lastPassed == 0 || !open)) {
         rows.add(position(stops[lastPassed + 1]));
         placed = true;
       }
       for (final s in shown) {
         rows.add(_stopRow(context, s, color, now));
         final k = stops.indexOf(s);
-        if (onBoard && !placed && k == lastPassed) {
+        if (onLeg && !placed && k == lastPassed) {
           rows.add(position(stops[k + 1]));
           placed = true;
         }

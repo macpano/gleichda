@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/transit_provider.dart';
 import '../../data/trias/trias_parser.dart' show distanceBetween;
+import '../../data/trias/trias_provider.dart' show rankLocations;
 import '../../domain/models.dart';
 import '../../domain/settings.dart';
 import '../../state/location.dart';
@@ -27,12 +28,17 @@ class LocationSearchScreen extends ConsumerStatefulWidget {
     this.stopsOnly = false,
     this.showPlaces = true,
     this.allowHere = true,
+    this.showNearby = true,
   });
 
   final String title;
   final bool stopsOnly;
   final bool showPlaces;
   final bool allowHere;
+
+  /// Haltestellen in der Nähe vorschlagen – beim Start sinnvoll, beim Ziel
+  /// nicht (dorthin will man ja erst).
+  final bool showNearby;
 
   @override
   ConsumerState<LocationSearchScreen> createState() => _LocationSearchScreenState();
@@ -68,6 +74,7 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
       final p = await ref.read(locationServiceProvider).current();
       if (!mounted) return;
       setState(() => _here = p);
+      if (!widget.showNearby) return;
       final near = await ref
           .read(transitProvider)
           .searchLocations('', near: p, limit: 6, radiusMeters: (ref.read(settingsProvider).value ?? const AppSettings()).walkRadiusMeters);
@@ -95,7 +102,7 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
     if (q.trim().length < 2) return;
     _debounce = Timer(const Duration(milliseconds: 300), () async {
       try {
-        final res = await ref.read(transitProvider).searchLocations(q, near: _here, limit: 12);
+        final res = await ref.read(transitProvider).searchLocations(q, near: _here, limit: 20);
         if (!mounted || seq != _seq) return;
         await ref.read(repositoryProvider).cacheStops(res);
         setState(() {
@@ -112,6 +119,7 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
     });
   }
 
+  /// Treffer aus Auskunft und Zwischenspeicher, nach Standort sortiert.
   List<Location> get _results {
     final seen = <String>{};
     final out = <Location>[];
@@ -119,7 +127,7 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
       if (widget.stopsOnly && l.type != LocationType.stop) continue;
       if (seen.add(l.id)) out.add(l);
     }
-    return out;
+    return rankLocations(out, _ctrl.text.trim(), _here);
   }
 
   void _pick(Location l) => Navigator.pop(context, l);
@@ -192,7 +200,8 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
                 const SizedBox(height: 18),
               ],
               if (q.isEmpty) ...[
-                if (_nearby == null && _locationError == null) ...[
+                if (!widget.showNearby) ...[
+                ] else if (_nearby == null && _locationError == null) ...[
                   const SectionTitle('In der Nähe', small: true),
                   ListGroup(children: [for (var i = 0; i < 3; i++) const _SkeletonRow()]),
                   const SizedBox(height: 18),

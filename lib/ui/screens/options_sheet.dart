@@ -57,7 +57,7 @@ class _OptionsSheet extends ConsumerWidget {
                     ),
               onTap: () async {
                 final l = await Navigator.of(context).push<Location>(MaterialPageRoute(
-                    builder: (_) => const LocationSearchScreen(title: 'Zwischenhalt', stopsOnly: true, allowHere: false)));
+                    builder: (_) => const LocationSearchScreen(title: 'Zwischenhalt', stopsOnly: true, allowHere: false, showNearby: false)));
                 if (l != null) ref.read(routeProvider.notifier).setVia(l);
               },
             ),

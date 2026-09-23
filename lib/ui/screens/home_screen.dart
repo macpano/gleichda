@@ -57,7 +57,7 @@ class _SearchCard extends ConsumerWidget {
 
   Future<void> _pick(BuildContext context, WidgetRef ref, bool isFrom) async {
     final l = await Navigator.of(context).push<Location>(MaterialPageRoute(
-        builder: (_) => LocationSearchScreen(title: isFrom ? 'Von' : 'Nach')));
+        builder: (_) => LocationSearchScreen(title: isFrom ? 'Von' : 'Nach', showNearby: isFrom)));
     if (l == null) return;
     final n = ref.read(routeProvider.notifier);
     isFrom ? n.setFrom(l) : n.setTo(l);

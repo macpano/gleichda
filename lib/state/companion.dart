@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:isolate';
+import 'dart:ui' show IsolateNameServer;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../domain/companion.dart';
 import '../domain/models.dart';
@@ -8,26 +11,55 @@ import '../domain/product.dart';
 import '../ui/format.dart';
 import '../ui/theme.dart';
 import '../ui/trip_status.dart';
+import '../domain/settings.dart';
+import 'location.dart';
 import 'notifications.dart';
 import 'providers.dart';
 
 class CompanionState {
-  const CompanionState({this.active = false, this.tripId});
+  const CompanionState({this.active = false, this.tripId, this.gps, this.gpsAt});
 
   final bool active;
   final String? tripId;
+
+  /// Letzte GPS-Position während der Begleitung (nur, wenn der Standort
+  /// erlaubt ist). Älter als 2 min gilt sie nicht mehr.
+  final GeoPoint? gps;
+  final DateTime? gpsAt;
+
+  GeoPoint? freshGps(DateTime now) =>
+      gps != null && gpsAt != null && now.difference(gpsAt!) < const Duration(minutes: 2) ? gps : null;
+
+  CompanionState withGps(GeoPoint p) => CompanionState(active: active, tripId: tripId, gps: p, gpsAt: DateTime.now());
 }
 
 /// Unterwegs-Modus: begleitet die zuletzt angesehene Fahrt und hält die
-/// laufende Benachrichtigung aktuell. Läuft über Fahrplan- und Echtzeit-
-/// daten; GPS ist nicht nötig.
+/// laufende Benachrichtigung aktuell. Mit Standort bestimmt GPS, wo man auf
+/// der Strecke ist (nächster Halt, Fortschritt); ohne ihn Fahrplan und
+/// Echtzeit.
 class CompanionController extends Notifier<CompanionState> {
   Timer? _timer;
   String? _lastKey;
+  StreamSubscription<Position>? _gpsSub;
+  DateTime? _gpsUpdated;
+
+  final _port = ReceivePort();
 
   @override
   CompanionState build() {
-    ref.onDispose(() => _timer?.cancel());
+    // „Beenden“ aus der Benachrichtigung kommt über diesen Port, ohne dass
+    // die App dafür geöffnet wird (notificationActionInBackground).
+    IsolateNameServer.removePortNameMapping(companionPortName);
+    IsolateNameServer.registerPortWithName(_port.sendPort, companionPortName);
+    final sub = _port.listen((m) {
+      if (m == 'stop') stop();
+    });
+    ref.onDispose(() {
+      _timer?.cancel();
+      _gpsSub?.cancel();
+      sub.cancel();
+      IsolateNameServer.removePortNameMapping(companionPortName);
+    });
     ref.listen(lastTripProvider, (_, next) {
       if (state.active) _update();
     });
@@ -43,11 +75,38 @@ class CompanionController extends Notifier<CompanionState> {
     _timer = Timer.periodic(const Duration(seconds: 15), (_) => _update());
     // Während der Begleitung auch im Hintergrund aktualisieren.
     ref.read(lastTripProvider.notifier).keepAlive = true;
+    await _startGps();
     await _update();
+  }
+
+  Future<void> _startGps() async {
+    await _gpsSub?.cancel();
+    _gpsSub = null;
+    final settings = ref.read(settingsProvider).value ?? const AppSettings();
+    if (!settings.useLocation) return;
+    try {
+      final loc = ref.read(locationServiceProvider);
+      await loc.current();
+      Notifications.locationAllowed = true;
+      _gpsSub = loc.watch().listen((p) {
+        if (!state.active || p.accuracy > 80) return;
+        state = state.withGps((lat: p.latitude, lon: p.longitude));
+        // Benachrichtigung höchstens alle 5 s neu rechnen.
+        final now = DateTime.now();
+        if (_gpsUpdated == null || now.difference(_gpsUpdated!) > const Duration(seconds: 5)) {
+          _gpsUpdated = now;
+          _update();
+        }
+      }, onError: (Object _) {});
+    } catch (_) {
+      // Ohne Standort läuft die Begleitung über die Uhrzeit.
+    }
   }
 
   Future<void> stop() async {
     _timer?.cancel();
+    await _gpsSub?.cancel();
+    _gpsSub = null;
     _lastKey = null;
     state = const CompanionState();
     ref.read(lastTripProvider.notifier).keepAlive = false;
@@ -61,7 +120,7 @@ class CompanionController extends Notifier<CompanionState> {
       return;
     }
     final now = DateTime.now();
-    final step = nextStep(s.trip, now);
+    final step = nextStep(s.trip, now, gps: state.freshGps(now));
     if (step.phase == CompanionPhase.arrived) {
       if (now.difference(s.trip.arrival.best) > const Duration(minutes: 1)) await stop();
       return;
@@ -100,10 +159,11 @@ final companionProvider = NotifierProvider<CompanionController, CompanionState>(
   switch (step.phase) {
     case CompanionPhase.onBoard:
       final n = step.stopsLeft ?? 0;
+      final next = step.nextBeforeExit;
       return (
         header: header,
         where: 'Aussteigen: ${step.where.stop.name}',
-        when: when,
+        when: next == null ? when : '$when · nächster Halt ${next.stop.name}',
         headline: n <= 1 ? 'Nächster Halt: aussteigen' : 'Aussteigen in $n Halten',
       );
     case CompanionPhase.transfer:

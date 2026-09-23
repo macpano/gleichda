@@ -55,7 +55,7 @@ class TriasProvider implements TransitProvider {
           .compareTo(distanceBetween(b, near) ?? 1e9));
       return list;
     }
-    final list = parseLocations(await _post(_req.locationInformation(q, limit: limit)));
+    final list = parseLocations(await _post(_req.locationInformation(q, limit: limit < 20 ? 20 : limit)));
     return rankLocations(list, q, near);
   }
 
@@ -160,27 +160,51 @@ TriasPlace placeOf(Location l) => switch (l.type) {
       LocationType.coordinate => TriasCoord(l.lat!, l.lon!, l.name),
     };
 
-/// Sortierung gleichnamiger Treffer: Trefferqualität und Entfernung
-/// kombiniert, damit ein exakter Namenstreffer in der Nähe oben steht.
+/// Sortierung der Suchtreffer nach Standort: Alle Treffer, die jedes Wort
+/// der Eingabe enthalten, stehen vorn – untereinander nach Entfernung (auf
+/// 250 m gerundet), bei gleicher Entfernung der genauere Name zuerst. Treffer
+/// ohne alle Wörter folgen danach, ebenfalls nach Entfernung. Ohne Standort
+/// entscheidet die Trefferqualität.
 List<Location> rankLocations(
     List<Location> list, String query, ({double lat, double lon})? near) {
-  final q = query.toLowerCase();
-  double score(Location l) {
+  String norm(String s) => s
+      .toLowerCase()
+      .replaceAll('hauptbahnhof', 'hbf')
+      .replaceAll('bahnhof', 'bf')
+      .replaceAll(RegExp(r'stra(ss|ß)e'), 'str')
+      .replaceAll('.', ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+  final q = norm(query);
+  final words = q.split(' ').where((w) => w.isNotEmpty).toList();
+  int tier(Location l) {
+    final text = norm('${l.place ?? ''} ${l.name}');
+    return words.every(text.contains) ? 0 : 1;
+  }
+
+  double quality(Location l) {
     var s = l.score ?? 0.5;
-    final name = l.name.toLowerCase();
-    if (name == q || '${l.place ?? ''} ${l.name}'.toLowerCase() == q) s += 0.5;
+    final name = norm(l.name);
+    if (name == q || norm('${l.place ?? ''} ${l.name}') == q) s += 0.5;
     if (name.startsWith(q)) s += 0.2;
-    if (near != null) {
-      final d = distanceBetween(l, near);
-      // Bis 2 km kein Abzug, danach je 10 km ein Viertelpunkt.
-      if (d != null && d > 2000) s -= ((d - 2000) / 10000 * 0.25).clamp(0, 1);
-    }
     return s;
   }
 
-  final scored = [for (final l in list) (l, score(l))];
-  scored.sort((a, b) => b.$2.compareTo(a.$2));
-  return [for (final e in scored) e.$1];
+  double bucket(Location l) {
+    if (near == null) return 0;
+    final d = distanceBetween(l, near);
+    return d == null ? double.infinity : (d / 250).floorToDouble();
+  }
+
+  final keyed = [for (final l in list) (l, tier(l), bucket(l), quality(l))];
+  keyed.sort((a, b) {
+    final t = a.$2.compareTo(b.$2);
+    if (t != 0) return t;
+    final d = a.$3.compareTo(b.$3);
+    if (d != 0) return d;
+    return b.$4.compareTo(a.$4);
+  });
+  return [for (final e in keyed) e.$1];
 }
 
 /// Findet eine gespeicherte Verbindung in frischen Suchergebnissen wieder:
