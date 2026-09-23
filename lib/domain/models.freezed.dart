@@ -2256,7 +2256,8 @@ $EventTimeCopyWith<$Res> get time {
 /// @nodoc
 mixin _$Message {
 
- String get id; String get title; String? get text; List<String> get lineIds; List<String> get stopIds; DateTime? get validFrom; DateTime? get validTo;/// Datenquelle, z. B. „VRR“ oder „DB“.
+ String get id; String get title; String? get text; List<String> get lineIds;/// Liniennummern passend zu [lineIds], für die Anzeige als Plaketten.
+ List<String> get lineNames; List<String> get stopIds; DateTime? get validFrom; DateTime? get validTo;/// Datenquelle, z. B. „VRR“ oder „DB“.
  String? get source;
 /// Create a copy of Message
 /// with the given fields replaced by the non-null parameter values.
@@ -2271,20 +2272,20 @@ $MessageCopyWith<Message> get copyWith => _$MessageCopyWithImpl<Message>(this as
 @override
 bool operator ==(Object other) {
   final _this = this as Message;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Message&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.title, _this.title) || other.title == _this.title)&&(identical(other.text, _this.text) || other.text == _this.text)&&const DeepCollectionEquality().equals(other.lineIds, _this.lineIds)&&const DeepCollectionEquality().equals(other.stopIds, _this.stopIds)&&(identical(other.validFrom, _this.validFrom) || other.validFrom == _this.validFrom)&&(identical(other.validTo, _this.validTo) || other.validTo == _this.validTo)&&(identical(other.source, _this.source) || other.source == _this.source));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Message&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.title, _this.title) || other.title == _this.title)&&(identical(other.text, _this.text) || other.text == _this.text)&&const DeepCollectionEquality().equals(other.lineIds, _this.lineIds)&&const DeepCollectionEquality().equals(other.lineNames, _this.lineNames)&&const DeepCollectionEquality().equals(other.stopIds, _this.stopIds)&&(identical(other.validFrom, _this.validFrom) || other.validFrom == _this.validFrom)&&(identical(other.validTo, _this.validTo) || other.validTo == _this.validTo)&&(identical(other.source, _this.source) || other.source == _this.source));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Message;
-  return Object.hash(runtimeType,_this.id,_this.title,_this.text,const DeepCollectionEquality().hash(_this.lineIds),const DeepCollectionEquality().hash(_this.stopIds),_this.validFrom,_this.validTo,_this.source);
+  return Object.hash(runtimeType,_this.id,_this.title,_this.text,const DeepCollectionEquality().hash(_this.lineIds),const DeepCollectionEquality().hash(_this.lineNames),const DeepCollectionEquality().hash(_this.stopIds),_this.validFrom,_this.validTo,_this.source);
 }
 
 @override
 String toString() {
   final _this = this as Message;
-  return 'Message(id: ${_this.id}, title: ${_this.title}, text: ${_this.text}, lineIds: ${_this.lineIds}, stopIds: ${_this.stopIds}, validFrom: ${_this.validFrom}, validTo: ${_this.validTo}, source: ${_this.source})';
+  return 'Message(id: ${_this.id}, title: ${_this.title}, text: ${_this.text}, lineIds: ${_this.lineIds}, lineNames: ${_this.lineNames}, stopIds: ${_this.stopIds}, validFrom: ${_this.validFrom}, validTo: ${_this.validTo}, source: ${_this.source})';
 }
 
 
@@ -2295,7 +2296,7 @@ abstract mixin class $MessageCopyWith<$Res>  {
   factory $MessageCopyWith(Message value, $Res Function(Message) _then) = _$MessageCopyWithImpl;
 @useResult
 $Res call({
- String id, String title, String? text, List<String> lineIds, List<String> stopIds, DateTime? validFrom, DateTime? validTo, String? source
+ String id, String title, String? text, List<String> lineIds, List<String> lineNames, List<String> stopIds, DateTime? validFrom, DateTime? validTo, String? source
 });
 
 
@@ -2312,12 +2313,13 @@ class _$MessageCopyWithImpl<$Res>
 
 /// Create a copy of Message
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? text = freezed,Object? lineIds = null,Object? stopIds = null,Object? validFrom = freezed,Object? validTo = freezed,Object? source = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? text = freezed,Object? lineIds = null,Object? lineNames = null,Object? stopIds = null,Object? validFrom = freezed,Object? validTo = freezed,Object? source = freezed,}) {
   return _then(Message(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,text: freezed == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
 as String?,lineIds: null == lineIds ? _self.lineIds : lineIds // ignore: cast_nullable_to_non_nullable
+as List<String>,lineNames: null == lineNames ? _self.lineNames : lineNames // ignore: cast_nullable_to_non_nullable
 as List<String>,stopIds: null == stopIds ? _self.stopIds : stopIds // ignore: cast_nullable_to_non_nullable
 as List<String>,validFrom: freezed == validFrom ? _self.validFrom : validFrom // ignore: cast_nullable_to_non_nullable
 as DateTime?,validTo: freezed == validTo ? _self.validTo : validTo // ignore: cast_nullable_to_non_nullable
@@ -2407,10 +2409,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String? text,  List<String> lineIds,  List<String> stopIds,  DateTime? validFrom,  DateTime? validTo,  String? source)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String? text,  List<String> lineIds,  List<String> lineNames,  List<String> stopIds,  DateTime? validFrom,  DateTime? validTo,  String? source)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Message() when $default != null:
-return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.stopIds,_that.validFrom,_that.validTo,_that.source);case _:
+return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.lineNames,_that.stopIds,_that.validFrom,_that.validTo,_that.source);case _:
   return orElse();
 
 }
@@ -2428,10 +2430,10 @@ return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.stopIds,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String? text,  List<String> lineIds,  List<String> stopIds,  DateTime? validFrom,  DateTime? validTo,  String? source)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String? text,  List<String> lineIds,  List<String> lineNames,  List<String> stopIds,  DateTime? validFrom,  DateTime? validTo,  String? source)  $default,) {final _that = this;
 switch (_that) {
 case _Message():
-return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.stopIds,_that.validFrom,_that.validTo,_that.source);case _:
+return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.lineNames,_that.stopIds,_that.validFrom,_that.validTo,_that.source);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2448,10 +2450,10 @@ return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.stopIds,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String? text,  List<String> lineIds,  List<String> stopIds,  DateTime? validFrom,  DateTime? validTo,  String? source)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String? text,  List<String> lineIds,  List<String> lineNames,  List<String> stopIds,  DateTime? validFrom,  DateTime? validTo,  String? source)?  $default,) {final _that = this;
 switch (_that) {
 case _Message() when $default != null:
-return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.stopIds,_that.validFrom,_that.validTo,_that.source);case _:
+return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.lineNames,_that.stopIds,_that.validFrom,_that.validTo,_that.source);case _:
   return null;
 
 }
@@ -2463,7 +2465,7 @@ return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.stopIds,_tha
 @JsonSerializable()
 
 class _Message implements Message {
-  const _Message({required this.id, required this.title, this.text,  List<String> lineIds = const <String>[],  List<String> stopIds = const <String>[], this.validFrom, this.validTo, this.source}): _lineIds = lineIds,_stopIds = stopIds;
+  const _Message({required this.id, required this.title, this.text,  List<String> lineIds = const <String>[],  List<String> lineNames = const <String>[],  List<String> stopIds = const <String>[], this.validFrom, this.validTo, this.source}): _lineIds = lineIds,_lineNames = lineNames,_stopIds = stopIds;
   factory _Message.fromJson(Map<String, dynamic> json) => _$MessageFromJson(json);
 
 @override final  String id;
@@ -2474,6 +2476,15 @@ class _Message implements Message {
   if (_lineIds is EqualUnmodifiableListView) return _lineIds;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_lineIds);
+}
+
+/// Liniennummern passend zu [lineIds], für die Anzeige als Plaketten.
+ final  List<String> _lineNames;
+/// Liniennummern passend zu [lineIds], für die Anzeige als Plaketten.
+@override@JsonKey() List<String> get lineNames {
+  if (_lineNames is EqualUnmodifiableListView) return _lineNames;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_lineNames);
 }
 
  final  List<String> _stopIds;
@@ -2501,18 +2512,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Message&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.text, text) || other.text == text)&&const DeepCollectionEquality().equals(other.lineIds, _lineIds)&&const DeepCollectionEquality().equals(other.stopIds, _stopIds)&&(identical(other.validFrom, validFrom) || other.validFrom == validFrom)&&(identical(other.validTo, validTo) || other.validTo == validTo)&&(identical(other.source, source) || other.source == source));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Message&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.text, text) || other.text == text)&&const DeepCollectionEquality().equals(other.lineIds, _lineIds)&&const DeepCollectionEquality().equals(other.lineNames, _lineNames)&&const DeepCollectionEquality().equals(other.stopIds, _stopIds)&&(identical(other.validFrom, validFrom) || other.validFrom == validFrom)&&(identical(other.validTo, validTo) || other.validTo == validTo)&&(identical(other.source, source) || other.source == source));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,title,text,const DeepCollectionEquality().hash(_lineIds),const DeepCollectionEquality().hash(_stopIds),validFrom,validTo,source);
+    return Object.hash(runtimeType,id,title,text,const DeepCollectionEquality().hash(_lineIds),const DeepCollectionEquality().hash(_lineNames),const DeepCollectionEquality().hash(_stopIds),validFrom,validTo,source);
 }
 
 @override
 String toString() {
-    return 'Message(id: $id, title: $title, text: $text, lineIds: $lineIds, stopIds: $stopIds, validFrom: $validFrom, validTo: $validTo, source: $source)';
+    return 'Message(id: $id, title: $title, text: $text, lineIds: $lineIds, lineNames: $lineNames, stopIds: $stopIds, validFrom: $validFrom, validTo: $validTo, source: $source)';
 }
 
 
@@ -2523,7 +2534,7 @@ abstract mixin class _$MessageCopyWith<$Res> implements $MessageCopyWith<$Res> {
   factory _$MessageCopyWith(_Message value, $Res Function(_Message) _then) = __$MessageCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String title, String? text, List<String> lineIds, List<String> stopIds, DateTime? validFrom, DateTime? validTo, String? source
+ String id, String title, String? text, List<String> lineIds, List<String> lineNames, List<String> stopIds, DateTime? validFrom, DateTime? validTo, String? source
 });
 
 
@@ -2540,12 +2551,13 @@ class __$MessageCopyWithImpl<$Res>
 
 /// Create a copy of Message
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? text = freezed,Object? lineIds = null,Object? stopIds = null,Object? validFrom = freezed,Object? validTo = freezed,Object? source = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? text = freezed,Object? lineIds = null,Object? lineNames = null,Object? stopIds = null,Object? validFrom = freezed,Object? validTo = freezed,Object? source = freezed,}) {
   return _then(_Message(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,text: freezed == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
 as String?,lineIds: null == lineIds ? _self._lineIds : lineIds // ignore: cast_nullable_to_non_nullable
+as List<String>,lineNames: null == lineNames ? _self._lineNames : lineNames // ignore: cast_nullable_to_non_nullable
 as List<String>,stopIds: null == stopIds ? _self._stopIds : stopIds // ignore: cast_nullable_to_non_nullable
 as List<String>,validFrom: freezed == validFrom ? _self.validFrom : validFrom // ignore: cast_nullable_to_non_nullable
 as DateTime?,validTo: freezed == validTo ? _self.validTo : validTo // ignore: cast_nullable_to_non_nullable

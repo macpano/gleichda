@@ -87,3 +87,13 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
   Build-Nummer, prüft, baut die signierte APK, taggt `v<Version>` und legt das Release an.
 - Signiert mit demselben Schlüssel wie Linienlog (`android/key.properties`, nicht im Repo).
   Ohne diesen Schlüssel lassen sich Updates nicht über die installierte App spielen.
+
+## Stand (v0.2.0, 23.09.2026)
+
+- Umgesetzt sind die Schritte 1–15 in Grundform; was fehlt, steht in `docs/abgleich.md`.
+- Der geteilte Chat liegt als `docs/chat-verlauf.txt` vor (Quelle für Anforderungen neben `konzept.md`).
+- Bildschirmfotos ohne Handy: `flutter test test_screens --update-goldens` → `test_screens/out/*.png`.
+  In Widget-Tests die Drift-Datenbank nicht schließen (wartet sonst auf Abfragen aus der Testzone).
+- Hintergrund: `lib/background.dart` (WorkManager ≈ 15 min: Linienabos, Wecker nachplanen).
+  Unterwegs-Benachrichtigung als Vordergrunddienst (`specialUse`), Fortschrittsbalken als Bild.
+- Kartenkacheln vorläufig FOSSGIS (`tile.openstreetmap.de`), offene Entscheidung im Konzept.

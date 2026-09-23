@@ -926,7 +926,7 @@ class FavoritesCompanion extends UpdateCompanion<Favorite> {
 }
 
 class $SubscriptionsTable extends Subscriptions
-    with TableInfo<$SubscriptionsTable, Subscription> {
+    with TableInfo<$SubscriptionsTable, SubscriptionRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -997,7 +997,7 @@ class $SubscriptionsTable extends Subscriptions
   static const String $name = 'subscriptions';
   @override
   VerificationContext validateIntegrity(
-    Insertable<Subscription> instance, {
+    Insertable<SubscriptionRow> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -1044,9 +1044,9 @@ class $SubscriptionsTable extends Subscriptions
   @override
   Set<GeneratedColumn> get $primaryKey => {lineId, providerId};
   @override
-  Subscription map(Map<String, dynamic> data, {String? tablePrefix}) {
+  SubscriptionRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return Subscription(
+    return SubscriptionRow(
       lineId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}line_id'],
@@ -1076,13 +1076,13 @@ class $SubscriptionsTable extends Subscriptions
   }
 }
 
-class Subscription extends DataClass implements Insertable<Subscription> {
+class SubscriptionRow extends DataClass implements Insertable<SubscriptionRow> {
   final String lineId;
   final String providerId;
   final String lineName;
   final String? window;
   final String? pushTopic;
-  const Subscription({
+  const SubscriptionRow({
     required this.lineId,
     required this.providerId,
     required this.lineName,
@@ -1118,12 +1118,12 @@ class Subscription extends DataClass implements Insertable<Subscription> {
     );
   }
 
-  factory Subscription.fromJson(
+  factory SubscriptionRow.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return Subscription(
+    return SubscriptionRow(
       lineId: serializer.fromJson<String>(json['lineId']),
       providerId: serializer.fromJson<String>(json['providerId']),
       lineName: serializer.fromJson<String>(json['lineName']),
@@ -1143,21 +1143,21 @@ class Subscription extends DataClass implements Insertable<Subscription> {
     };
   }
 
-  Subscription copyWith({
+  SubscriptionRow copyWith({
     String? lineId,
     String? providerId,
     String? lineName,
     Value<String?> window = const Value.absent(),
     Value<String?> pushTopic = const Value.absent(),
-  }) => Subscription(
+  }) => SubscriptionRow(
     lineId: lineId ?? this.lineId,
     providerId: providerId ?? this.providerId,
     lineName: lineName ?? this.lineName,
     window: window.present ? window.value : this.window,
     pushTopic: pushTopic.present ? pushTopic.value : this.pushTopic,
   );
-  Subscription copyWithCompanion(SubscriptionsCompanion data) {
-    return Subscription(
+  SubscriptionRow copyWithCompanion(SubscriptionsCompanion data) {
+    return SubscriptionRow(
       lineId: data.lineId.present ? data.lineId.value : this.lineId,
       providerId: data.providerId.present
           ? data.providerId.value
@@ -1170,7 +1170,7 @@ class Subscription extends DataClass implements Insertable<Subscription> {
 
   @override
   String toString() {
-    return (StringBuffer('Subscription(')
+    return (StringBuffer('SubscriptionRow(')
           ..write('lineId: $lineId, ')
           ..write('providerId: $providerId, ')
           ..write('lineName: $lineName, ')
@@ -1186,7 +1186,7 @@ class Subscription extends DataClass implements Insertable<Subscription> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Subscription &&
+      (other is SubscriptionRow &&
           other.lineId == this.lineId &&
           other.providerId == this.providerId &&
           other.lineName == this.lineName &&
@@ -1194,7 +1194,7 @@ class Subscription extends DataClass implements Insertable<Subscription> {
           other.pushTopic == this.pushTopic);
 }
 
-class SubscriptionsCompanion extends UpdateCompanion<Subscription> {
+class SubscriptionsCompanion extends UpdateCompanion<SubscriptionRow> {
   final Value<String> lineId;
   final Value<String> providerId;
   final Value<String> lineName;
@@ -1219,7 +1219,7 @@ class SubscriptionsCompanion extends UpdateCompanion<Subscription> {
   }) : lineId = Value(lineId),
        providerId = Value(providerId),
        lineName = Value(lineName);
-  static Insertable<Subscription> custom({
+  static Insertable<SubscriptionRow> custom({
     Expression<String>? lineId,
     Expression<String>? providerId,
     Expression<String>? lineName,
@@ -1294,7 +1294,7 @@ class SubscriptionsCompanion extends UpdateCompanion<Subscription> {
 }
 
 class $SavedPlacesTable extends SavedPlaces
-    with TableInfo<$SavedPlacesTable, SavedPlace> {
+    with TableInfo<$SavedPlacesTable, SavedPlaceRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -1346,7 +1346,7 @@ class $SavedPlacesTable extends SavedPlaces
   static const String $name = 'saved_places';
   @override
   VerificationContext validateIntegrity(
-    Insertable<SavedPlace> instance, {
+    Insertable<SavedPlaceRow> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -1386,9 +1386,9 @@ class $SavedPlacesTable extends SavedPlaces
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  SavedPlace map(Map<String, dynamic> data, {String? tablePrefix}) {
+  SavedPlaceRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return SavedPlace(
+    return SavedPlaceRow(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
@@ -1414,12 +1414,12 @@ class $SavedPlacesTable extends SavedPlaces
   }
 }
 
-class SavedPlace extends DataClass implements Insertable<SavedPlace> {
+class SavedPlaceRow extends DataClass implements Insertable<SavedPlaceRow> {
   final String id;
   final String name;
   final String kind;
   final String location;
-  const SavedPlace({
+  const SavedPlaceRow({
     required this.id,
     required this.name,
     required this.kind,
@@ -1444,12 +1444,12 @@ class SavedPlace extends DataClass implements Insertable<SavedPlace> {
     );
   }
 
-  factory SavedPlace.fromJson(
+  factory SavedPlaceRow.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return SavedPlace(
+    return SavedPlaceRow(
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       kind: serializer.fromJson<String>(json['kind']),
@@ -1467,19 +1467,19 @@ class SavedPlace extends DataClass implements Insertable<SavedPlace> {
     };
   }
 
-  SavedPlace copyWith({
+  SavedPlaceRow copyWith({
     String? id,
     String? name,
     String? kind,
     String? location,
-  }) => SavedPlace(
+  }) => SavedPlaceRow(
     id: id ?? this.id,
     name: name ?? this.name,
     kind: kind ?? this.kind,
     location: location ?? this.location,
   );
-  SavedPlace copyWithCompanion(SavedPlacesCompanion data) {
-    return SavedPlace(
+  SavedPlaceRow copyWithCompanion(SavedPlacesCompanion data) {
+    return SavedPlaceRow(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       kind: data.kind.present ? data.kind.value : this.kind,
@@ -1489,7 +1489,7 @@ class SavedPlace extends DataClass implements Insertable<SavedPlace> {
 
   @override
   String toString() {
-    return (StringBuffer('SavedPlace(')
+    return (StringBuffer('SavedPlaceRow(')
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('kind: $kind, ')
@@ -1503,14 +1503,14 @@ class SavedPlace extends DataClass implements Insertable<SavedPlace> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is SavedPlace &&
+      (other is SavedPlaceRow &&
           other.id == this.id &&
           other.name == this.name &&
           other.kind == this.kind &&
           other.location == this.location);
 }
 
-class SavedPlacesCompanion extends UpdateCompanion<SavedPlace> {
+class SavedPlacesCompanion extends UpdateCompanion<SavedPlaceRow> {
   final Value<String> id;
   final Value<String> name;
   final Value<String> kind;
@@ -1533,7 +1533,7 @@ class SavedPlacesCompanion extends UpdateCompanion<SavedPlace> {
        name = Value(name),
        kind = Value(kind),
        location = Value(location);
-  static Insertable<SavedPlace> custom({
+  static Insertable<SavedPlaceRow> custom({
     Expression<String>? id,
     Expression<String>? name,
     Expression<String>? kind,
@@ -2848,6 +2848,208 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
   }
 }
 
+class $AlarmsTable extends Alarms with TableInfo<$AlarmsTable, AlarmRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AlarmsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dataMeta = const VerificationMeta('data');
+  @override
+  late final GeneratedColumn<String> data = GeneratedColumn<String>(
+    'data',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, data];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'alarms';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AlarmRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('data')) {
+      context.handle(
+        _dataMeta,
+        this.data.isAcceptableOrUnknown(data['data']!, _dataMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dataMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AlarmRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AlarmRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      data: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}data'],
+      )!,
+    );
+  }
+
+  @override
+  $AlarmsTable createAlias(String alias) {
+    return $AlarmsTable(attachedDatabase, alias);
+  }
+}
+
+class AlarmRow extends DataClass implements Insertable<AlarmRow> {
+  final String id;
+  final String data;
+  const AlarmRow({required this.id, required this.data});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['data'] = Variable<String>(data);
+    return map;
+  }
+
+  AlarmsCompanion toCompanion(bool nullToAbsent) {
+    return AlarmsCompanion(id: Value(id), data: Value(data));
+  }
+
+  factory AlarmRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AlarmRow(
+      id: serializer.fromJson<String>(json['id']),
+      data: serializer.fromJson<String>(json['data']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'data': serializer.toJson<String>(data),
+    };
+  }
+
+  AlarmRow copyWith({String? id, String? data}) =>
+      AlarmRow(id: id ?? this.id, data: data ?? this.data);
+  AlarmRow copyWithCompanion(AlarmsCompanion data) {
+    return AlarmRow(
+      id: data.id.present ? data.id.value : this.id,
+      data: data.data.present ? data.data.value : this.data,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AlarmRow(')
+          ..write('id: $id, ')
+          ..write('data: $data')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, data);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AlarmRow && other.id == this.id && other.data == this.data);
+}
+
+class AlarmsCompanion extends UpdateCompanion<AlarmRow> {
+  final Value<String> id;
+  final Value<String> data;
+  final Value<int> rowid;
+  const AlarmsCompanion({
+    this.id = const Value.absent(),
+    this.data = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AlarmsCompanion.insert({
+    required String id,
+    required String data,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       data = Value(data);
+  static Insertable<AlarmRow> custom({
+    Expression<String>? id,
+    Expression<String>? data,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (data != null) 'data': data,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AlarmsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? data,
+    Value<int>? rowid,
+  }) {
+    return AlarmsCompanion(
+      id: id ?? this.id,
+      data: data ?? this.data,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (data.present) {
+      map['data'] = Variable<String>(data.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AlarmsCompanion(')
+          ..write('id: $id, ')
+          ..write('data: $data, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2858,6 +3060,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LastTripsTable lastTrips = $LastTripsTable(this);
   late final $StopCacheTable stopCache = $StopCacheTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
+  late final $AlarmsTable alarms = $AlarmsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2870,6 +3073,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     lastTrips,
     stopCache,
     settings,
+    alarms,
   ];
 }
 
@@ -3476,17 +3680,17 @@ class $$SubscriptionsTableTableManager
         RootTableManager<
           _$AppDatabase,
           $SubscriptionsTable,
-          Subscription,
+          SubscriptionRow,
           $$SubscriptionsTableFilterComposer,
           $$SubscriptionsTableOrderingComposer,
           $$SubscriptionsTableAnnotationComposer,
           $$SubscriptionsTableCreateCompanionBuilder,
           $$SubscriptionsTableUpdateCompanionBuilder,
           (
-            Subscription,
-            BaseReferences<_$AppDatabase, $SubscriptionsTable, Subscription>,
+            SubscriptionRow,
+            BaseReferences<_$AppDatabase, $SubscriptionsTable, SubscriptionRow>,
           ),
-          Subscription,
+          SubscriptionRow,
           PrefetchHooks Function()
         > {
   $$SubscriptionsTableTableManager(_$AppDatabase db, $SubscriptionsTable table)
@@ -3535,11 +3739,11 @@ class $$SubscriptionsTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable<$SubscriptionsTable, Subscription>(table),
+                  e.readTable<$SubscriptionsTable, SubscriptionRow>(table),
                   BaseReferences<
                     _$AppDatabase,
                     $SubscriptionsTable,
-                    Subscription
+                    SubscriptionRow
                   >(db, table, e),
                 ),
               )
@@ -3553,17 +3757,17 @@ typedef $$SubscriptionsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
       $SubscriptionsTable,
-      Subscription,
+      SubscriptionRow,
       $$SubscriptionsTableFilterComposer,
       $$SubscriptionsTableOrderingComposer,
       $$SubscriptionsTableAnnotationComposer,
       $$SubscriptionsTableCreateCompanionBuilder,
       $$SubscriptionsTableUpdateCompanionBuilder,
       (
-        Subscription,
-        BaseReferences<_$AppDatabase, $SubscriptionsTable, Subscription>,
+        SubscriptionRow,
+        BaseReferences<_$AppDatabase, $SubscriptionsTable, SubscriptionRow>,
       ),
-      Subscription,
+      SubscriptionRow,
       PrefetchHooks Function()
     >;
 typedef $$SavedPlacesTableCreateCompanionBuilder =
@@ -3670,17 +3874,17 @@ class $$SavedPlacesTableTableManager
         RootTableManager<
           _$AppDatabase,
           $SavedPlacesTable,
-          SavedPlace,
+          SavedPlaceRow,
           $$SavedPlacesTableFilterComposer,
           $$SavedPlacesTableOrderingComposer,
           $$SavedPlacesTableAnnotationComposer,
           $$SavedPlacesTableCreateCompanionBuilder,
           $$SavedPlacesTableUpdateCompanionBuilder,
           (
-            SavedPlace,
-            BaseReferences<_$AppDatabase, $SavedPlacesTable, SavedPlace>,
+            SavedPlaceRow,
+            BaseReferences<_$AppDatabase, $SavedPlacesTable, SavedPlaceRow>,
           ),
-          SavedPlace,
+          SavedPlaceRow,
           PrefetchHooks Function()
         > {
   $$SavedPlacesTableTableManager(_$AppDatabase db, $SavedPlacesTable table)
@@ -3725,12 +3929,12 @@ class $$SavedPlacesTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable<$SavedPlacesTable, SavedPlace>(table),
-                  BaseReferences<_$AppDatabase, $SavedPlacesTable, SavedPlace>(
-                    db,
-                    table,
-                    e,
-                  ),
+                  e.readTable<$SavedPlacesTable, SavedPlaceRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $SavedPlacesTable,
+                    SavedPlaceRow
+                  >(db, table, e),
                 ),
               )
               .toList(),
@@ -3743,17 +3947,17 @@ typedef $$SavedPlacesTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
       $SavedPlacesTable,
-      SavedPlace,
+      SavedPlaceRow,
       $$SavedPlacesTableFilterComposer,
       $$SavedPlacesTableOrderingComposer,
       $$SavedPlacesTableAnnotationComposer,
       $$SavedPlacesTableCreateCompanionBuilder,
       $$SavedPlacesTableUpdateCompanionBuilder,
       (
-        SavedPlace,
-        BaseReferences<_$AppDatabase, $SavedPlacesTable, SavedPlace>,
+        SavedPlaceRow,
+        BaseReferences<_$AppDatabase, $SavedPlacesTable, SavedPlaceRow>,
       ),
-      SavedPlace,
+      SavedPlaceRow,
       PrefetchHooks Function()
     >;
 typedef $$LastTripsTableCreateCompanionBuilder = LastTripsCompanion Function({
@@ -4429,6 +4633,140 @@ typedef $$SettingsTableProcessedTableManager =
       Setting,
       PrefetchHooks Function()
     >;
+typedef $$AlarmsTableCreateCompanionBuilder = AlarmsCompanion Function({
+  required String id,
+  required String data,
+  Value<int> rowid,
+});
+typedef $$AlarmsTableUpdateCompanionBuilder = AlarmsCompanion Function({
+  Value<String> id,
+  Value<String> data,
+  Value<int> rowid,
+});
+
+class $$AlarmsTableFilterComposer
+    extends Composer<_$AppDatabase, $AlarmsTable> {
+  $$AlarmsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get data => $composableBuilder(
+    column: $table.data,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AlarmsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AlarmsTable> {
+  $$AlarmsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get data => $composableBuilder(
+    column: $table.data,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AlarmsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AlarmsTable> {
+  $$AlarmsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get data =>
+      $composableBuilder(column: $table.data, builder: (column) => column);
+}
+
+class $$AlarmsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AlarmsTable,
+          AlarmRow,
+          $$AlarmsTableFilterComposer,
+          $$AlarmsTableOrderingComposer,
+          $$AlarmsTableAnnotationComposer,
+          $$AlarmsTableCreateCompanionBuilder,
+          $$AlarmsTableUpdateCompanionBuilder,
+          (AlarmRow, BaseReferences<_$AppDatabase, $AlarmsTable, AlarmRow>),
+          AlarmRow,
+          PrefetchHooks Function()
+        > {
+  $$AlarmsTableTableManager(_$AppDatabase db, $AlarmsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AlarmsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AlarmsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AlarmsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> data = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) => AlarmsCompanion(id: id, data: data, rowid: rowid),
+          createCompanionCallback: ({
+            required String id,
+            required String data,
+            Value<int> rowid = const Value.absent(),
+          }) => AlarmsCompanion.insert(id: id, data: data, rowid: rowid),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$AlarmsTable, AlarmRow>(table),
+                  BaseReferences<_$AppDatabase, $AlarmsTable, AlarmRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AlarmsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AlarmsTable,
+      AlarmRow,
+      $$AlarmsTableFilterComposer,
+      $$AlarmsTableOrderingComposer,
+      $$AlarmsTableAnnotationComposer,
+      $$AlarmsTableCreateCompanionBuilder,
+      $$AlarmsTableUpdateCompanionBuilder,
+      (AlarmRow, BaseReferences<_$AppDatabase, $AlarmsTable, AlarmRow>),
+      AlarmRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4447,4 +4785,6 @@ class $AppDatabaseManager {
       $$StopCacheTableTableManager(_db, _db.stopCache);
   $$SettingsTableTableManager get settings =>
       $$SettingsTableTableManager(_db, _db.settings);
+  $$AlarmsTableTableManager get alarms =>
+      $$AlarmsTableTableManager(_db, _db.alarms);
 }

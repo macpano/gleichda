@@ -234,7 +234,78 @@ class Repository {
         .toList();
   }
 
+  // --- Linienabos ---
+
+  Stream<List<Subscription>> watchSubscriptions() => db.select(db.subscriptions).watch().map((rows) => [
+        for (final r in rows)
+          Subscription(
+            lineId: r.lineId,
+            providerId: r.providerId,
+            lineName: r.lineName,
+            window: r.window == null ? null : TimeWindow.fromJson(jsonDecode(r.window!) as Map<String, dynamic>),
+          ),
+      ]);
+
+  Future<List<Subscription>> subscriptions() => watchSubscriptions().first;
+
+  Future<void> subscribe(Subscription s) => db.into(db.subscriptions).insertOnConflictUpdate(
+        SubscriptionsCompanion.insert(
+          lineId: s.lineId,
+          providerId: s.providerId,
+          lineName: s.lineName,
+          window: Value(s.window == null ? null : _enc(s.window!.toJson())),
+        ),
+      );
+
+  Future<void> unsubscribe(String lineId) =>
+      (db.delete(db.subscriptions)..where((t) => t.lineId.equals(lineId))).go();
+
+  // --- Meine Orte ---
+
+  Stream<List<SavedPlace>> watchPlaces() => db.select(db.savedPlaces).watch().map((rows) {
+        final list = [
+          for (final r in rows)
+            SavedPlace(
+              id: r.id,
+              name: r.name,
+              kind: PlaceKind.values.firstWhere((k) => k.name == r.kind, orElse: () => PlaceKind.other),
+              location: _loc(r.location),
+            ),
+        ];
+        list.sort((a, b) => a.kind.index != b.kind.index ? a.kind.index - b.kind.index : a.name.compareTo(b.name));
+        return list;
+      });
+
+  Future<void> savePlace(SavedPlace p) => db.into(db.savedPlaces).insertOnConflictUpdate(
+        SavedPlacesCompanion.insert(id: p.id, name: p.name, kind: p.kind.name, location: _enc(p.location.toJson())),
+      );
+
+  Future<void> deletePlace(String id) => (db.delete(db.savedPlaces)..where((t) => t.id.equals(id))).go();
+
+  // --- Fahrtenwecker ---
+
+  Stream<List<Alarm>> watchAlarms() => db.select(db.alarms).watch().map((rows) {
+        final list = <Alarm>[];
+        for (final r in rows) {
+          try {
+            list.add(Alarm.fromJson(jsonDecode(r.data) as Map<String, dynamic>));
+          } catch (_) {}
+        }
+        list.sort((a, b) => a.minuteOfDay.compareTo(b.minuteOfDay));
+        return list;
+      });
+
+  Future<List<Alarm>> alarms() => watchAlarms().first;
+
+  Future<void> saveAlarm(Alarm a) =>
+      db.into(db.alarms).insertOnConflictUpdate(AlarmsCompanion.insert(id: a.id, data: _enc(a.toJson())));
+
+  Future<void> deleteAlarm(String id) => (db.delete(db.alarms)..where((t) => t.id.equals(id))).go();
+
   // --- Einstellungen ---
+
+  Future<String?> setting(String key) async =>
+      (await (db.select(db.settings)..where((t) => t.key.equals(key))).getSingleOrNull())?.value;
 
   Stream<String?> watchSetting(String key) =>
       (db.select(db.settings)..where((t) => t.key.equals(key)))

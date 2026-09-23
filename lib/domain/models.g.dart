@@ -228,6 +228,9 @@ _Message _$MessageFromJson(Map<String, dynamic> json) => _Message(
   lineIds:
       (json['lineIds'] as List<dynamic>?)?.map((e) => e as String).toList() ??
       const <String>[],
+  lineNames:
+      (json['lineNames'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      const <String>[],
   stopIds:
       (json['stopIds'] as List<dynamic>?)?.map((e) => e as String).toList() ??
       const <String>[],
@@ -245,6 +248,7 @@ Map<String, dynamic> _$MessageToJson(_Message instance) => <String, dynamic>{
   'title': instance.title,
   'text': ?instance.text,
   'lineIds': instance.lineIds,
+  'lineNames': instance.lineNames,
   'stopIds': instance.stopIds,
   'validFrom': ?instance.validFrom?.toIso8601String(),
   'validTo': ?instance.validTo?.toIso8601String(),

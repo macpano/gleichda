@@ -1,5 +1,8 @@
 import '../domain/models.dart';
 
+/// Worauf die Verbindungssuche optimiert.
+enum TripOptimization { fastest, minChanges, leastWalking }
+
 /// Suchanfrage für Verbindungen.
 class TripQuery {
   const TripQuery({
@@ -8,6 +11,12 @@ class TripQuery {
     required this.time,
     this.arriveBy = false,
     this.maxResults = 5,
+    this.via,
+    this.optimization = TripOptimization.fastest,
+    this.excludedModes = const {},
+    this.accessible = false,
+    this.walkSpeedPercent = 100,
+    this.maxInterchanges,
   });
 
   final Location from;
@@ -17,6 +26,35 @@ class TripQuery {
   /// true: [time] ist die gewünschte Ankunft.
   final bool arriveBy;
   final int maxResults;
+
+  /// Zwischenhalt.
+  final Location? via;
+  final TripOptimization optimization;
+
+  /// Auszuschließende Verkehrsmittel.
+  final Set<TransportMode> excludedModes;
+
+  /// Nur stufenlose Wege.
+  final bool accessible;
+
+  /// Gehgeschwindigkeit in Prozent der üblichen.
+  final int walkSpeedPercent;
+  final int? maxInterchanges;
+
+  TripQuery copyWith({DateTime? time, bool? arriveBy, TripOptimization? optimization, int? maxResults}) =>
+      TripQuery(
+        from: from,
+        to: to,
+        time: time ?? this.time,
+        arriveBy: arriveBy ?? this.arriveBy,
+        maxResults: maxResults ?? this.maxResults,
+        via: via,
+        optimization: optimization ?? this.optimization,
+        excludedModes: excludedModes,
+        accessible: accessible,
+        walkSpeedPercent: walkSpeedPercent,
+        maxInterchanges: maxInterchanges,
+      );
 }
 
 /// Ergebnis einer Abfahrtsabfrage: Abfahrten und die zugehörigen Meldungen.
@@ -62,4 +100,7 @@ abstract class TransitProvider {
 
   /// Aktuelle Meldungen, optional auf Linien beschränkt.
   Future<List<Message>> messages({List<String> lineIds = const []});
+
+  /// Steige einer Haltestelle mit Koordinaten. Leer, wenn unbekannt.
+  Future<List<Platform>> platforms(Location stop);
 }

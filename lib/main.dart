@@ -1,17 +1,79 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'app.dart';
+import 'background.dart';
 import 'data/db/database.dart';
+import 'state/alarm_planner.dart';
+import 'state/companion.dart';
+import 'state/notifications.dart';
 import 'state/providers.dart';
+import 'ui/screens/companion_screen.dart';
+import 'ui/screens/connections_screen.dart';
+import 'ui/screens/messages_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('de');
   final db = AppDatabase();
-  runApp(ProviderScope(
-    overrides: [databaseProvider.overrideWithValue(db)],
-    child: const GleichdaApp(),
-  ));
+  final container = ProviderContainer(overrides: [databaseProvider.overrideWithValue(db)]);
+  await Notifications.init();
+  Notifications.onResponse = (payload, action) => handleNotification(container, payload, action);
+  runApp(UncontrolledProviderScope(container: container, child: const GleichdaApp()));
+
+  // Nach dem ersten Bild: Hintergrundprüfung anmelden, Wecker nachplanen,
+  // Start über eine Benachrichtigung auswerten.
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    if (Platform.isAndroid) await registerBackgroundWork();
+    final launch = await Notifications.launchPayload();
+    if (launch != null) await handleNotification(container, launch, null);
+    try {
+      final settings = await container.read(settingsProvider.future);
+      await planAllAlarms(container.read(repositoryProvider), container.read(transitProvider), settings: settings);
+    } catch (_) {}
+  });
+}
+
+/// Tipp auf eine Benachrichtigung bzw. eine ihrer Aktionen.
+Future<void> handleNotification(ProviderContainer container, String? payload, String? action) async {
+  final nav = navigatorKey.currentState;
+  if (payload == 'companion') {
+    if (action == 'stop') {
+      await container.read(companionProvider.notifier).stop();
+      return;
+    }
+    nav?.push(MaterialPageRoute(builder: (_) => const CompanionScreen()));
+    return;
+  }
+  if (payload != null && payload.startsWith('alarm:')) {
+    final id = payload.substring(6);
+    final alarm = (await container.read(repositoryProvider).alarms()).where((a) => a.id == id).firstOrNull;
+    if (alarm == null) return;
+    if (alarm.startCompanion) {
+      try {
+        final settings = await container.read(settingsProvider.future);
+        final trips = await container.read(transitProvider).planTrip(buildQuery(
+              from: alarm.from,
+              to: alarm.to,
+              time: DateTime.now(),
+              settings: settings,
+            ));
+        if (trips.isNotEmpty) {
+          await container.read(lastTripProvider.notifier).open(trips.first);
+          await container.read(companionProvider.notifier).start();
+          nav?.push(MaterialPageRoute(builder: (_) => const CompanionScreen()));
+          return;
+        }
+      } catch (_) {}
+    }
+    nav?.push(MaterialPageRoute(
+        builder: (_) => ConnectionsScreen(from: alarm.from, to: alarm.to, time: null, arriveBy: false)));
+    return;
+  }
+  if (payload != null && payload.startsWith('message:')) {
+    nav?.push(MaterialPageRoute(builder: (_) => const Scaffold(body: MessagesScreen())));
+  }
 }

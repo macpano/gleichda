@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repository.dart';
 import '../../domain/models.dart';
+import '../../domain/settings.dart';
+import '../../state/location.dart';
 import '../../state/providers.dart';
 import '../format.dart';
 import '../theme.dart';
@@ -10,6 +12,7 @@ import '../trip_status.dart';
 import '../widgets.dart';
 import 'connections_screen.dart';
 import 'location_search_screen.dart';
+import 'options_sheet.dart';
 import 'time_sheet.dart';
 import 'trip_screen.dart';
 
@@ -67,7 +70,7 @@ class _SearchCard extends ConsumerWidget {
     final t = ref.read(searchTimeProvider);
     Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => ConnectionsScreen(
-            from: r.from!, to: r.to!, time: t.time, arriveBy: t.arriveBy)));
+            from: r.from!, to: r.to!, via: r.via, time: t.time, arriveBy: t.arriveBy)));
   }
 
   @override
@@ -75,6 +78,7 @@ class _SearchCard extends ConsumerWidget {
     final c = context.c;
     final route = ref.watch(routeProvider);
     final time = ref.watch(searchTimeProvider);
+    final settings = ref.watch(settingsProvider).value ?? const AppSettings();
     Widget field(String label, Location? value, String hint, bool isFrom) => InkWell(
           onTap: () => _pick(context, ref, isFrom),
           child: SizedBox(
@@ -85,8 +89,13 @@ class _SearchCard extends ConsumerWidget {
               children: [
                 Text(label, style: TextStyle(fontSize: 12, color: c.muted)),
                 const SizedBox(height: 2),
-                OneLine(value?.name ?? hint,
-                    style: TextStyle(fontSize: 16, color: value == null ? c.muted : c.ink)),
+                Row(children: [
+                  if (isHere(value)) ...[Icon(Icons.my_location, size: 15, color: c.accent), const SizedBox(width: 6)],
+                  Expanded(
+                    child: OneLine(value?.name ?? hint,
+                        style: TextStyle(fontSize: 16, color: value == null ? c.muted : c.ink)),
+                  ),
+                ]),
               ],
             ),
           ),
@@ -123,6 +132,13 @@ class _SearchCard extends ConsumerWidget {
           icon: Icons.schedule,
           label: timeChipLabel(time),
           onTap: () => showTimeSheet(context, ref),
+        ),
+        const SizedBox(width: 8),
+        _Chip(
+          icon: optionsActive(route, settings) ? Icons.tune : null,
+          label: route.via != null ? 'über ${route.via!.name}' : 'Optionen',
+          onTap: () => showOptionsSheet(context),
+          maxWidth: 130,
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -193,11 +209,12 @@ class _RouteGlyphPainter extends CustomPainter {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.onTap, this.icon});
+  const _Chip({required this.label, required this.onTap, this.icon, this.maxWidth});
 
   final String label;
   final IconData? icon;
   final VoidCallback onTap;
+  final double? maxWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -210,10 +227,17 @@ class _Chip extends StatelessWidget {
         onTap: onTap,
         child: Container(
           height: 44,
+          constraints: BoxConstraints(maxWidth: maxWidth ?? double.infinity),
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             if (icon != null) ...[Icon(icon, size: 16, color: c.ink), const SizedBox(width: 6)],
-            Text(label, style: context.t.number(15).copyWith(color: c.ink)),
+            Flexible(
+              child: Text(label,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.t.number(15).copyWith(color: c.ink)),
+            ),
           ]),
         ),
       ),

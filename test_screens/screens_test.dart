@@ -13,15 +13,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gleichda/app.dart';
 import 'package:gleichda/data/db/database.dart';
+import 'package:gleichda/data/efa/efa_client.dart' show parseAddInfo;
 import 'package:gleichda/data/repository.dart';
 import 'package:gleichda/data/transit_provider.dart';
 import 'package:gleichda/data/trias/trias_parser.dart';
-import 'package:gleichda/domain/models.dart';
+import 'package:gleichda/domain/models.dart' hide Platform;
+import 'package:gleichda/domain/models.dart' as m show Platform;
 import 'package:gleichda/state/providers.dart';
 import 'package:gleichda/ui/screens/connections_screen.dart';
 import 'package:gleichda/ui/screens/departures_screen.dart';
 import 'package:gleichda/ui/screens/design_demo_screen.dart';
+import 'package:gleichda/ui/screens/alarms_screen.dart';
+import 'package:gleichda/ui/screens/alternatives_screen.dart';
+import 'package:gleichda/ui/screens/companion_screen.dart';
+import 'package:gleichda/ui/screens/location_search_screen.dart';
+import 'package:gleichda/ui/screens/messages_screen.dart';
+import 'package:gleichda/ui/screens/more_screen.dart';
 import 'package:gleichda/ui/screens/trip_screen.dart';
+import 'package:gleichda/domain/settings.dart';
 import 'package:gleichda/ui/theme.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -58,13 +67,17 @@ class FakeProvider implements TransitProvider {
   Future<DepartureBoard> departures(Location stop, {DateTime? time, int limit = 20}) async => board;
 
   @override
-  Future<List<Message>> messages({List<String> lineIds = const []}) async => const [];
+  Future<List<Message>> messages({List<String> lineIds = const []}) async =>
+      parseAddInfo(jsonDecode(fixture('efa_addinfo_wuppertal.json')) as Map<String, dynamic>);
 
   @override
   Future<List<Trip>> planTrip(TripQuery query) async => trips;
 
   @override
   Future<Trip?> refreshTrip(Trip trip) async => trip;
+
+  @override
+  Future<List<m.Platform>> platforms(Location stop) async => const [];
 
   @override
   Future<List<Location>> searchLocations(String query,
@@ -162,6 +175,22 @@ void main() {
   testWidgets('Fahrt dunkel',
       (t) => shot(t, 'fahrt_dunkel', const TripScreen(), brightness: Brightness.dark, seed: seedHome));
   testWidgets('Abfahrten', (t) => shot(t, 'abfahrten', Scaffold(body: DeparturesScreen(initialStop: hbf))));
+  testWidgets('Zeitraster', (t) => shot(t, 'zeitraster',
+      ConnectionsScreen(from: trips.first.origin, to: trips.first.destination, time: null, arriveBy: false),
+      seed: (r) => r.setSetting('settings', const AppSettings(connectionsGrid: true).encode())));
+  testWidgets('Meldungen', (t) => shot(t, 'meldungen', const Scaffold(body: MessagesScreen())));
+  testWidgets('Mehr', (t) => shot(t, 'mehr', const Scaffold(body: MoreScreen())));
+  testWidgets('Unterwegs', (t) => shot(t, 'unterwegs', const CompanionScreen(), seed: (r) async {
+        final onBoard = tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first;
+        await r.saveLastTrip(onBoard);
+      }));
+  testWidgets('Fahrt unterwegs', (t) => shot(t, 'fahrt_unterwegs', const TripScreen(), seed: (r) async {
+        final onBoard = tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first;
+        await r.saveLastTrip(onBoard);
+      }));
+  testWidgets('Alternativen', (t) => shot(t, 'alternativen', AlternativesScreen(trip: trips.first)));
+  testWidgets('Neuer Wecker', (t) => shot(t, 'wecker_neu', const AlarmEditScreen()));
+  testWidgets('Suche leer', (t) => shot(t, 'suche_leer', const LocationSearchScreen(title: 'Nach'), seed: seedHome));
   testWidgets('Farben dunkel',
       (t) => shot(t, 'farben_dunkel', const DesignDemoScreen(), brightness: Brightness.dark));
 }

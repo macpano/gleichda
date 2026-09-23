@@ -146,9 +146,19 @@ class TriasRequests {
         });
       });
 
-  /// Verbindungssuche.
+  /// Verbindungssuche. [modes]: PtMode-Werte („bus“, „rail“ …), mit
+  /// [excludeModes] ausgeschlossen, sonst ausschließlich.
   String trip(TriasPlace from, TriasPlace to,
-          {required DateTime time, bool arriveBy = false, int limit = 5}) =>
+          {required DateTime time,
+          bool arriveBy = false,
+          int limit = 5,
+          TriasPlace? via,
+          List<String> modes = const [],
+          bool excludeModes = true,
+          bool accessible = false,
+          int walkSpeed = 100,
+          int? interchangeLimit,
+          String? algorithm}) =>
       _envelope((b) {
         b.element('TripRequest', nest: () {
           b.element('Origin', nest: () {
@@ -159,11 +169,34 @@ class TriasRequests {
             _locationRef(b, to);
             if (arriveBy) b.element('DepArrTime', nest: _utc(time));
           });
+          if (via is TriasStop) {
+            b.element('Via', nest: () {
+              b.element('ViaPoint', nest: () => b.element('StopPointRef', nest: via.ref));
+            });
+          }
           b.element('Params', nest: () {
+            if (modes.isNotEmpty) {
+              b.element('PtModeFilter', nest: () {
+                b.element('Exclude', nest: '$excludeModes');
+                for (final m in modes) {
+                  b.element('PtMode', nest: m);
+                }
+              });
+            }
+            if (accessible) {
+              b.element('NoSingleStep', nest: 'true');
+              b.element('NoStairs', nest: 'true');
+              b.element('LevelEntrance', nest: 'true');
+            }
+            if (walkSpeed != 100) b.element('WalkSpeed', nest: '$walkSpeed');
             b.element('NumberOfResults', nest: '$limit');
             b.element('IncludeTrackSections', nest: 'false');
             b.element('IncludeLegProjection', nest: 'false');
             b.element('IncludeIntermediateStops', nest: 'true');
+            if (interchangeLimit != null) {
+              b.element('InterchangeLimit', nest: '$interchangeLimit');
+            }
+            if (algorithm != null) b.element('AlgorithmType', nest: algorithm);
           });
         });
       });

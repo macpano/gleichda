@@ -68,9 +68,35 @@ class TriasProvider implements TransitProvider {
 
   @override
   Future<List<Trip>> planTrip(TripQuery query) async {
+    // Nur Busse ausschließen versteht der Server zuverlässig; Bahnen filtert
+    // die App zusätzlich selbst (siehe docs/konzept.md).
+    final ptModes = <String>{
+      for (final m in query.excludedModes) ...switch (m) {
+        TransportMode.bus || TransportMode.onDemand || TransportMode.replacementBus => ['bus'],
+        TransportMode.tram => ['tram'],
+        TransportMode.subway => ['metro'],
+        _ => const <String>[],
+      },
+    }.toList();
     final xml = await _post(_req.trip(placeOf(query.from), placeOf(query.to),
-        time: query.time, arriveBy: query.arriveBy, limit: query.maxResults));
-    return parseTrips(xml);
+        time: query.time,
+        arriveBy: query.arriveBy,
+        limit: query.maxResults,
+        via: query.via == null ? null : placeOf(query.via!),
+        modes: ptModes,
+        accessible: query.accessible,
+        walkSpeed: query.walkSpeedPercent,
+        interchangeLimit: query.maxInterchanges,
+        algorithm: switch (query.optimization) {
+          TripOptimization.fastest => null,
+          TripOptimization.minChanges => 'minChanges',
+          TripOptimization.leastWalking => 'leastWalking',
+        }));
+    final trips = parseTrips(xml);
+    if (query.excludedModes.isEmpty) return trips;
+    return trips
+        .where((t) => !t.rides.any((r) => query.excludedModes.contains(r.line?.mode)))
+        .toList();
   }
 
   /// Rückfall ohne Fahrtverlauf-Anfrage: dieselbe Verbindung neu suchen und
@@ -85,6 +111,18 @@ class TriasProvider implements TransitProvider {
       maxResults: 5,
     ));
     return matchTrip(trip, found);
+  }
+
+  /// TRIAS kennt über die Suche nur die Haltestelle selbst, keine Steige.
+  @override
+  Future<List<Platform>> platforms(Location stop) async {
+    if (stop.lat != null && stop.lon != null) {
+      return [Platform(id: stop.id, stopId: stop.id, lat: stop.lat!, lon: stop.lon!)];
+    }
+    final found = parseLocations(await _post(_req.locationInformation(stop.name, limit: 5)))
+        .where((l) => stopAreaId(l.id) == stopAreaId(stop.id) && l.lat != null)
+        .toList();
+    return [for (final l in found) Platform(id: l.id, stopId: l.id, lat: l.lat!, lon: l.lon!)];
   }
 
   @override

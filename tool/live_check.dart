@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 // Prüft die Kette live gegen den VRR-Testserver: suchen, Verbindung,
 // Fahrt über EFA aktualisieren.   dart run tool/live_check.dart
 import 'package:dio/dio.dart';

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bus aus dem Logo, einfarbig für die Statusleiste -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="62"
+    android:viewportHeight="62">
+    <group android:translateX="6" android:translateY="17">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M5,0H42A8,8 0,0 1,50 8V16A4,4 0,0 1,46 20H3A3,3 0,0 1,0 17V5A5,5 0,0 1,5 0Z M5,4H40L45,10.5H5Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M11,21m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0 M38,21m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0" />
+    </group>
+</vector>

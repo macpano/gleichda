@@ -39,6 +39,7 @@ class Favorites extends Table {
 }
 
 /// Linienabos (zunächst nur lokal).
+@DataClassName('SubscriptionRow')
 class Subscriptions extends Table {
   TextColumn get lineId => text()();
   TextColumn get providerId => text()();
@@ -51,6 +52,7 @@ class Subscriptions extends Table {
 }
 
 /// Gespeicherte Orte („Zuhause“, „Arbeit“ …).
+@DataClassName('SavedPlaceRow')
 class SavedPlaces extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
@@ -106,6 +108,16 @@ class StopCache extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Fahrtenwecker, als JSON des Modells Alarm.
+@DataClassName('AlarmRow')
+class Alarms extends Table {
+  TextColumn get id => text()();
+  TextColumn get data => text()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Einfache Einstellungen als Schlüssel/Wert.
 class Settings extends Table {
   TextColumn get key => text()();
@@ -123,11 +135,24 @@ class Settings extends Table {
   LastTrips,
   StopCache,
   Settings,
+  Alarms,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
-      : super(executor ?? driftDatabase(name: 'gleichda'));
+      : super(executor ??
+            driftDatabase(
+              name: 'gleichda',
+              // Hintergrundprüfung (Linienabos, Wecker) nutzt dieselbe Datei.
+              native: const DriftNativeOptions(shareAcrossIsolates: true),
+            ));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, from, to) async {
+          if (from < 2) await m.createTable(alarms);
+        },
+      );
 }

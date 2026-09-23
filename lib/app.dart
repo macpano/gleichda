@@ -10,6 +10,9 @@ import 'ui/screens/messages_screen.dart';
 import 'ui/screens/more_screen.dart';
 import 'ui/theme.dart';
 
+/// Für Benachrichtigungen, die einen Screen öffnen.
+final navigatorKey = GlobalKey<NavigatorState>();
+
 class GleichdaApp extends ConsumerWidget {
   const GleichdaApp({super.key});
 
@@ -19,6 +22,7 @@ class GleichdaApp extends ConsumerWidget {
     final platform = Theme.of(context).platform;
     return MaterialApp(
       title: 'Gleichda',
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       themeMode: mode,
       theme: buildTheme(Brightness.light, platform),
@@ -41,6 +45,7 @@ class HomeShell extends ConsumerStatefulWidget {
 
 class _HomeShellState extends ConsumerState<HomeShell> {
   int _tab = 0;
+  final _visited = <int>{0};
   late final AppLifecycleListener _life;
 
   @override
@@ -57,6 +62,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     _life.dispose();
     super.dispose();
   }
+
+  void _select(int i) => setState(() {
+        _tab = i;
+        _visited.add(i);
+      });
 
   static const _tabs = [
     (Icons.search, 'Suche'),
@@ -77,18 +87,20 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       child: Scaffold(
         body: IndexedStack(
           index: _tab,
-          children: const [
-            HomeScreen(),
-            DeparturesScreen(),
-            MessagesScreen(),
-            MoreScreen(),
+          children: [
+            const HomeScreen(),
+            // Erst beim ersten Öffnen aufbauen: keine Standortabfrage und keine
+            // Meldungsabfrage, bevor der Tab gebraucht wird.
+            _visited.contains(1) ? const DeparturesScreen() : const SizedBox.shrink(),
+            _visited.contains(2) ? const MessagesScreen() : const SizedBox.shrink(),
+            const MoreScreen(),
           ],
         ),
         bottomNavigationBar: context.isIOS
-            ? _IosTabBar(index: _tab, onTap: (i) => setState(() => _tab = i), tabs: _tabs)
+            ? _IosTabBar(index: _tab, onTap: _select, tabs: _tabs)
             : NavigationBar(
                 selectedIndex: _tab,
-                onDestinationSelected: (i) => setState(() => _tab = i),
+                onDestinationSelected: _select,
                 labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                 destinations: [
                   for (final t in _tabs)
