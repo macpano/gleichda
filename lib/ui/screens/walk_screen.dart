@@ -16,7 +16,7 @@ import '../../state/location.dart';
 import '../../state/providers.dart';
 import '../format.dart';
 import '../theme.dart';
-import '../trip_map.dart' show MapCredit;
+import '../trip_map.dart' show MapButton, MapCredit;
 import '../widgets.dart';
 
 /// Kartenkacheln: FOSSGIS (tile.openstreetmap.de). Der Kachelserver von
@@ -52,18 +52,37 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
   DateTime? _routedAt;
   bool _routing = false;
 
+  /// Zuletzt erreichter Wegpunkt; gesucht wird nur vorwärts.
+  int _routeIndex = 0;
+
+  /// Karte folgt der eigenen Position (nach „Zentrieren“), bis man sie selbst
+  /// verschiebt.
+  bool _follow = false;
+
+  void _center() {
+    final p = _pos;
+    if (p == null) return;
+    setState(() => _follow = true);
+    _map.move(LatLng(p.latitude, p.longitude), math.max(_map.camera.zoom, 17.5));
+  }
+
   Future<void> _maybeRoute() async {
     final t = _target, p = _pos;
     if (t == null || p == null || _routing) return;
     final here = (lat: p.latitude, lon: p.longitude);
     final r = _route;
-    final off = r == null ? double.infinity : r.locate(here).off;
-    final recent = _routedAt != null && DateTime.now().difference(_routedAt!) < const Duration(seconds: 15);
-    if (off <= 35 || (r != null && recent)) return;
+    final off = r == null ? double.infinity : r.locate(here, from: _routeIndex).off;
+    final recent = _routedAt != null && DateTime.now().difference(_routedAt!) < const Duration(seconds: 10);
+    if (off <= 25 || (r != null && recent)) return;
     _routing = true;
     try {
       final route = await ref.read(walkRouterProvider).route(here, (lat: t.lat, lon: t.lon));
-      if (mounted && route != null) setState(() => _route = route);
+      if (mounted && route != null) {
+        setState(() {
+          _route = route;
+          _routeIndex = 0;
+        });
+      }
     } on ProviderException {
       // Ohne Router bleibt die Luftlinie.
     } finally {
@@ -133,6 +152,7 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
         if (!mounted) return;
         setState(() => _pos = p);
         _fit();
+        if (_follow) _map.move(LatLng(p.latitude, p.longitude), _map.camera.zoom);
         _maybeRoute();
       });
     } on LocationException catch (e) {
@@ -187,7 +207,8 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
     double? bearing;
     // Mit Gehweg: Restweg entlang des Wegs und das nächste Abbiegen.
     final route = _route;
-    final at = route != null && p != null ? route.locate((lat: p.latitude, lon: p.longitude)) : null;
+    final at = route != null && p != null ? route.locate((lat: p.latitude, lon: p.longitude), from: _routeIndex) : null;
+    if (at != null && at.off < 40) _routeIndex = at.index;
     final turn = at == null ? null : route!.nextStep(at.index);
     if (t != null && p != null) {
       dist = at != null ? route!.remainingFrom(at.index) + at.off : _dist(p.latitude, p.longitude, t.lat, t.lon);
@@ -253,6 +274,9 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
                         initialCenter: LatLng(t.lat, t.lon),
                         initialZoom: 17,
                         onMapReady: _fit,
+                        onPositionChanged: (_, gesture) {
+                          if (gesture && _follow) setState(() => _follow = false);
+                        },
                       ),
                       children: [
                         TileLayer(urlTemplate: tileUrl, userAgentPackageName: 'de.gleichda.app', maxZoom: 19),
@@ -305,6 +329,20 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
                             ),
                         ]),
                         const MapCredit(),
+                        // Auf die eigene Position zentrieren und ihr folgen.
+                        if (p != null)
+                          Align(
+                            alignment: Alignment.topRight,
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: MapButton(
+                                icon: _follow ? Icons.my_location : Icons.location_searching,
+                                tooltip: 'Auf mich zentrieren',
+                                active: _follow,
+                                onTap: _center,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
         ),

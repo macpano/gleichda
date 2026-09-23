@@ -61,7 +61,8 @@ bool _inWindow(TimeWindow? w, DateTime now) {
 Future<int> checkSubscriptions(Repository repo, TransitProvider provider, {DateTime? now}) async {
   final subs = await repo.subscriptions();
   if (subs.isEmpty) return 0;
-  final messages = await provider.messages();
+  // Gebiet wie zuletzt in „Meldungen“ (Standort des Nutzers), sonst Wuppertal.
+  final messages = await provider.messages(region: await repo.setting('messagesRegion'));
   final seenRaw = await repo.setting('seenMessages');
   final seen = seenRaw == null ? null : (jsonDecode(seenRaw) as List).cast<String>().toSet();
   final t = now ?? DateTime.now();

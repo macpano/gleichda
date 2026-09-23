@@ -71,7 +71,10 @@ class FakeProvider implements TransitProvider {
   Future<DepartureBoard> departures(Location stop, {DateTime? time, int limit = 20}) async => board;
 
   @override
-  Future<List<Message>> messages({List<String> lineIds = const []}) async =>
+  Future<String?> regionOf(GeoPoint near) async => null;
+
+  @override
+  Future<List<Message>> messages({List<String> lineIds = const [], String? region}) async =>
       parseAddInfo(jsonDecode(fixture('efa_addinfo_wuppertal.json')) as Map<String, dynamic>);
 
   @override
@@ -93,7 +96,7 @@ class FakeProvider implements TransitProvider {
   Future<Trip?> tripOfDeparture(Departure departure) async => null;
 
   @override
-  Future<List<Line>> searchLines(String query) async => const [
+  Future<List<Line>> searchLines(String query, {GeoPoint? near}) async => const [
         Line(id: 'wsw:66604', name: '604', mode: TransportMode.bus, product: 'bus', longName: 'Langerfeld – Rott'),
         Line(id: 'wsw:64060', name: '60', mode: TransportMode.suspension, product: 'suspension', longName: 'Oberbarmen – Vohwinkel'),
       ];

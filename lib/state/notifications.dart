@@ -151,6 +151,17 @@ class Notifications {
     );
   }
 
+  /// Steht die Unterwegs-Benachrichtigung noch? null, wenn unbekannt.
+  static Future<bool?> companionVisible() async {
+    if (!_ready || _android == null) return null;
+    try {
+      final active = await _android!.getActiveNotifications();
+      return active.any((n) => n.id == companionId);
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<void> stopCompanion() async {
     if (!_ready) return;
     if (_serviceRunning) {
@@ -232,11 +243,10 @@ const companionPortName = 'gleichda_unterwegs';
 @pragma('vm:entry-point')
 Future<void> notificationActionInBackground(NotificationResponse r) async {
   if (r.actionId != 'stop') return;
-  final port = IsolateNameServer.lookupPortByName(companionPortName);
-  if (port != null) {
-    port.send('stop');
-    return;
-  }
+  // Der App Bescheid geben (falls sie läuft) und den Dienst in jedem Fall
+  // selbst anhalten – kommt die Nachricht nicht an, merkt die App beim
+  // nächsten Takt, dass ihre Benachrichtigung fehlt (companionVisible).
+  IsolateNameServer.lookupPortByName(companionPortName)?.send('stop');
   final plugin = FlutterLocalNotificationsPlugin();
   final android = plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
   try {

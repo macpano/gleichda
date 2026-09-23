@@ -63,7 +63,7 @@ class _OptionsSheet extends ConsumerWidget {
             ),
             ValueRow(
               label: 'Profil',
-              value: s.isDefault ? 'Standard' : 'angepasst',
+              value: s.isDefault ? 'Standard' : 'Angepasst',
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
             ),
           ]),

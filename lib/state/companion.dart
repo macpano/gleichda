@@ -41,6 +41,7 @@ class CompanionController extends Notifier<CompanionState> {
   Timer? _timer;
   String? _lastKey;
   StreamSubscription<Position>? _gpsSub;
+  bool _shown = false;
   DateTime? _gpsUpdated;
 
   final _port = ReceivePort();
@@ -105,6 +106,7 @@ class CompanionController extends Notifier<CompanionState> {
 
   Future<void> stop() async {
     _timer?.cancel();
+    _shown = false;
     await _gpsSub?.cancel();
     _gpsSub = null;
     _lastKey = null;
@@ -125,6 +127,12 @@ class CompanionController extends Notifier<CompanionState> {
       if (now.difference(s.trip.arrival.best) > const Duration(minutes: 1)) await stop();
       return;
     }
+    // Über die Benachrichtigung beendet (Knopf „Beenden“ ohne App): Die
+    // Benachrichtigung ist weg – dann nicht neu zeigen, sondern aufhören.
+    if (_shown && await Notifications.companionVisible() == false) {
+      await stop();
+      return;
+    }
     final text = companionTexts(s.trip, step, now);
     final issue = tripIssue(s.trip, lost: s.lost);
     final percent = (step.progress * 100).round();
@@ -141,6 +149,7 @@ class CompanionController extends Notifier<CompanionState> {
           : (issue.level == IssueLevel.cancelled ? AppColors.light.red : AppColors.light.orange),
       reason: issue?.title,
     );
+    _shown = true;
   }
 }
 

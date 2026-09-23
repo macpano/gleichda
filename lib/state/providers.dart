@@ -253,17 +253,32 @@ class MessagesState {
   final String? error;
 }
 
+/// Meldungen für den Ort, an dem man ist (Gebiet der nächsten Haltestelle).
+/// Das Gebiet wird gemerkt – ohne Standort und in der Hintergrundprüfung der
+/// Linienabos gilt das zuletzt genutzte.
 class MessagesController extends AsyncNotifier<MessagesState> {
   @override
-  Future<MessagesState> build() async {
-    final list = await ref.read(transitProvider).messages();
-    return MessagesState(list, DateTime.now());
+  Future<MessagesState> build() async => MessagesState(await _load(), DateTime.now());
+
+  Future<List<Message>> _load() async {
+    final p = ref.read(transitProvider);
+    final repo = ref.read(repositoryProvider);
+    String? region;
+    try {
+      final here = await ref.read(locationServiceProvider).current(preferRecent: true);
+      region = await p.regionOf((lat: here.lat, lon: here.lon));
+      if (region != null) await repo.setSetting('messagesRegion', region);
+    } catch (_) {
+      // Ohne Standort: zuletzt genutztes Gebiet.
+    }
+    region ??= await repo.setting('messagesRegion');
+    return p.messages(region: region);
   }
 
   Future<void> refresh() async {
     final old = state.value;
     try {
-      final list = await ref.read(transitProvider).messages();
+      final list = await _load();
       state = AsyncData(MessagesState(list, DateTime.now()));
     } on ProviderException catch (e) {
       state = old == null

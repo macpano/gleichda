@@ -108,7 +108,11 @@ abstract class TransitProvider {
   Future<Trip?> refreshTrip(Trip trip);
 
   /// Aktuelle Meldungen, optional auf Linien beschränkt.
-  Future<List<Message>> messages({List<String> lineIds = const []});
+  Future<List<Message>> messages({List<String> lineIds = const [], String? region});
+
+  /// Gebiet für Meldungen an einem Ort (beim VRR der Gemeindeschlüssel der
+  /// nächsten Haltestelle). null, wenn unbekannt.
+  Future<String?> regionOf(GeoPoint near);
 
   /// Steige einer Haltestelle mit Koordinaten. Leer, wenn unbekannt.
   Future<List<Platform>> platforms(Location stop);
@@ -121,6 +125,7 @@ abstract class TransitProvider {
   /// Endhaltestelle, als Verbindung mit einem Abschnitt. null, wenn unbekannt.
   Future<Trip?> tripOfDeparture(Departure departure);
 
-  /// Linien zum Suchbegriff (Liniennummer), etwa zum Abonnieren.
-  Future<List<Line>> searchLines(String query);
+  /// Linien zum Suchbegriff (Liniennummer), etwa zum Abonnieren –
+  /// deutschlandweit, Linien in der Nähe von [near] zuerst.
+  Future<List<Line>> searchLines(String query, {GeoPoint? near});
 }

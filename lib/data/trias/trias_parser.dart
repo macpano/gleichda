@@ -97,6 +97,11 @@ String displayName(String name, String? place) {
   return name;
 }
 
+/// Haltestellenname mit Ort, wie ihn die Auskunft schreibt, nur ohne Komma
+/// („Wuppertal, Alter Markt“ → „Wuppertal Alter Markt“).
+String fullStopName(String name) =>
+    name.replaceFirstMapped(RegExp(r'^([^,]{2,30}), '), (m) => '${m[1]} ').trim();
+
 ProductInfo _productOf(XmlElement? mode, {String? published, String? lineRef}) {
   String? submode;
   for (final e in mode?.childElements ?? const <XmlElement>[]) {
@@ -163,7 +168,8 @@ StopTime _call(XmlElement call, {bool serviceCancelled = false}) {
     stop: Location(
       id: ref,
       providerId: _provider,
-      name: displayName(name, homePlace),
+      // Voller Name mit Ort („Wuppertal Hbf“): „Hbf“ allein könnte überall sein.
+      name: fullStopName(name),
       type: LocationType.stop,
     ),
     arrival: _eventTime(call.el('ServiceArrival')),
@@ -371,7 +377,7 @@ StopTime _legEnd(XmlElement e, DateTime? time, {required bool isStart}) {
     stop: Location(
       id: ref ?? 'coord:$lat:$lon',
       providerId: _provider,
-      name: displayName(name.replaceFirst('$homePlace, ', ''), homePlace),
+      name: ref != null ? fullStopName(name) : name,
       lat: lat,
       lon: lon,
       type: ref != null ? LocationType.stop : LocationType.coordinate,

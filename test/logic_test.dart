@@ -249,7 +249,7 @@ class _Messages implements TransitProvider {
   String get id => 'fake';
 
   @override
-  Future<List<Message>> messages({List<String> lineIds = const []}) async => list;
+  Future<List<Message>> messages({List<String> lineIds = const [], String? region}) async => list;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
