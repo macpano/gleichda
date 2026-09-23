@@ -79,8 +79,10 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 
 ## Auslieferung (Obtainium)
 
-- Repository: https://github.com/macpano/gleichda (privat). Obtainium verfolgt die
-  GitHub-Releases; im privaten Repo braucht Obtainium ein GitHub-Token mit Leserecht.
+- Repository: https://github.com/macpano/gleichda (öffentlich seit 23.09.2026).
+  Obtainium verfolgt die GitHub-Releases, ohne Token.
+- Commits nur mit der anonymen Adresse 325691885+macpano@users.noreply.github.com
+  (in der Repo-Konfiguration gesetzt) – keine private E-Mail im öffentlichen Verlauf.
 - Neue Version: `bash tool/release.sh <Version> "<Neuerungen>"` – erhöht die
   Build-Nummer, prüft, baut die signierte APK, taggt `v<Version>` und legt das Release an.
 - Signiert mit demselben Schlüssel wie Linienlog (`android/key.properties`, nicht im Repo).
