@@ -273,3 +273,6 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Erster Start: Erklärung zum Standort, bevor Android fragt (Standortabfragen warten darauf)
 - ✅ Große Schrift geprüft (150 %, Bildschirmfotos `gross_*`): feste Zeilenhöhen wachsen mit (`textGrowth`),
   Sortier-/Barrierefrei-Knöpfe brechen um statt überzulaufen
+
+## 0.4.12-vorab.3 (23.09.2026)
+- ✅ Reiter in der Reihenfolge Suche · Abfahrten · Karte · Meldungen · Mehr (Nutzervorgabe)
