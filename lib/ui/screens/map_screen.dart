@@ -119,7 +119,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     _scheduleStops();
   }
 
-  Future<void> _showStop(Location stop, {String? platform}) async {
+  Future<void> _showStop(Location stop, {Platform? platform}) async {
     final d = await showModalBottomSheet<Departure>(
       context: context,
       showDragHandle: true,
@@ -184,7 +184,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             width: 34,
             height: 24,
             child: GestureDetector(
-              onTap: () => _showStop(stop, platform: p.name),
+              onTap: () => _showStop(stop, platform: p),
               child: _PlatformMarker(label: p.name ?? '', color: color),
             ),
           ));
@@ -416,7 +416,7 @@ class _StopSheet extends ConsumerStatefulWidget {
   final Location stop;
 
   /// Nur Abfahrten dieses Steigs (nach Tipp auf einen einzelnen Steig).
-  final String? platform;
+  final Platform? platform;
 
   @override
   ConsumerState<_StopSheet> createState() => _StopSheetState();
@@ -434,19 +434,17 @@ class _StopSheetState extends ConsumerState<_StopSheet> {
 
   Future<void> _load() async {
     try {
-      final b = await ref.read(transitProvider).departures(widget.stop, limit: widget.platform == null ? 12 : 30);
+      // Steiggenau über die volle Steigkennung („de:05124:11376:91:2“): Die
+      // Nummer allein ist nicht eindeutig – am Hbf gibt es Steig 2 am
+      // Busbahnhof (…:2:2) und an der Straße (…:91:2).
+      final p = widget.platform;
+      final b = await ref
+          .read(transitProvider)
+          .departures(p == null ? widget.stop : widget.stop.copyWith(id: p.id), limit: 12);
       if (mounted) setState(() => _board = b);
     } on ProviderException catch (e) {
       if (mounted) setState(() => _error = e.message);
     }
-  }
-
-  /// Mit Steig: nur dessen Abfahrten (falls die Auskunft Steige nennt).
-  List<Departure> _shown(List<Departure> all) {
-    final p = widget.platform;
-    if (p == null) return all;
-    final mine = all.where((d) => d.platform == p || d.plannedPlatform == p).toList();
-    return mine.isEmpty ? all : mine.take(12).toList();
   }
 
   @override
@@ -461,7 +459,7 @@ class _StopSheetState extends ConsumerState<_StopSheet> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: SheetHeader(
-                widget.platform == null ? widget.stop.label : '${widget.stop.label} · Steig ${widget.platform}',
+                widget.platform?.name == null ? widget.stop.label : '${widget.stop.label} · Steig ${widget.platform!.name}',
                 done: 'Schließen'),
           ),
           Flexible(
@@ -480,7 +478,7 @@ class _StopSheetState extends ConsumerState<_StopSheet> {
                         child: Text('Keine Abfahrten in der nächsten Zeit.', style: TextStyle(color: c.muted)),
                       )
                     : ListView(shrinkWrap: true, children: [
-                        for (final d in _shown(board.departures))
+                        for (final d in board.departures)
                           DepartureRow(d, now: now, onSelect: (d) => Navigator.pop(context, d)),
                       ]),
           ),
