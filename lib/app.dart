@@ -4,6 +4,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'state/providers.dart';
+import 'ui/trip_status.dart';
+import 'ui/screens/walk_screen.dart';
+import 'ui/screens/trip_screen.dart';
+import 'ui/screens/companion_card.dart';
+import 'state/companion.dart';
 import 'state/updates.dart';
 import 'ui/screens/update_screen.dart';
 import 'ui/screens/departures_screen.dart';
@@ -34,27 +39,39 @@ class GleichDaApp extends ConsumerWidget {
       supportedLocales: const [Locale('de')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       home: const HomeShell(),
-      // Die Statusleiste ist durchsichtig; ein Streifen in Hintergrundfarbe
-      // darunter verhindert, dass beim Scrollen Inhalte hinter Uhrzeit und
-      // Symbolen durchscheinen.
-      builder: (context, child) {
-        final top = MediaQuery.paddingOf(context).top;
-        return Stack(children: [
-          child!,
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: top,
-            child: IgnorePointer(child: ColoredBox(color: Theme.of(context).scaffoldBackgroundColor)),
-          ),
-        ]);
-      },
+      builder: appFrame,
     );
   }
 }
 
-/// Vier feste Tabs: Suche, Abfahrten, Meldungen, Mehr.
+/// Rahmen um jede Ansicht:
+/// Die Statusleiste ist durchsichtig; ein Streifen in Hintergrundfarbe
+/// darunter verhindert, dass beim Scrollen Inhalte hinter Uhrzeit und
+/// Symbolen durchscheinen.
+/// Außerdem die Unterwegs-Leiste unten, in jeder Ansicht an derselben Stelle.
+Widget appFrame(BuildContext context, Widget? child) {
+  final top = MediaQuery.paddingOf(context).top;
+  return Stack(children: [
+    // Unterwegs-Leiste unter jeder Ansicht; die Ansicht darüber verliert
+    // dann den unteren Rand (den übernimmt die Leiste).
+    Consumer(builder: (context, ref, _) {
+      final following = ref.watch(companionProvider).active;
+      return Column(children: [
+        Expanded(child: MediaQuery.removePadding(context: context, removeBottom: following, child: child!)),
+        const GlobalCompanionBar(),
+      ]);
+    }),
+    Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      height: top,
+      child: IgnorePointer(child: ColoredBox(color: Theme.of(context).scaffoldBackgroundColor)),
+    ),
+  ]);
+}
+
+/// Fünf feste Reiter: Suche, Karte, Abfahrten, Meldungen, Mehr.
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
 
@@ -176,6 +193,35 @@ class _IosTabBar extends StatelessWidget {
             ),
           ),
       ]),
+    );
+  }
+}
+
+/// Die Unterwegs-Leiste für die ganze App, solange eine Begleitung läuft.
+class GlobalCompanionBar extends ConsumerWidget {
+  const GlobalCompanionBar({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final companion = ref.watch(companionProvider);
+    final s = ref.watch(lastTripProvider).value;
+    if (!companion.active || s == null || s.trip.id != companion.tripId) return const SizedBox.shrink();
+    final now = ref.watch(clockProvider).value ?? DateTime.now();
+    return Material(
+      type: MaterialType.transparency,
+      child: CompanionBar(
+        trip: s.trip,
+        now: now,
+        issue: tripIssue(s.trip, lost: s.lost),
+        gps: companion.freshGps(now),
+        onStop: () => ref.read(companionProvider.notifier).stop(),
+        onWalk: (step) => navigatorKey.currentState?.push(MaterialPageRoute(
+            builder: (_) => WalkScreen(target: step.where.stop, platform: step.where.platform, departure: step.when))),
+        onOpen: () {
+          if (TripScreen.open > 0) return;
+          navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => const TripScreen()));
+        },
+      ),
     );
   }
 }

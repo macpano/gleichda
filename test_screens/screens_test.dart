@@ -180,6 +180,7 @@ void main() {
         debugShowCheckedModeBanner: false,
         theme: buildTheme(brightness, TargetPlatform.android),
         home: home,
+        builder: appFrame,
       ),
     ));
     for (var i = 0; i < 8; i++) {
@@ -229,6 +230,12 @@ void main() {
   testWidgets('Unterwegs', (t) {
     final onBoard = withCoords(tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first);
     return shot(t, 'unterwegs', const TripScreen(),
+        seed: (r) => r.saveLastTrip(onBoard),
+        overrides: [companionProvider.overrideWith(() => _Following(onBoard.id))]);
+  });
+  testWidgets('Unterwegs auf der Startseite', (t) {
+    final onBoard = withCoords(tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first);
+    return shot(t, 'unterwegs_startseite', const HomeShell(),
         seed: (r) => r.saveLastTrip(onBoard),
         overrides: [companionProvider.overrideWith(() => _Following(onBoard.id))]);
   });

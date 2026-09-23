@@ -6,18 +6,32 @@ import '../format.dart';
 import '../theme.dart';
 import '../trip_status.dart';
 import '../widgets.dart';
-import 'walk_screen.dart';
 
-/// Unterwegs: der nächste Schritt als feste Leiste am unteren Rand der Fahrt,
-/// zusammen mit „Beenden“ – immer sichtbar, ohne den Fahrtverlauf zu
-/// verschieben. Oben ein feiner Fortschrittsstrich. Dieselben Angaben wie die
+/// Unterwegs: der nächste Schritt als feste Leiste am unteren Rand – in jeder
+/// Ansicht an derselben Stelle (wie der Mini-Player einer Musik-App), zusammen
+/// mit „Beenden“. Oben ein feiner Fortschrittsstrich. Dieselben Angaben wie die
 /// laufende Benachrichtigung (docs/konzept.md, „Unterwegs-Modus“).
 class CompanionBar extends StatelessWidget {
-  const CompanionBar({super.key, required this.trip, required this.now, required this.onStop, this.issue, this.gps});
+  const CompanionBar({
+    super.key,
+    required this.trip,
+    required this.now,
+    required this.onStop,
+    required this.onWalk,
+    required this.onOpen,
+    this.issue,
+    this.gps,
+  });
 
   final Trip trip;
   final DateTime now;
   final VoidCallback onStop;
+
+  /// Weg zum Steig des nächsten Einstiegs.
+  final void Function(CompanionStep step) onWalk;
+
+  /// Fahrt öffnen (Tipp auf die Leiste im Fahrzeug).
+  final VoidCallback onOpen;
   final TripIssue? issue;
 
   /// Eigene Position während der Begleitung; bestimmt nächsten Halt und
@@ -66,12 +80,8 @@ class CompanionBar extends StatelessWidget {
           backgroundColor: Colors.transparent,
         ),
         InkWell(
-          // Vor dem Einsteigen führt ein Tipp zum Weg zum Steig.
-          onTap: boarding
-              ? () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) =>
-                      WalkScreen(target: step.where.stop, platform: step.where.platform, departure: step.when)))
-              : null,
+          // Vor dem Einsteigen führt ein Tipp zum Weg zum Steig, sonst zur Fahrt.
+          onTap: boarding ? () => onWalk(step) : onOpen,
           child: SizedBox(
             height: 62,
             child: Padding(
@@ -116,9 +126,7 @@ class CompanionBar extends StatelessWidget {
                   IconButton(
                     tooltip: 'Weg zum Steig',
                     icon: Icon(Icons.directions_walk, color: c.accent),
-                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) =>
-                            WalkScreen(target: step.where.stop, platform: step.where.platform, departure: step.when))),
+                    onPressed: () => onWalk(step),
                   ),
                 TextButton(
                   style: TextButton.styleFrom(foregroundColor: c.muted),

@@ -13,7 +13,6 @@ import '../trip_map.dart';
 import '../trip_status.dart';
 import '../widgets.dart';
 import 'alternatives_screen.dart';
-import 'companion_card.dart';
 import 'walk_screen.dart';
 
 /// Fahrtdetail der zuletzt geöffneten Fahrt, mit Fahrtverlauf nach
@@ -21,11 +20,27 @@ import 'walk_screen.dart';
 class TripScreen extends ConsumerStatefulWidget {
   const TripScreen({super.key});
 
+  /// Wie viele Fahrtansichten gerade im Stapel liegen (die Unterwegs-Leiste
+  /// öffnet dann keine weitere).
+  static int open = 0;
+
   @override
   ConsumerState<TripScreen> createState() => _TripScreenState();
 }
 
 class _TripScreenState extends ConsumerState<TripScreen> {
+  @override
+  void initState() {
+    super.initState();
+    TripScreen.open++;
+  }
+
+  @override
+  void dispose() {
+    TripScreen.open--;
+    super.dispose();
+  }
+
   final _expanded = <int>{};
   final _openMessages = <String>{};
 
@@ -176,14 +191,10 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           ],
         ),
       ),
+      // Bei laufender Begleitung steht die Unterwegs-Leiste app-weit unten
+      // (GlobalCompanionBar in app.dart).
       bottomNavigationBar: following
-          ? CompanionBar(
-              trip: trip,
-              now: now,
-              issue: issue,
-              gps: companion.freshGps(now),
-              onStop: () => ref.read(companionProvider.notifier).stop(),
-            )
+          ? null
           : arrived
               ? null
               : Container(
