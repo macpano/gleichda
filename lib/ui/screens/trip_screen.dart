@@ -28,6 +28,7 @@ class TripScreen extends ConsumerStatefulWidget {
 class _TripScreenState extends ConsumerState<TripScreen> {
   final _expanded = <int>{};
   final _openMessages = <String>{};
+  bool _companionHidden = false;
 
   @override
   Widget build(BuildContext context) {
@@ -94,8 +95,17 @@ class _TripScreenState extends ConsumerState<TripScreen> {
             ),
             const SizedBox(height: 14),
             if (following) ...[
-              CompanionCard(trip: trip, now: now, issue: issue, gps: companion.freshGps(now)),
-              const SizedBox(height: 14),
+              if (_companionHidden)
+                CompanionCollapsed(onShow: () => setState(() => _companionHidden = false))
+              else
+                CompanionCard(
+                  trip: trip,
+                  now: now,
+                  issue: issue,
+                  gps: companion.freshGps(now),
+                  onHide: () => setState(() => _companionHidden = true),
+                ),
+              const SizedBox(height: 12),
             ],
             if (issue != null) ...[
               IssueBanner(issue, onAlternatives: () => openAlternatives(context, trip)),

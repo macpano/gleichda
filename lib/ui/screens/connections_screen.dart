@@ -410,7 +410,7 @@ class _ViewToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    Widget b(bool g, IconData icon, String label) => Semantics(
+    Widget b(bool g, String label) => Semantics(
           button: true,
           selected: grid == g,
           label: label,
@@ -424,7 +424,11 @@ class _ViewToggle extends StatelessWidget {
                 color: grid == g ? (dark ? const Color(0xFF3A3F46) : c.surface) : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, size: 18, color: c.ink),
+              alignment: Alignment.center,
+              child: CustomPaint(
+                size: const Size(18, 16),
+                painter: _ViewIconPainter(grid: g, color: grid == g ? c.ink : c.muted),
+              ),
             ),
           ),
         );
@@ -432,12 +436,45 @@ class _ViewToggle extends StatelessWidget {
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(color: c.fill, borderRadius: BorderRadius.circular(Radii.input)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        b(false, Icons.view_agenda_outlined, 'Liste'),
+        b(false, 'Liste'),
         const SizedBox(width: 2),
-        b(true, Icons.view_week_outlined, 'Zeitraster'),
+        b(true, 'Zeitraster'),
       ]),
     );
   }
+}
+
+/// Eigene Symbole für die Ansichtswahl: Liste = drei Zeilen wie die
+/// Verbindungsbalken, Zeitraster = drei versetzte Spalten wie im Raster.
+class _ViewIconPainter extends CustomPainter {
+  _ViewIconPainter({required this.grid, required this.color});
+
+  final bool grid;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = color
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round;
+    final w = size.width, h = size.height;
+    if (grid) {
+      // Spalten: Beginn und Länge versetzt wie Fahrten in der Zeitachse.
+      const cols = [(0.2, 0.05, 0.6), (0.5, 0.3, 0.95), (0.8, 0.15, 0.75)];
+      for (final (x, a, b) in cols) {
+        canvas.drawLine(Offset(w * x, h * a + 1), Offset(w * x, h * b - 1), p);
+      }
+    } else {
+      const rows = [(0.2, 0.95), (0.5, 0.7), (0.8, 0.85)];
+      for (final (y, len) in rows) {
+        canvas.drawLine(Offset(1.5, h * y), Offset(w * len, h * y), p);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ViewIconPainter old) => old.grid != grid || old.color != color;
 }
 
 class _ConnectionSkeleton extends StatelessWidget {
