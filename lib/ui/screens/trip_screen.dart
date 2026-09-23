@@ -73,6 +73,19 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                 ),
               ]),
             ),
+            // Über eine Abfahrt geöffnet: Linie und Ziel stehen oben.
+            if (trip.id.startsWith('abfahrt:') && trip.rides.length == 1)
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 6),
+                child: Row(children: [
+                  LineBadge(trip.rides.first.line),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OneLine('Richtung ${trip.rides.first.direction ?? trip.destination.label}',
+                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                  ),
+                ]),
+              ),
             RouteSummary(from: trip.origin.label, to: trip.destination.label),
             Padding(
               padding: const EdgeInsets.only(left: 4),
@@ -253,24 +266,34 @@ class _TripScreenState extends ConsumerState<TripScreen> {
         onTap: l.intermediates.isEmpty
             ? null
             : () => setState(() => open ? _expanded.remove(i) : _expanded.add(i)),
+        // Zwei Zeilen: Linie und volles Ziel, darunter Zwischenhalte und
+        // Echtzeit – vorher in einer Zeile, das Ziel wurde abgeschnitten.
         child: _Row(
-          height: 38,
+          height: 56,
           rail: _Rail(color: color),
-          child: Row(children: [
-            LineBadge(l.line),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Padding(padding: const EdgeInsets.only(top: 1), child: LineBadge(l.line)),
             const SizedBox(width: 8),
             Expanded(
-              child: OneLine(
-                l.intermediates.isEmpty || open
-                    ? 'Richtung ${l.direction ?? ''}'
-                    : '${l.intermediates.length == 1 ? '1 Zwischenhalt' : '${l.intermediates.length} Zwischenhalte'} · Richtung ${l.direction ?? ''}',
-                style: TextStyle(fontSize: 15, color: c.ink2),
-              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                OneLine('Richtung ${l.direction ?? ''}', style: TextStyle(fontSize: 15, color: c.ink2, height: 1.3)),
+                const SizedBox(height: 2),
+                Text.rich(
+                  TextSpan(children: [
+                    if (l.intermediates.isNotEmpty)
+                      TextSpan(
+                          text: '${l.intermediates.length == 1 ? '1 Zwischenhalt' : '${l.intermediates.length} Zwischenhalte'} · ',
+                          style: TextStyle(color: c.muted)),
+                    TextSpan(text: tag, style: TextStyle(color: tagColor)),
+                  ]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, height: 1.3),
+                ),
+              ]),
             ),
-            const SizedBox(width: 8),
-            Text(tag, style: TextStyle(fontSize: 13, color: tagColor)),
             if (l.intermediates.isNotEmpty) ...[
-              const SizedBox(width: 2),
+              const SizedBox(width: 4),
               Icon(open ? Icons.expand_less : Icons.expand_more, size: 20, color: c.muted),
             ],
           ]),

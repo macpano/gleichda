@@ -120,3 +120,7 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Orte überall mit Ort angezeigt (`Location.label`: „Wuppertal Hbf“, „Hofaue 12, Wuppertal“); die Echtzeit-Aktualisierung
   übernimmt volle EFA-Namen und heilt so gespeicherte Fahrten mit Kurznamen
 - ✅ Zuletzt angesehene Fahrt verschwindet 2 min nach der Ankunft, auch bei offener App
+
+## v0.4.2 (23.09.2026)
+- ✅ Fahrtverlauf: Linie und volles Ziel in einer eigenen Zeile, Zwischenhalte und Echtzeit darunter (vorher abgeschnitten)
+- ✅ Über eine Abfahrt geöffnete Fahrt zeigt Linie und Ziel oben im Kopf
