@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gleichda/data/efa/efa_client.dart';
 import 'package:gleichda/data/trias/trias_provider.dart';
 import 'package:gleichda/data/vrr_provider.dart';
-import 'package:gleichda/domain/models.dart';
 import 'package:gleichda/state/providers.dart' show MessagesState;
 
 void main() {
