@@ -233,6 +233,9 @@ abstract class Message with _$Message {
 
     /// Datenquelle, z. B. „VRR“ oder „DB“.
     String? source,
+
+    /// Gebiete (Gemeindeschlüssel), unter denen die Auskunft sie führt.
+    @Default(<String>[]) List<String> regions,
   }) = _Message;
 
   factory Message.fromJson(Map<String, dynamic> json) =>

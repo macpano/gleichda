@@ -174,3 +174,8 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 ## 0.4.11-vorab.2 (23.09.2026)
 - ✅ Unterwegs-Leiste app-weit unten (MaterialApp-`builder` → `appFrame`), in jeder Ansicht an derselben Stelle;
   Tipp: vor dem Einsteigen Weg zum Steig, sonst die Fahrt
+
+## 0.4.11-vorab.3 (23.09.2026)
+- ✅ Meldungen nach Nähe: „In deiner Nähe“ = Linien an Haltestellen im Umkreis von 1,5 km, „Weitere in der Umgebung“ =
+  Linien derselben Verkehrsbetriebe; fremde Betriebe (unter Hagen z. B. MVG aus Iserlohn/Hemer) und Nachbarorte ohne
+  Bezug fallen weg. Gemessen Hagen-Boele: 82 → 2 Meldungen (539 und 518/519 Herdecke)

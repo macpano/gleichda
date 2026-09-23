@@ -263,12 +263,36 @@ final alarmsProvider = StreamProvider<List<Alarm>>((ref) => ref.watch(repository
 
 /// Meldungsliste mit Zeitpunkt des Abrufs.
 class MessagesState {
-  const MessagesState(this.messages, this.at, {this.failed = false, this.error});
+  const MessagesState(this.messages, this.at,
+      {this.failed = false, this.error, this.nearLines = const {}, this.homeRegion});
 
   final List<Message> messages;
   final DateTime at;
   final bool failed;
   final String? error;
+
+  /// Linien (Schlüssel wie „wsw:66604“), die in der Nähe halten.
+  final Set<String> nearLines;
+
+  /// Eigener Ort (Gemeindeschlüssel).
+  final String? homeRegion;
+
+  /// Betrifft eine Linie, die in der Nähe hält.
+  bool isNear(Message m) => m.lineIds.any(nearLines.contains);
+
+  /// Verkehrsbetriebe der Linien in der Nähe („hst“, „wsw“, „ddb“ …).
+  Set<String> get nearNetworks => {for (final k in nearLines) k.split(':').first};
+
+  /// Gehört in die Liste „Alle“: betrifft eine Linie in der Nähe, eine Linie
+  /// derselben Verkehrsbetriebe oder ist eine allgemeine Meldung des eigenen
+  /// Orts. Die EFA führt unter einer Stadt auch fremde Betriebe (unter Hagen
+  /// z. B. MVG-Meldungen aus Iserlohn und Hemer) – die fallen so heraus.
+  bool isRelevant(Message m) {
+    if (nearLines.isEmpty) return true; // ohne Standort: alles
+    if (isNear(m)) return true;
+    if (m.lineIds.isEmpty) return homeRegion == null || m.regions.contains(homeRegion);
+    return m.lineIds.any((k) => nearNetworks.contains(k.split(':').first));
+  }
 }
 
 /// Zuletzt genutzte Gebiete für Meldungen (auch für die Hintergrundprüfung).
@@ -282,32 +306,37 @@ Future<List<String>> savedMessageRegions(Repository repo) async {
 /// Linienabos gilt das zuletzt genutzte.
 class MessagesController extends AsyncNotifier<MessagesState> {
   @override
-  Future<MessagesState> build() async => MessagesState(await _load(), DateTime.now());
+  Future<MessagesState> build() => _load();
 
-  Future<List<Message>> _load() async {
+  Future<MessagesState> _load() async {
     final p = ref.read(transitProvider);
     final repo = ref.read(repositoryProvider);
     var regions = <String>[];
+    var near = <String>{};
     try {
       final here = await ref.read(locationServiceProvider).current(preferRecent: true);
-      regions = await p.regionsOf((lat: here.lat, lon: here.lon));
+      final at = (lat: here.lat, lon: here.lon);
+      final results = await Future.wait([p.regionsOf(at), p.linesNear(at)]);
+      regions = results[0] as List<String>;
+      near = {for (final l in results[1] as List<Line>) lineKey(l.id)};
       if (regions.isNotEmpty) await repo.setSetting('messagesRegions', regions.join(','));
     } catch (_) {
       // Ohne Standort: zuletzt genutzte Gebiete.
     }
     if (regions.isEmpty) regions = await savedMessageRegions(repo);
-    return p.messages(regions: regions);
+    final list = await p.messages(regions: regions);
+    return MessagesState(list, DateTime.now(), nearLines: near, homeRegion: regions.firstOrNull);
   }
 
   Future<void> refresh() async {
     final old = state.value;
     try {
-      final list = await _load();
-      state = AsyncData(MessagesState(list, DateTime.now()));
+      state = AsyncData(await _load());
     } on ProviderException catch (e) {
       state = old == null
           ? AsyncError(e, StackTrace.current)
-          : AsyncData(MessagesState(old.messages, old.at, failed: true, error: e.message));
+          : AsyncData(MessagesState(old.messages, old.at,
+              failed: true, error: e.message, nearLines: old.nearLines, homeRegion: old.homeRegion));
     }
   }
 }
