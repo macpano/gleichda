@@ -88,7 +88,7 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 - Signiert mit demselben Schlüssel wie Linienlog (`android/key.properties`, nicht im Repo).
   Ohne diesen Schlüssel lassen sich Updates nicht über die installierte App spielen.
 
-## Stand (v0.2.0, 23.09.2026)
+## Stand (v0.2.1, 23.09.2026)
 
 - Umgesetzt sind die Schritte 1–15 in Grundform; was fehlt, steht in `docs/abgleich.md`.
 - Der geteilte Chat liegt nur lokal als `docs/chat-verlauf.txt` (in .gitignore, persönliche Angaben – nie einchecken).
@@ -96,4 +96,10 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
   In Widget-Tests die Drift-Datenbank nicht schließen (wartet sonst auf Abfragen aus der Testzone).
 - Hintergrund: `lib/background.dart` (WorkManager ≈ 15 min: Linienabos, Wecker nachplanen).
   Unterwegs-Benachrichtigung als Vordergrunddienst (`specialUse`), Fortschrittsbalken als Bild.
+- Produkte (SB, CE, AST, SEV, ICE-Nummer …) erkennt `lib/domain/product.dart` aus TRIAS-Submode,
+  Verkehrsmittelname und Linienname; Tests gegen `test/fixtures/trias_se_*.xml`.
+- Fußweg-Grenze: TRIAS `IndividualTransportOptions/MaxDuration` in Origin und Destination
+  (wirkt nur auf Start und Ziel); Umsteigewege filtert die App selbst.
+- Release-Builds entfernen Ressourcen, die nur per Name geladen werden – `res/raw/keep.xml` hält
+  `ic_stat_gleichda` (fehlte in v0.2.0, App hing am Startbild).
 - Kartenkacheln vorläufig FOSSGIS (`tile.openstreetmap.de`), offene Entscheidung im Konzept.

@@ -5,6 +5,7 @@ import '../../data/efa/efa_client.dart' show lineKey;
 import '../../data/transit_provider.dart';
 import '../../data/trias/trias_parser.dart' show stopAreaId;
 import '../../domain/models.dart';
+import '../../domain/product.dart';
 import '../../state/providers.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -73,34 +74,33 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
               FreshnessStamp(updatedAt: state.at, now: now, failed: state.failed, refreshing: async.isLoading),
           ]),
           const SizedBox(height: 16),
-          Row(children: [
-            for (final (f, label) in [
-              (_Filter.myLines, 'Meine Linien'),
-              (_Filter.myStops, 'Meine Halte'),
-              (_Filter.all, 'Alle'),
-            ]) ...[
-              ChoiceChipX(label: label, selected: _filter == f, onTap: () => setState(() => _filter = f)),
-              const SizedBox(width: 8),
-            ],
-          ]),
+          Segmented<_Filter>(
+            options: const [(_Filter.myLines, 'Meine Linien'), (_Filter.myStops, 'Meine Halte'), (_Filter.all, 'Alle')],
+            value: _filter,
+            onChanged: (f) => setState(() => _filter = f),
+          ),
           const SizedBox(height: 16),
           ListGroup(children: [
             InkWell(
               onTap: () => Navigator.of(context)
                   .push(MaterialPageRoute(builder: (_) => const SubscriptionsScreen())),
               child: SizedBox(
-                height: 48,
+                height: 52,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(children: [
-                    const Text('Linienabos', style: TextStyle(fontSize: 16)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OneLine(
-                        subs.isEmpty ? 'keine' : subs.map((s) => s.lineName).join(', '),
-                        style: TextStyle(fontSize: 16, color: c.muted),
-                      ),
-                    ),
+                    const Text('Benachrichtigungen', style: TextStyle(fontSize: 16)),
+                    const Spacer(),
+                    if (subs.isEmpty)
+                      Text('keine Linien', style: TextStyle(fontSize: 15, color: c.muted))
+                    else
+                      for (final s in subs.take(4))
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: LineBadge(Line(id: s.lineId, name: s.lineName, mode: _modeGuess(s.lineName)),
+                              height: 22, width: 34),
+                        ),
+                    const SizedBox(width: 8),
                     Icon(Icons.chevron_right, size: 18, color: c.chevron),
                   ]),
                 ),
@@ -125,11 +125,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
               _Filter.all => 'Keine aktuellen Meldungen.',
             })
           else
-            for (final m in list)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: MessageCard(message: m, subscribed: subKeys),
-              ),
+            ListGroup(children: [for (final m in list) MessageCard(message: m, subscribed: subKeys)]),
           if (state != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -169,53 +165,60 @@ class MessageCard extends ConsumerWidget {
     for (var i = 0; i < m.lineIds.length && i < m.lineNames.length; i++) {
       names.putIfAbsent(m.lineIds[i], () => m.lineNames[i]);
     }
-    return Material(
-      color: c.surface,
-      borderRadius: BorderRadius.circular(Radii.card),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => showMessageSheet(context, ref, m),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Row(children: [
-              ...names.entries.take(4).map((e) => Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: Stack(clipBehavior: Clip.none, children: [
-                      LineBadge(Line(id: e.key, name: e.value, mode: _modeGuess(e.value)), height: 20, width: 34),
-                      if (subscribed.contains(e.key))
-                        Positioned(
-                          right: -3,
-                          top: -3,
-                          child: Icon(Icons.star, size: 11, color: c.accent),
-                        ),
-                    ]),
-                  )),
-              if (names.length > 4) Text('+${names.length - 4}', style: TextStyle(fontSize: 13, color: c.muted)),
-              const Spacer(),
-              Text(validityText(m), style: context.t.number(13).copyWith(color: c.muted)),
-            ]),
-            if (names.isNotEmpty) const SizedBox(height: 8),
-            Text(m.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, height: 1.3)),
-            if (m.text != null) ...[
-              const SizedBox(height: 4),
-              Text(m.text!, maxLines: 3, overflow: TextOverflow.ellipsis,
-                  style: context.t.secondary.copyWith(color: c.ink2, height: 1.4)),
-            ],
+    final (String kind, Color kindColor) = messageKind(context, m);
+    return InkWell(
+      onTap: () => showMessageSheet(context, ref, m),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            ...names.entries.take(3).map((e) => Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: LineBadge(Line(id: e.key, name: e.value, mode: _modeGuess(e.value)), height: 22, width: 34),
+                )),
+            if (names.length > 3)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Text('+${names.length - 3}', style: TextStyle(fontSize: 13, color: c.muted)),
+              ),
+            Expanded(child: OneLine(kind, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kindColor))),
+            const SizedBox(width: 8),
+            Text(validityText(m), style: context.t.number(13).copyWith(color: c.muted)),
           ]),
-        ),
+          const SizedBox(height: 6),
+          Text(m.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, height: 1.3)),
+          if (m.text != null) ...[
+            const SizedBox(height: 2),
+            Text(m.text!, maxLines: 2, overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 15, height: 1.4, color: c.ink2)),
+          ],
+        ]),
       ),
     );
   }
 }
 
-TransportMode _modeGuess(String name) {
-  if (name == '60') return TransportMode.suspension;
-  if (RegExp(r'^S\s?\d').hasMatch(name)) return TransportMode.suburbanRail;
-  if (RegExp(r'^(RE|RB|IC|ICE)').hasMatch(name)) return TransportMode.rail;
-  if (name.startsWith('SEV')) return TransportMode.replacementBus;
-  return TransportMode.bus;
+/// Art der Meldung in Farbe: Umleitung orange, Ersatzverkehr violett,
+/// Ausfall rot, sonst Hinweis grau.
+(String, Color) messageKind(BuildContext context, Message m) {
+  final c = context.c;
+  (String, Color)? classify(String t) {
+    t = t.toLowerCase();
+    if (t.contains('ersatzverkehr') || RegExp(r'\bsev\b').hasMatch(t)) return ('Ersatzverkehr', c.sev);
+    if (t.contains('umleitung') || t.contains('verlegt') || t.contains('verlegung') || t.contains('haltestellenveränderung')) {
+      return ('Umleitung', c.orange);
+    }
+    if (t.contains('fällt aus') || t.contains('ausfall') || t.contains('entfällt') || t.contains('entfallen')) {
+      return ('Ausfall', c.red);
+    }
+    return null;
+  }
+
+  // Der Titel entscheidet; der Text nur, wenn der Titel nichts hergibt.
+  return classify(m.title) ?? classify(m.text ?? '') ?? ('Hinweis', c.muted);
 }
+
+TransportMode _modeGuess(String name) => guessProduct(name).mode;
 
 /// Meldungsdetail mit ganzem Text und Linienabo je Linie.
 Future<void> showMessageSheet(BuildContext context, WidgetRef ref, Message m) => showModalBottomSheet<void>(

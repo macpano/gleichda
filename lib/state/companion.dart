@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/companion.dart';
 import '../domain/models.dart';
+import '../domain/product.dart';
 import '../ui/format.dart';
 import '../ui/progress_bitmap.dart';
 import '../ui/theme.dart';
@@ -100,7 +101,7 @@ final companionProvider = NotifierProvider<CompanionController, CompanionState>(
     Trip trip, CompanionStep step, DateTime now) {
   final leg = step.leg;
   final line = leg?.line;
-  final lineText = line == null ? '' : [_modeWord(line.mode), line.name].where((x) => x.isNotEmpty).join(' ');
+  final lineText = line == null ? '' : lineTitle(line);
   final header = [if (lineText.isNotEmpty) lineText, if (leg?.direction != null) leg!.direction!].join(' · ');
   final t = step.when?.best;
   final mins = t == null ? '' : countdown(t, now);
@@ -128,16 +129,3 @@ final companionProvider = NotifierProvider<CompanionController, CompanionState>(
       return (header: header, where: 'Angekommen: ${step.where.stop.name}', when: '', headline: 'Angekommen');
   }
 }
-
-String _modeWord(TransportMode m) => switch (m) {
-      TransportMode.bus || TransportMode.onDemand => 'Bus',
-      TransportMode.replacementBus => 'SEV',
-      TransportMode.suspension => 'Schwebebahn',
-      TransportMode.tram => 'Tram',
-      TransportMode.subway => 'U-Bahn',
-      TransportMode.suburbanRail => '',
-      TransportMode.rail => '',
-      TransportMode.ferry => 'Fähre',
-      TransportMode.other => '',
-    }
-        .trim();

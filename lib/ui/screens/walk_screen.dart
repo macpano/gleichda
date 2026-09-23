@@ -156,51 +156,43 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
         ? dep.subtract(Duration(minutes: walkMinutes)).difference(now).inMinutes
         : null;
     final platformName = t?.name ?? widget.platform;
-    final title = [
-      if (platformName != null) 'Steig $platformName' else widget.target.name,
-      if (t?.direction != null) 'Richtung ${t!.direction}',
-    ].join(' – ');
-
+    final headerTitle = platformName != null ? 'Zu Steig $platformName' : 'Zur Haltestelle';
+    final minutesLeft = dep?.difference(now).inMinutes;
+    final arrow = p != null && p.speed > 0.6 && p.heading > 0 && bearing != null ? bearing - p.heading : bearing;
+    final instruction = dist == null
+        ? (_error ?? 'Standort wird ermittelt')
+        : direction![0].toUpperCase() + direction.substring(1);
+    final hint = [
+      if (t?.direction != null) '${platformName != null ? 'Steig $platformName' : 'Der Halt'} fährt Richtung ${t!.direction}.',
+      if (leave != null)
+        leave <= 0 ? 'Jetzt loslaufen, $walkMinutes min zu Fuß.' : 'Loslaufen in $leave min, $walkMinutes min zu Fuß.'
+      else if (walkMinutes != null)
+        'Etwa $walkMinutes min zu Fuß, gepunktet die Luftlinie.',
+    ].join(' ');
     return Scaffold(
+      backgroundColor: c.bg,
       body: Column(children: [
-        Padding(
-          padding: EdgeInsets.fromLTRB(Space.page, MediaQuery.of(context).padding.top + 8, Space.page, 8),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const SubpageHeader(title: 'Weg zum Steig', backLabel: 'Fahrt'),
-            OneLine(widget.target.name, style: TextStyle(fontSize: 15, color: c.muted)),
-            OneLine(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 10),
-            Row(children: [
-              if (bearing != null)
-                Transform.rotate(
-                  angle: (p!.speed > 0.6 && p.heading > 0 ? bearing - p.heading : bearing) * math.pi / 180,
-                  child: Icon(Icons.navigation, size: 34, color: c.accent),
-                )
-              else
-                SkeletonBlock(height: 34, width: 34, radius: 17),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  FadeText(dist == null ? (_error ?? 'Standort wird ermittelt') : '${distanceText(dist)}, $direction',
-                      style: context.t.time(17).copyWith(color: _error != null && dist == null ? c.orange : c.ink)),
-                  FadeText(
-                    leave == null
-                        ? (walkMinutes == null ? '' : 'etwa $walkMinutes min zu Fuß')
-                        : leave <= 0
-                            ? 'Jetzt loslaufen · $walkMinutes min zu Fuß'
-                            : 'Loslaufen in $leave min · $walkMinutes min zu Fuß',
-                    style: context.t.number(14).copyWith(color: leave != null && leave <= 0 ? c.orange : c.muted),
+        Container(
+          color: c.bar,
+          padding: EdgeInsets.fromLTRB(Space.page, MediaQuery.of(context).padding.top, Space.page, 0),
+          child: SubpageHeader(
+            title: headerTitle,
+            backLabel: 'Fahrt',
+            trailing: minutesLeft == null
+                ? null
+                : Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Text('$minutesLeft min',
+                        style: context.t.time(15).copyWith(color: leave != null && leave <= 0 ? c.orange : c.muted)),
                   ),
-                ]),
-              ),
-            ]),
-          ]),
+          ),
         ),
+        Divider(height: 1, color: c.hair),
         Expanded(
           child: t == null && _platforms == null
               ? Center(child: Text(_error ?? 'Steig wird gesucht …', style: TextStyle(color: c.muted)))
               : t == null
-                  ? const Center(child: Text('Genaue Position unbekannt.'))
+                  ? Center(child: Text('Genaue Position unbekannt.', style: TextStyle(color: c.muted)))
                   : FlutterMap(
                       mapController: _map,
                       options: MapOptions(
@@ -224,14 +216,14 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
                             if (o.id != t.id)
                               Marker(
                                 point: LatLng(o.lat, o.lon),
-                                width: 26,
-                                height: 26,
+                                width: 24,
+                                height: 24,
                                 child: _PlatformDot(label: o.name ?? '', color: c.muted, bg: c.surface),
                               ),
                           Marker(
                             point: LatLng(t.lat, t.lon),
-                            width: 40,
-                            height: 40,
+                            width: 30,
+                            height: 30,
                             child: _PlatformDot(label: platformName ?? 'H', color: c.onAccent, bg: c.accent, big: true),
                           ),
                           if (p != null)
@@ -241,9 +233,9 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
                               height: 22,
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: c.ink,
+                                  color: const Color(0xFF1D5FD1),
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: c.surface, width: 3),
+                                  border: Border.all(color: Colors.white, width: 3),
                                 ),
                               ),
                             ),
@@ -253,21 +245,80 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
                     ),
         ),
         Container(
-          color: c.bar,
-          padding: EdgeInsets.fromLTRB(16, 8, 16, 8 + MediaQuery.of(context).padding.bottom),
-          child: Row(children: [
-            Expanded(
-              child: Text('Gepunktet: Luftlinie. Andere Steige grau.',
-                  style: TextStyle(fontSize: 13, color: c.muted)),
-            ),
-            if (t != null)
-              TextButton(
-                onPressed: () => launchUrl(
-                  Uri.parse('geo:${t.lat},${t.lon}?q=${t.lat},${t.lon}(${Uri.encodeComponent(title)})'),
-                  mode: LaunchMode.externalApplication,
-                ),
-                child: const Text('In Karten-App'),
+          decoration: BoxDecoration(
+            color: c.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            border: Border(top: BorderSide(color: c.hair)),
+          ),
+          padding: EdgeInsets.fromLTRB(16, 18, 16, 16 + MediaQuery.of(context).padding.bottom),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(color: c.fill, borderRadius: BorderRadius.circular(Radii.card)),
+                child: arrow == null
+                    ? Icon(Icons.near_me_outlined, color: c.muted)
+                    : Transform.rotate(
+                        angle: arrow * math.pi / 180,
+                        child: Icon(Icons.arrow_upward_rounded, size: 30, color: c.ink),
+                      ),
               ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  FadeText(dist == null ? '– m' : distanceText(dist),
+                      style: context.t.time(28).copyWith(fontWeight: FontWeight.w700, color: c.ink)),
+                  OneLine(instruction, style: TextStyle(fontSize: 16, color: c.ink2)),
+                ]),
+              ),
+            ]),
+            if (hint.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(hint, style: TextStyle(fontSize: 15, height: 1.4, color: leave != null && leave <= 0 ? c.orange : c.muted)),
+            ],
+            const SizedBox(height: 14),
+            Row(children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: c.accent,
+                      foregroundColor: c.onAccent,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: t == null
+                        ? null
+                        : () {
+                            _fitted = false;
+                            _fit();
+                          },
+                    child: const Text('Steig zeigen', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: c.fill,
+                      foregroundColor: c.ink,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: t == null
+                        ? null
+                        : () => launchUrl(
+                              Uri.parse('geo:${t.lat},${t.lon}?q=${t.lat},${t.lon}(${Uri.encodeComponent(headerTitle)})'),
+                              mode: LaunchMode.externalApplication,
+                            ),
+                    child: const Text('In Karten öffnen', style: TextStyle(fontSize: 16)),
+                  ),
+                ),
+              ),
+            ]),
           ]),
         ),
       ]),

@@ -43,6 +43,7 @@ TripQuery buildQuery({
       excludedModes: usePersonal ? modesOf(settings.excludedModes) : const {},
       accessible: accessible || (usePersonal && settings.accessible),
       walkSpeedPercent: usePersonal ? settings.walkPace.walkPercent : 100,
+      maxWalkMinutes: settings.maxWalkMinutes,
     );
 
 /// Mehrere Profile parallel, Doppelte entfernt, nach Abfahrt sortiert.

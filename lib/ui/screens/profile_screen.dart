@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/settings.dart';
 import '../../state/providers.dart';
+import '../format.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -21,11 +22,10 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 2),
             Text(hint, style: TextStyle(fontSize: 13, color: c.muted)),
             const SizedBox(height: 10),
-            SegmentedButton<Pace>(
-              showSelectedIcon: false,
-              segments: [for (final p in Pace.values) ButtonSegment(value: p, label: Text(p.label))],
-              selected: {value},
-              onSelectionChanged: (v) => updateSettings(ref, (_) => set(v.first)),
+            Segmented<Pace>(
+              options: [for (final p in Pace.values) (p, p.label)],
+              value: value,
+              onChanged: (v) => updateSettings(ref, (_) => set(v)),
             ),
           ]),
         );
@@ -43,11 +43,32 @@ class ProfileScreen extends ConsumerWidget {
           ]),
           const SizedBox(height: 16),
           ListGroup(children: [
-            SwitchListTile(
-              title: const Text('Barrierefreie Wege'),
-              subtitle: const Text('Ohne Stufen und Treppen'),
-              value: s.accessible,
-              onChanged: (v) => updateSettings(ref, (x) => x.copyWith(accessible: v)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Text('Fußweg höchstens', style: context.t.listRow),
+                const SizedBox(height: 2),
+                OneLine(
+                  'Zum ersten und vom letzten Halt · In der Nähe: ${distanceText(s.walkRadiusMeters.toDouble())}',
+                  style: TextStyle(fontSize: 13, color: c.muted),
+                ),
+                const SizedBox(height: 10),
+                Segmented<int>(
+                  options: [for (final m in walkLimitChoices) (m, '$m min')],
+                  value: s.maxWalkMinutes,
+                  onChanged: (v) => updateSettings(ref, (x) => x.copyWith(maxWalkMinutes: v)),
+                ),
+              ]),
+            ),
+          ]),
+          const SizedBox(height: 16),
+          ListGroup(children: [
+            ValueRow(
+              label: 'Barrierefreie Wege',
+              trailing: Switch(
+                value: s.accessible,
+                onChanged: (v) => updateSettings(ref, (x) => x.copyWith(accessible: v)),
+              ),
             ),
           ]),
           const SizedBox(height: 16),

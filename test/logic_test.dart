@@ -158,13 +158,13 @@ void main() {
     const s = AppSettings(
       transferPace: Pace.slow,
       accessible: true,
-      excludedModes: {ModeGroup.rail},
+      excludedModes: {ModeGroup.regional},
       connectionsGrid: true,
     );
     final back = AppSettings.decode(s.encode());
     expect(back.transferPace, Pace.slow);
     expect(back.accessible, isTrue);
-    expect(back.excludedModes, {ModeGroup.rail});
+    expect(back.excludedModes, {ModeGroup.regional});
     expect(back.connectionsGrid, isTrue);
     expect(back.summary, contains('barrierefrei'));
     expect(AppSettings.decode('kaputt').isDefault, isTrue);

@@ -17,7 +17,8 @@ Color lineColor(BuildContext context, Line? line) {
     TransportMode.replacementBus => c.sev,
     TransportMode.suburbanRail =>
       dark ? const Color(0xFF23883C) : const Color(0xFF1F7A35),
-    TransportMode.rail => dark ? const Color(0xFF4A5057) : const Color(0xFF3D434B),
+    TransportMode.rail || TransportMode.longDistanceRail =>
+      dark ? const Color(0xFF4A5057) : const Color(0xFF3D434B),
     TransportMode.tram || TransportMode.subway =>
       dark ? const Color(0xFF2E6FB0) : const Color(0xFF235A93),
     _ => c.muted,
@@ -588,7 +589,7 @@ class VehicleGlyph extends StatelessWidget {
         TransportMode.tram => 'assets/glyphs/tram.svg',
         TransportMode.subway => 'assets/glyphs/ubahn.svg',
         TransportMode.suspension => 'assets/glyphs/schwebebahn.svg',
-        TransportMode.rail || TransportMode.suburbanRail => 'assets/glyphs/zug.svg',
+        TransportMode.rail || TransportMode.suburbanRail || TransportMode.longDistanceRail => 'assets/glyphs/zug.svg',
         TransportMode.ferry => 'assets/glyphs/faehre.svg',
         _ => 'assets/glyphs/bus.svg',
       };
@@ -600,4 +601,152 @@ class VehicleGlyph extends StatelessWidget {
         height: width * 36 / 62,
         theme: SvgTheme(currentColor: color),
       );
+}
+
+/// Umschalter wie im Canvas: Fläche `fill`, gewählte Option weiß abgehoben.
+class Segmented<T> extends StatelessWidget {
+  const Segmented({super.key, required this.options, required this.value, required this.onChanged, this.height = 36});
+
+  final List<(T, String)> options;
+  final T value;
+  final ValueChanged<T> onChanged;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(color: c.fill, borderRadius: BorderRadius.circular(Radii.input)),
+      child: Row(children: [
+        for (final (v, label) in options)
+          Expanded(
+            child: Semantics(
+              button: true,
+              selected: v == value,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onChanged(v),
+                child: AnimatedContainer(
+                  duration: MediaQuery.of(context).disableAnimations ? Duration.zero : const Duration(milliseconds: 150),
+                  height: height,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: v == value ? (dark ? const Color(0xFF3A3F46) : c.surface) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 15, color: c.ink, fontWeight: v == value ? FontWeight.w600 : FontWeight.w400)),
+                ),
+              ),
+            ),
+          ),
+      ]),
+    );
+  }
+}
+
+/// Wahlknopf in fester Größe (Tag, Schnellwahl): gewählt gefüllt.
+class PickButton extends StatelessWidget {
+  const PickButton({super.key, required this.label, required this.selected, required this.onTap, this.accent = false});
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  /// Gewählt in Petrol statt Schwarz (Tag).
+  final bool accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final bg = selected ? (accent ? c.accent : c.ink) : c.fill;
+    final fg = selected ? (accent ? c.onAccent : c.bg) : c.ink;
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(Radii.input),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(Radii.input),
+        onTap: onTap,
+        child: Container(
+          height: 40,
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.t.number(14).copyWith(
+                  color: fg, fontWeight: selected && accent ? FontWeight.w600 : FontWeight.w400, fontSize: accent ? 15 : 14)),
+        ),
+      ),
+    );
+  }
+}
+
+/// Kopf eines Fensters von unten: Titel links, „Fertig“ rechts.
+class SheetHeader extends StatelessWidget {
+  const SheetHeader(this.title, {super.key, this.done = 'Fertig', this.onDone});
+
+  final String title;
+  final String done;
+  final VoidCallback? onDone;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: 44,
+        child: Row(children: [
+          Expanded(child: OneLine(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600))),
+          GestureDetector(
+            onTap: onDone ?? () => Navigator.pop(context),
+            child: Text(done, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: context.c.accent)),
+          ),
+        ]),
+      );
+}
+
+/// Zeile in Einstellungsgruppen: Beschriftung links, Wert rechts, feste Höhe.
+class ValueRow extends StatelessWidget {
+  const ValueRow({super.key, required this.label, this.value, this.onTap, this.trailing, this.labelColor, this.chevron = true, this.valueColor});
+
+  final String label;
+  final String? value;
+  final VoidCallback? onTap;
+  final Widget? trailing;
+  final Color? labelColor;
+  final Color? valueColor;
+  final bool chevron;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 46),
+        padding: EdgeInsets.only(left: 16, right: trailing != null ? 8 : 16),
+        child: Row(children: [
+          OneLine(label, style: TextStyle(fontSize: 16, color: labelColor ?? c.ink)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: value == null
+                ? const SizedBox.shrink()
+                : Text(value!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: TextStyle(fontSize: 16, color: valueColor ?? c.muted)),
+          ),
+          ?trailing,
+          if (trailing == null && chevron && onTap != null) ...[
+            const SizedBox(width: 8),
+            Icon(Icons.chevron_right, size: 18, color: c.chevron),
+          ],
+        ]),
+      ),
+    );
+  }
 }

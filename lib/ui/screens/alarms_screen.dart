@@ -11,15 +11,14 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'location_search_screen.dart';
 
-const _weekdayShort = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+const _dayLetters = ['M', 'D', 'M', 'D', 'F', 'S', 'S'];
 
-String minuteText(int m) => '${(m ~/ 60).toString().padLeft(2, '0')}:${(m % 60).toString().padLeft(2, '0')}';
+String minuteText(int m) => '${m ~/ 60}:${(m % 60).toString().padLeft(2, '0')}';
 
 final _planProvider = FutureProvider.autoDispose.family<AlarmPlan?, String>(
     (ref, id) => loadPlan(ref.watch(repositoryProvider), id));
 
-/// Mehr → Fahrtenwecker: wiederkehrende Fahrten, geweckt wird zum
-/// tatsächlichen Aufbruchszeitpunkt.
+/// Mehr → Fahrtenwecker, wie im Entwurf: je Wecker eine Karte.
 class AlarmsScreen extends ConsumerWidget {
   const AlarmsScreen({super.key});
 
@@ -27,6 +26,7 @@ class AlarmsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.c;
     final alarms = ref.watch(alarmsProvider).value ?? const <Alarm>[];
+    void add() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AlarmEditScreen()));
     return Scaffold(
       body: ListView(
         padding: pagePadding(context),
@@ -34,24 +34,32 @@ class AlarmsScreen extends ConsumerWidget {
           SubpageHeader(
             title: 'Fahrtenwecker',
             backLabel: 'Mehr',
-            trailing: IconButton(
-              tooltip: 'Neuer Wecker',
-              icon: Icon(Icons.add, color: c.accent),
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AlarmEditScreen())),
-            ),
+            trailing: TextButton(onPressed: add, child: const Text('Neu', style: TextStyle(fontSize: 17))),
           ),
-          const SizedBox(height: 8),
-          if (alarms.isEmpty)
-            Notice('Noch kein Wecker. Ein Wecker weckt zur Fahrt, etwa zur Arbeit, und rechnet Gehzeit und Echtzeit mit ein.',
-                action: 'Wecker anlegen',
-                onAction: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AlarmEditScreen())))
-          else
-            ListGroup(children: [for (final a in alarms) _AlarmRow(a)]),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text('Gleichda prüft deine Fahrt vorher mit Echtzeit und weckt dich, wenn du losmusst.',
+                style: context.t.secondary.copyWith(color: c.muted, height: 1.4)),
+          ),
           const SizedBox(height: 16),
-          Text(
-            'Gleichda prüft die Fahrt vor dem Wecken mit Echtzeit, etwa alle 15 Minuten. '
-            'Fällt die übliche Fahrt aus, weckt der Wecker früher und nennt die Alternative.',
-            style: context.t.secondary.copyWith(color: c.muted, height: 1.4),
+          for (final a in alarms) ...[_AlarmCard(a), const SizedBox(height: 14)],
+          Material(
+            color: c.fill,
+            borderRadius: BorderRadius.circular(Radii.card),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(Radii.card),
+              onTap: add,
+              child: SizedBox(
+                height: 50,
+                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(Icons.add, color: c.accent),
+                  const SizedBox(width: 8),
+                  Text('Wecker hinzufügen',
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: c.accent)),
+                ]),
+              ),
+            ),
           ),
         ],
       ),
@@ -59,8 +67,8 @@ class AlarmsScreen extends ConsumerWidget {
   }
 }
 
-class _AlarmRow extends ConsumerWidget {
-  const _AlarmRow(this.a);
+class _AlarmCard extends ConsumerWidget {
+  const _AlarmCard(this.a);
 
   final Alarm a;
 
@@ -69,61 +77,83 @@ class _AlarmRow extends ConsumerWidget {
     final c = context.c;
     final plan = ref.watch(_planProvider(a.id)).value;
     final now = DateTime.now();
-    final planText = !a.enabled
-        ? 'aus'
+    final on = a.enabled;
+    final (String status, Color statusColor) = !on
+        ? ('Ausgeschaltet', c.muted)
         : plan == null || plan.wake.isBefore(now)
-            ? 'wird geplant'
-            : [
-                '${relativeDay(plan.wake, now)} ${hm(plan.wake)} wecken',
-                if (plan.line != null) '${plan.line} ${plan.status ?? ''}'.trim(),
-              ].join(' · ');
-    return InkWell(
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AlarmEditScreen(existing: a))),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-        child: Row(children: [
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
-                Text(minuteText(a.minuteOfDay),
-                    style: context.t.time(26).copyWith(color: a.enabled ? c.ink : c.muted)),
-                const SizedBox(width: 10),
-                Expanded(child: OneLine(a.name, style: context.t.listRow.copyWith(color: a.enabled ? c.ink : c.muted))),
+            ? ('Wird geplant', c.muted)
+            : (
+                [
+                  '${relativeDay(plan.wake, now)} ${hm(plan.wake)} wecken',
+                  if (plan.line != null) '${plan.line} ${plan.status ?? ''}'.trim(),
+                ].join(' · '),
+                plan.problem ? c.orange : (plan.status == 'nur Fahrplan' ? c.muted : c.green),
+              );
+    return Opacity(
+      opacity: on ? 1 : 0.6,
+      child: Material(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(Radii.card),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AlarmEditScreen(existing: a))),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    OneLine(a.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    OneLine('${a.from.name} → ${a.to.name}', style: TextStyle(fontSize: 15, color: c.muted)),
+                  ]),
+                ),
+                Switch(
+                  value: on,
+                  onChanged: (v) async {
+                    final next = a.copyWith(enabled: v);
+                    await ref.read(repositoryProvider).saveAlarm(next);
+                    await _plan(ref, next);
+                  },
+                ),
               ]),
-              const SizedBox(height: 2),
-              OneLine('${a.timeRef == AlarmTimeRef.arriveBy ? 'Ankommen' : 'Losfahren'} · ${a.from.name} → ${a.to.name}',
-                  style: TextStyle(fontSize: 13, color: c.muted)),
-              const SizedBox(height: 6),
+              const SizedBox(height: 10),
               Row(children: [
                 for (var d = 1; d <= 7; d++)
                   Container(
-                    width: 22,
-                    height: 22,
-                    margin: const EdgeInsets.only(right: 4),
+                    width: 26,
+                    height: 26,
+                    margin: const EdgeInsets.only(right: 6),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: a.weekdays.contains(d) ? (a.enabled ? c.accent : c.muted) : c.fill,
+                      color: a.weekdays.contains(d) ? c.accent : c.fill,
                     ),
-                    child: Text(_weekdayShort[d - 1].substring(0, 1),
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
+                    child: Text(_dayLetters[d - 1],
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
                             color: a.weekdays.contains(d) ? c.onAccent : c.muted)),
                   ),
+                Expanded(
+                  child: Text('${a.timeRef == AlarmTimeRef.arriveBy ? 'an' : 'ab'} ${minuteText(a.minuteOfDay)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                      style: context.t.number(15).copyWith(color: c.muted)),
+                ),
               ]),
-              const SizedBox(height: 6),
-              OneLine(planText,
-                  style: context.t.number(13).copyWith(color: plan?.problem == true ? c.orange : c.muted)),
+              const SizedBox(height: 12),
+              Divider(height: 1, color: c.hair),
+              const SizedBox(height: 10),
+              Row(children: [
+                Icon(Icons.schedule, size: 18, color: statusColor),
+                const SizedBox(width: 8),
+                Expanded(child: OneLine(status, style: context.t.number(15).copyWith(color: statusColor))),
+              ]),
             ]),
           ),
-          Switch(
-            value: a.enabled,
-            onChanged: (v) async {
-              final next = a.copyWith(enabled: v);
-              await ref.read(repositoryProvider).saveAlarm(next);
-              await _plan(ref, next);
-            },
-          ),
-        ]),
+        ),
       ),
     );
   }
@@ -139,7 +169,7 @@ Future<void> _plan(WidgetRef ref, Alarm a) async {
   ref.invalidate(_planProvider(a.id));
 }
 
-/// Neuer Wecker bzw. Wecker ändern.
+/// Neuer Wecker bzw. Wecker ändern, wie im Entwurf.
 class AlarmEditScreen extends ConsumerStatefulWidget {
   const AlarmEditScreen({super.key, this.existing});
 
@@ -150,13 +180,13 @@ class AlarmEditScreen extends ConsumerStatefulWidget {
 }
 
 class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
-  late final TextEditingController _name = TextEditingController(text: widget.existing?.name ?? 'Zur Arbeit');
+  late String _name = widget.existing?.name ?? 'Zur Arbeit';
   Location? _from;
   Location? _to;
   late AlarmTimeRef _ref = widget.existing?.timeRef ?? AlarmTimeRef.arriveBy;
   late int _minute = widget.existing?.minuteOfDay ?? 8 * 60;
-  late Set<int> _days = {...?widget.existing?.weekdays} ;
-  late int _lead = widget.existing?.leadMinutes ?? 5;
+  late Set<int> _days = {...?widget.existing?.weekdays};
+  late int _lead = widget.existing?.leadMinutes ?? 10;
   late bool _earlier = widget.existing?.earlierOnDisruption ?? true;
   late bool _companion = widget.existing?.startCompanion ?? false;
   bool _saving = false;
@@ -174,11 +204,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _name.dispose();
-    super.dispose();
-  }
+  bool get _valid => _from != null && _to != null && _days.isNotEmpty;
 
   Future<void> _pick(bool from) async {
     final l = await Navigator.of(context).push<Location>(MaterialPageRoute(
@@ -186,19 +212,64 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
     if (l != null) setState(() => from ? _from = l : _to = l);
   }
 
+  Future<void> _editName() async {
+    final ctrl = TextEditingController(text: _name);
+    final v = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Name'),
+        content: TextField(controller: ctrl, autofocus: true, textCapitalization: TextCapitalization.sentences),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Abbrechen')),
+          TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: const Text('OK')),
+        ],
+      ),
+    );
+    if (v != null && v.isNotEmpty) setState(() => _name = v);
+  }
+
+  Future<void> _pickLead() async {
+    final v = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const SheetHeader('Vorlauf zum Losgehen'),
+            const SizedBox(height: 8),
+            ListGroup(children: [
+              for (final m in [0, 5, 10, 15, 20, 30])
+                ValueRow(
+                  label: '$m min',
+                  chevron: false,
+                  trailing: m == _lead ? Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Icon(Icons.check, color: ctx.c.accent),
+                  ) : null,
+                  onTap: () => Navigator.pop(ctx, m),
+                ),
+            ]),
+          ]),
+        ),
+      ),
+    );
+    if (v != null) setState(() => _lead = v);
+  }
+
   Future<void> _save() async {
-    if (_from == null || _to == null || _days.isEmpty) return;
+    if (!_valid || _saving) return;
     setState(() => _saving = true);
     await Notifications.requestPermission();
     await Notifications.requestExactAlarms();
     final a = Alarm(
       id: widget.existing?.id ?? 'wecker-${DateTime.now().millisecondsSinceEpoch}',
-      name: _name.text.trim().isEmpty ? 'Wecker' : _name.text.trim(),
+      name: _name,
       from: _from!,
       to: _to!,
       timeRef: _ref,
       minuteOfDay: _minute,
-      weekdays: (_days.toList()..sort()),
+      weekdays: _days.toList()..sort(),
       leadMinutes: _lead,
       earlierOnDisruption: _earlier,
       startCompanion: _companion,
@@ -215,7 +286,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
     Widget field(String label, Location? l, bool from) => InkWell(
           onTap: () => _pick(from),
           child: SizedBox(
-            height: 56,
+            height: 52,
             child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(label, style: TextStyle(fontSize: 12, color: c.muted)),
               OneLine(l?.name ?? 'Ort wählen', style: TextStyle(fontSize: 16, color: l == null ? c.accent : c.ink)),
@@ -229,37 +300,21 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
           SubpageHeader(
             title: widget.existing == null ? 'Neuer Wecker' : 'Wecker',
             backLabel: 'Wecker',
-            trailing: widget.existing == null
-                ? null
-                : IconButton(
-                    tooltip: 'Löschen',
-                    icon: Icon(Icons.delete_outline, color: c.red),
-                    onPressed: () async {
-                      await Notifications.cancel(alarmNotificationId(widget.existing!.id));
-                      await ref.read(repositoryProvider).deleteAlarm(widget.existing!.id);
-                      if (context.mounted) Navigator.of(context).pop();
-                    },
-                  ),
+            trailing: TextButton(
+              onPressed: _valid && !_saving ? _save : null,
+              child: const Text('Sichern', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+            ),
           ),
           const SizedBox(height: 8),
-          ListGroup(children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TextField(
-                controller: _name,
-                decoration: const InputDecoration(
-                    labelText: 'Name', filled: false, border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 8)),
-              ),
-            ),
-          ]),
-          const SizedBox(height: 16),
+          ListGroup(children: [ValueRow(label: 'Name', value: _name, valueColor: c.ink, chevron: false, onTap: _editName)]),
+          const SizedBox(height: 14),
           Material(
             color: c.surface,
             borderRadius: BorderRadius.circular(Radii.card),
             child: Row(children: [
               const SizedBox(width: 16),
-              SizedBox(width: 10, height: 112, child: CustomPaint(painter: MiniRoutePainter(c.muted, c.ink))),
-              const SizedBox(width: 12),
+              SizedBox(width: 10, height: 104, child: CustomPaint(painter: MiniRoutePainter(c.accent, c.ink))),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(children: [
                   field('Von', _from, true),
@@ -267,94 +322,99 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
                   field('Nach', _to, false),
                 ]),
               ),
-              IconButton(
-                tooltip: 'Tauschen',
-                onPressed: () => setState(() {
-                  final f = _from;
-                  _from = _to;
-                  _to = f;
-                }),
-                icon: Icon(Icons.swap_vert, color: c.muted),
-              ),
+              const SizedBox(width: 16),
             ]),
           ),
-          const SizedBox(height: 16),
-          SegmentedButton<AlarmTimeRef>(
-            showSelectedIcon: false,
-            segments: const [
-              ButtonSegment(value: AlarmTimeRef.arriveBy, label: Text('Ankommen um')),
-              ButtonSegment(value: AlarmTimeRef.departAt, label: Text('Losfahren um')),
-            ],
-            selected: {_ref},
-            onSelectionChanged: (s) => setState(() => _ref = s.first),
+          const SizedBox(height: 14),
+          Segmented<AlarmTimeRef>(
+            options: const [(AlarmTimeRef.arriveBy, 'Ankommen um'), (AlarmTimeRef.departAt, 'Losfahren um')],
+            value: _ref,
+            onChanged: (v) => setState(() => _ref = v),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           ListGroup(children: [
-            ListTile(
-              title: const Text('Uhrzeit'),
-              trailing: Text(minuteText(_minute), style: context.t.time(20)),
-              onTap: () async {
-                final t = await showTimePicker(
-                    context: context, initialTime: TimeOfDay(hour: _minute ~/ 60, minute: _minute % 60));
-                if (t != null) setState(() => _minute = t.hour * 60 + t.minute);
-              },
+            ValueRow(
+              label: _ref == AlarmTimeRef.arriveBy ? 'Ankunft' : 'Abfahrt',
+              trailing: Material(
+                color: c.fill,
+                borderRadius: BorderRadius.circular(8),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () async {
+                    final t = await showTimePicker(
+                        context: context, initialTime: TimeOfDay(hour: _minute ~/ 60, minute: _minute % 60));
+                    if (t != null) setState(() => _minute = t.hour * 60 + t.minute);
+                  },
+                  child: Container(
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    alignment: Alignment.center,
+                    child: Text(minuteText(_minute), style: context.t.time(20)),
+                  ),
+                ),
+              ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                for (var d = 1; d <= 7; d++)
-                  InkResponse(
+          ]),
+          const SizedBox(height: 14),
+          const SectionTitle('Wiederholen', small: true),
+          Container(
+            decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(Radii.card)),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              for (var d = 1; d <= 7; d++)
+                Semantics(
+                  button: true,
+                  selected: _days.contains(d),
+                  child: InkResponse(
                     onTap: () => setState(() => _days.contains(d) ? _days.remove(d) : _days.add(d)),
                     child: Container(
-                      width: 38,
-                      height: 38,
+                      width: 40,
+                      height: 40,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(shape: BoxShape.circle, color: _days.contains(d) ? c.accent : c.fill),
-                      child: Text(_weekdayShort[d - 1],
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                              color: _days.contains(d) ? c.onAccent : c.ink)),
+                      child: Text(_dayLetters[d - 1],
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: _days.contains(d) ? c.onAccent : c.muted)),
                     ),
                   ),
-              ]),
-            ),
-            ListTile(
-              title: const Text('Vorlauf zum Losgehen'),
-              trailing: DropdownButton<int>(
-                value: _lead,
-                underline: const SizedBox.shrink(),
-                items: [for (final m in [0, 5, 10, 15, 20, 30]) DropdownMenuItem(value: m, child: Text('$m min'))],
-                onChanged: (v) => setState(() => _lead = v ?? 5),
-              ),
-            ),
-          ]),
-          const SizedBox(height: 16),
-          ListGroup(children: [
-            SwitchListTile(
-              title: const Text('Bei Störung früher wecken'),
-              value: _earlier,
-              onChanged: (v) => setState(() => _earlier = v),
-            ),
-            SwitchListTile(
-              title: const Text('Unterwegs-Modus starten'),
-              subtitle: const Text('Beim Öffnen des Weckers wird die Fahrt begleitet.'),
-              value: _companion,
-              onChanged: (v) => setState(() => _companion = v),
-            ),
-          ]),
-          const SizedBox(height: 24),
-          SizedBox(
-            height: 50,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: c.accent,
-                foregroundColor: c.onAccent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.card)),
-              ),
-              onPressed: _saving || _from == null || _to == null || _days.isEmpty ? null : _save,
-              child: Text(_saving ? 'Wird geplant …' : 'Speichern',
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-            ),
+                ),
+            ]),
           ),
+          const SizedBox(height: 14),
+          ListGroup(children: [
+            ValueRow(label: 'Vorlauf zum Losgehen', value: '$_lead min', onTap: _pickLead),
+            ValueRow(
+              label: 'Bei Störung früher wecken',
+              trailing: Switch(value: _earlier, onChanged: (v) => setState(() => _earlier = v)),
+            ),
+            ValueRow(
+              label: 'Unterwegs-Modus starten',
+              trailing: Switch(value: _companion, onChanged: (v) => setState(() => _companion = v)),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text('Der Wecker rechnet Gehzeit und Echtzeit mit ein und klingelt früher, wenn deine Fahrt ausfällt.',
+                style: TextStyle(fontSize: 13, height: 1.4, color: c.muted)),
+          ),
+          if (widget.existing != null) ...[
+            const SizedBox(height: 20),
+            ListGroup(children: [
+              ValueRow(
+                label: 'Wecker löschen',
+                labelColor: c.red,
+                chevron: false,
+                onTap: () async {
+                  await Notifications.cancel(alarmNotificationId(widget.existing!.id));
+                  await ref.read(repositoryProvider).deleteAlarm(widget.existing!.id);
+                  if (context.mounted) Navigator.of(context).pop();
+                },
+              ),
+            ]),
+          ],
         ],
       ),
     );

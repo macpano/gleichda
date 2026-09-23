@@ -123,15 +123,7 @@ class _AlternativesScreenState extends ConsumerState<AlternativesScreen> {
             const SubpageHeader(title: 'Alternativen', backLabel: 'Fahrt'),
             RouteSummary(from: _from.name, to: original.destination.name, when: 'ab jetzt'),
             const SizedBox(height: 14),
-            const SectionTitle('Deine Verbindung', small: true),
-            ListGroup(indent: 0, children: [
-              ConnectionRow(item: ConnectionItem(original), onTap: () => Navigator.of(context).maybePop()),
-            ]),
-            if (issue != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
-                child: Text(issue.title, style: TextStyle(fontSize: 14, color: issue.color(context))),
-              ),
+            _Original(trip: original, issue: issue),
             if (_loading && items == null) ...[
               const SizedBox(height: 20),
               const SkeletonBlock(height: 96, radius: Radii.card),
@@ -151,6 +143,43 @@ class _AlternativesScreenState extends ConsumerState<AlternativesScreen> {
                 style: TextStyle(fontSize: 13, color: c.muted)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Die betroffene Verbindung kompakt, getönt nach Art der Abweichung.
+class _Original extends StatelessWidget {
+  const _Original({required this.trip, this.issue});
+
+  final Trip trip;
+  final TripIssue? issue;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final red = issue?.level == IssueLevel.cancelled;
+    final bg = issue == null ? c.surface : (red ? c.redTint : c.orangeTint);
+    final fg = issue == null ? c.ink : (red ? c.redText : c.orangeText);
+    return GestureDetector(
+      onTap: () => Navigator.of(context).maybePop(),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(Radii.card)),
+        child: Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Deine Verbindung', style: TextStyle(fontSize: 13, color: fg)),
+              const SizedBox(height: 2),
+              OneLine(
+                '${hm(trip.departure.best)} – ${hm(trip.arrival.best)}${issue == null ? '' : ' · ${issue!.title}'}',
+                style: context.t.time(16).copyWith(color: fg),
+              ),
+            ]),
+          ),
+          const SizedBox(width: 12),
+          Text(durationText(trip.duration), style: context.t.number(15).copyWith(color: fg)),
+        ]),
       ),
     );
   }

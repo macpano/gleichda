@@ -85,7 +85,10 @@ class EfaClient {
       );
       return res.data ?? const {};
     } on DioException catch (e) {
-      throw ProviderException('EFA nicht erreichbar', cause: e);
+      final offline = e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout;
+      throw ProviderException('EFA nicht erreichbar', cause: e, offline: offline);
     }
   }
 

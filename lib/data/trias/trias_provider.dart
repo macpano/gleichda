@@ -37,7 +37,7 @@ class TriasProvider implements TransitProvider {
       if (e.type == DioExceptionType.connectionError ||
           e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout) {
-        throw ProviderException('Keine Verbindung zur Auskunft', cause: e);
+        throw ProviderException('Keine Verbindung zur Auskunft', cause: e, offline: true);
       }
       throw ProviderException('Auskunft antwortet nicht wie erwartet', cause: e);
     }
@@ -45,12 +45,12 @@ class TriasProvider implements TransitProvider {
 
   @override
   Future<List<Location>> searchLocations(String query,
-      {({double lat, double lon})? near, int limit = 10}) async {
+      {({double lat, double lon})? near, int limit = 10, int radiusMeters = 1000}) async {
     final q = query.trim();
     if (q.isEmpty) {
       if (near == null) return const [];
       final list = parseLocations(
-          await _post(_req.locationsNear(near.lat, near.lon, limit: limit)));
+          await _post(_req.locationsNear(near.lat, near.lon, radiusMeters: radiusMeters, limit: limit)));
       list.sort((a, b) => (distanceBetween(a, near) ?? 1e9)
           .compareTo(distanceBetween(b, near) ?? 1e9));
       return list;
@@ -87,16 +87,25 @@ class TriasProvider implements TransitProvider {
         accessible: query.accessible,
         walkSpeed: query.walkSpeedPercent,
         interchangeLimit: query.maxInterchanges,
+        maxWalkMinutes: query.maxWalkMinutes,
         algorithm: switch (query.optimization) {
           TripOptimization.fastest => null,
           TripOptimization.minChanges => 'minChanges',
           TripOptimization.leastWalking => 'leastWalking',
         }));
-    final trips = parseTrips(xml);
-    if (query.excludedModes.isEmpty) return trips;
-    return trips
-        .where((t) => !t.rides.any((r) => query.excludedModes.contains(r.line?.mode)))
-        .toList();
+    var trips = parseTrips(xml);
+    if (query.excludedModes.isNotEmpty) {
+      trips = trips.where((t) => !t.rides.any((r) => query.excludedModes.contains(r.line?.mode))).toList();
+    }
+    final maxWalk = query.maxWalkMinutes;
+    if (maxWalk != null) {
+      // Der Server begrenzt nur den Weg zum ersten und vom letzten Halt;
+      // Umsteigewege prüft die App selbst. Bleibt nichts übrig, zeigt sie
+      // lieber die Vorschläge des Servers als eine leere Liste.
+      final ok = trips.where((t) => !t.legs.any((l) => l.type != LegType.ride && (l.durationMinutes ?? 0) > maxWalk)).toList();
+      if (ok.isNotEmpty) trips = ok;
+    }
+    return trips;
   }
 
   /// Rückfall ohne Fahrtverlauf-Anfrage: dieselbe Verbindung neu suchen und

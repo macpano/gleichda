@@ -20,16 +20,21 @@ Future<void> main() async {
   await initializeDateFormatting('de');
   final db = AppDatabase();
   final container = ProviderContainer(overrides: [databaseProvider.overrideWithValue(db)]);
-  await Notifications.init();
-  Notifications.onResponse = (payload, action) => handleNotification(container, payload, action);
+  // Erst das erste Bild, dann alles Weitere: Nichts davon darf den Start
+  // aufhalten (v0.2.0 blieb im Startbild hängen, weil die Einrichtung der
+  // Benachrichtigungen vor runApp scheiterte).
   runApp(UncontrolledProviderScope(container: container, child: const GleichdaApp()));
 
-  // Nach dem ersten Bild: Hintergrundprüfung anmelden, Wecker nachplanen,
-  // Start über eine Benachrichtigung auswerten.
   WidgetsBinding.instance.addPostFrameCallback((_) async {
-    if (Platform.isAndroid) await registerBackgroundWork();
-    final launch = await Notifications.launchPayload();
-    if (launch != null) await handleNotification(container, launch, null);
+    try {
+      await Notifications.init();
+      Notifications.onResponse = (payload, action) => handleNotification(container, payload, action);
+      final launch = await Notifications.launchPayload();
+      if (launch != null) await handleNotification(container, launch, null);
+    } catch (_) {}
+    try {
+      if (Platform.isAndroid) await registerBackgroundWork();
+    } catch (_) {}
     try {
       final settings = await container.read(settingsProvider.future);
       await planAllAlarms(container.read(repositoryProvider), container.read(transitProvider), settings: settings);

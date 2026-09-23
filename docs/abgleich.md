@@ -51,8 +51,16 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 
 ## Zustände
 - ✅ Laden als Platzhalter, Fehler mit „Erneut versuchen“ und letztem Stand, „Daten nicht aktuell“ nach 2 min
-- ☐ Eigener Offline-Zustand mit grauen Zeiten
+- ✅ Eigener Offline-Zustand mit grauen Zeiten und „Stand von hh:mm“
 
 ## Später (laut Chat)
 - Erster Start mit Standort-Erklärung, Haltestellen-Detail, Widget, große Schrift prüfen,
   Englisch, iOS (Live Activity, Dynamic Island).
+
+## v0.2.1 (23.09.2026)
+- ✅ Start hing am Startbild: Benachrichtigungssymbol fiel im Release-Build weg (`res/raw/keep.xml`), Initialisierung erst nach dem ersten Bild
+- ✅ Startbild wie im Canvas (Logo auf hellem bzw. dunklem Grund)
+- ✅ Aktualisierung: prüft beim Start und alle 6 h das neueste GitHub-Release, lädt und installiert auf Wunsch
+- ✅ Produkte: Bus, Schnellbus (SB), CityExpress (CE), Nachtexpress, AST, SEV, Schwebebahn, Straßenbahn, U-Bahn, S-Bahn, RE/RB, IC/ICE mit Zugnummer (`lib/domain/product.dart`)
+- ✅ Fortschrittsbalken in der App wie in der Benachrichtigung
+- ✅ Fußweg höchstens 5–30 min (Profil, Suchoptionen); bestimmt auch den Umkreis „In der Nähe“; Fußwege in der Verbindungsleiste mit Minuten

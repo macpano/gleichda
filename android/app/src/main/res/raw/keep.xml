@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nur per Name aus Dart angesprochen (Benachrichtigungen). Ohne diese Datei
+     entfernt der Release-Build das Symbol, und die App bleibt im Startbild hängen. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_gleichda" />

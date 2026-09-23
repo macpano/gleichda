@@ -27,7 +27,8 @@ enum TransportMode {
   subway,
   suspension, // Schwebebahn
   suburbanRail,
-  rail,
+  rail, // Regionalzug
+  longDistanceRail, // IC, ICE, EC
   ferry,
   replacementBus, // SEV
   onDemand,
@@ -95,6 +96,9 @@ abstract class Line with _$Line {
 
     /// Ausführliche Bezeichnung, z. B. „ICE 950 InterCityExpress“.
     String? longName,
+
+    /// Linienart als Name von `Product` (bus, expressBus, cityExpress …).
+    String? product,
   }) = _Line;
 
   factory Line.fromJson(Map<String, dynamic> json) => _$LineFromJson(json);

@@ -17,6 +17,7 @@ class TripQuery {
     this.accessible = false,
     this.walkSpeedPercent = 100,
     this.maxInterchanges,
+    this.maxWalkMinutes,
   });
 
   final Location from;
@@ -41,6 +42,9 @@ class TripQuery {
   final int walkSpeedPercent;
   final int? maxInterchanges;
 
+  /// Längster Fußweg zum ersten und vom letzten Halt, in Minuten.
+  final int? maxWalkMinutes;
+
   TripQuery copyWith({DateTime? time, bool? arriveBy, TripOptimization? optimization, int? maxResults}) =>
       TripQuery(
         from: from,
@@ -54,6 +58,7 @@ class TripQuery {
         accessible: accessible,
         walkSpeedPercent: walkSpeedPercent,
         maxInterchanges: maxInterchanges,
+        maxWalkMinutes: maxWalkMinutes,
       );
 }
 
@@ -67,10 +72,13 @@ class DepartureBoard {
 
 /// Fehler einer Datenquelle, mit Klartext für die Oberfläche.
 class ProviderException implements Exception {
-  const ProviderException(this.message, {this.cause});
+  const ProviderException(this.message, {this.cause, this.offline = false});
 
   final String message;
   final Object? cause;
+
+  /// Kein Netz bzw. Server nicht erreichbar (für den Offline-Zustand).
+  final bool offline;
 
   @override
   String toString() => 'ProviderException: $message${cause == null ? '' : ' ($cause)'}';
@@ -83,9 +91,10 @@ abstract class TransitProvider {
   String get id;
 
   /// Haltestellen, Adressen und Orte zum Suchbegriff. [near] dient der
-  /// Sortierung gleichnamiger Treffer.
+  /// Sortierung gleichnamiger Treffer; ohne Suchbegriff liefert es die
+  /// Haltestellen im Umkreis [radiusMeters] um [near].
   Future<List<Location>> searchLocations(String query,
-      {({double lat, double lon})? near, int limit = 10});
+      {({double lat, double lon})? near, int limit = 10, int radiusMeters = 1000});
 
   /// Abfahrten an einer Haltestelle ab [time] (Standard: jetzt).
   Future<DepartureBoard> departures(Location stop,

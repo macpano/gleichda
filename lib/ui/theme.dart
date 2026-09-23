@@ -165,7 +165,8 @@ abstract final class Space {
 }
 
 abstract final class Radii {
-  static const double card = 12;
+  /// Wie im Canvas: 14 px für Karten und Gruppen.
+  static const double card = 14;
   static const double input = 10;
   static const double badge = 8;
   static const double logo = 22;
@@ -184,8 +185,9 @@ class AppText extends ThemeExtension<AppText> {
 
   static const tabular = [FontFeature.tabularFigures()];
 
+  /// Bildschirmtitel wie im Canvas: 32 px, fett, leicht enger.
   TextStyle get screenTitle => const TextStyle(
-      fontSize: 28, fontWeight: FontWeight.w600, height: 1.15);
+      fontSize: 32, fontWeight: FontWeight.w700, height: 1.1, letterSpacing: -0.64);
   TextStyle get listRow =>
       TextStyle(fontSize: isIOS ? 17 : 16, fontWeight: FontWeight.w400);
   TextStyle get secondary =>
@@ -278,7 +280,9 @@ ThemeData buildTheme(Brightness brightness, TargetPlatform platform) {
           color: s.contains(WidgetState.selected) ? c.ink : c.muted)),
     ),
     bottomSheetTheme: BottomSheetThemeData(
-      backgroundColor: c.surface,
+      backgroundColor: c.bg,
+      dragHandleColor: brightness == Brightness.dark ? const Color(0xFF3A3F46) : const Color(0xFFC9CDD2),
+      dragHandleSize: const Size(36, 5),
       surfaceTintColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
@@ -292,9 +296,19 @@ ThemeData buildTheme(Brightness brightness, TargetPlatform platform) {
           borderSide: BorderSide.none),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
     ),
+    // Schalter wie im Canvas: weißer Knopf, Spur Petrol bzw. Grau, ohne Rand.
     switchTheme: SwitchThemeData(
-      trackColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? c.accent : c.fill),
+      thumbColor: const WidgetStatePropertyAll(Colors.white),
+      trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected)
+          ? c.accent
+          : (brightness == Brightness.dark ? const Color(0xFF3A3F46) : const Color(0xFFD3D6DA))),
+      trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+      thumbIcon: const WidgetStatePropertyAll(null),
+    ),
+    listTileTheme: ListTileThemeData(
+      titleTextStyle: TextStyle(fontSize: 16, color: c.ink),
+      subtitleTextStyle: TextStyle(fontSize: 13, color: c.muted),
+      minVerticalPadding: 8,
     ),
     pageTransitionsTheme: const PageTransitionsTheme(builders: {
       TargetPlatform.android: SlidePageTransitionsBuilder(),

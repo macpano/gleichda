@@ -75,11 +75,15 @@ class _DeparturesScreenState extends ConsumerState<DeparturesScreen> {
     } else {
       try {
         final here = await ref.read(locationServiceProvider).current();
-        final near = await p.searchLocations('', near: here, limit: 6);
+        final radius = (ref.read(settingsProvider).value ?? const AppSettings()).walkRadiusMeters;
+        final near = await p.searchLocations('', near: here, limit: 6, radiusMeters: radius);
         boards = [
           for (final l in near.take(4)) _StopBoard(l, distance: distanceBetween(l, here)),
         ];
-        if (boards.isEmpty) _error = 'Keine Haltestellen in der Nähe gefunden.';
+        if (boards.isEmpty) {
+          _error = 'Keine Haltestelle im Umkreis von ${distanceText(radius.toDouble())}. '
+              'Den Umkreis bestimmt der längste Fußweg unter Mehr → Profil.';
+        }
       } on LocationException catch (e) {
         _error = '${e.message} Wähle eine Haltestelle über die Suche.';
       } on ProviderException catch (e) {
@@ -429,34 +433,22 @@ class _DepartureTimeSheetState extends State<_DepartureTimeSheet> {
     final c = context.c;
     final now = DateTime.now();
     final base = _t ?? now;
-    final quick = <(String, DateTime?)>[
-      ('Jetzt', null),
-      ('+15 min', now.add(const Duration(minutes: 15))),
-      ('+30 min', now.add(const Duration(minutes: 30))),
-      ('+1 Std', now.add(const Duration(hours: 1))),
-    ];
     final today = DateTime(now.year, now.month, now.day);
-    final dayIndex = DateTime(base.year, base.month, base.day).difference(today).inDays;
+    final dayIndex = DateTime(base.year, base.month, base.day).difference(today).inDays.clamp(0, 2);
+    final quick = <(String, int?)>[('Jetzt', null), ('+15 min', 15), ('+30 min', 30), ('+1 Std', 60)];
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            Expanded(child: Text('Abfahrtszeit', style: context.t.section)),
-            TextButton(onPressed: () => Navigator.pop(context, _t), child: const Text('Fertig')),
-          ]),
-          const SizedBox(height: 8),
-          SegmentedButton<int>(
-            showSelectedIcon: false,
-            segments: const [
-              ButtonSegment(value: 0, label: Text('Heute')),
-              ButtonSegment(value: 1, label: Text('Morgen')),
-              ButtonSegment(value: 2, label: Text('Datum')),
-            ],
-            selected: {dayIndex.clamp(0, 2)},
-            onSelectionChanged: (s) async {
-              if (s.first < 2) {
-                setState(() => _t = DateTime(today.year, today.month, today.day + s.first, base.hour, base.minute));
+          SheetHeader('Abfahrtszeit', onDone: () => Navigator.pop(context, _t)),
+          const SizedBox(height: 12),
+          Segmented<int>(
+            options: const [(0, 'Heute'), (1, 'Morgen'), (2, 'Datum')],
+            value: dayIndex,
+            height: 34,
+            onChanged: (i) async {
+              if (i < 2) {
+                setState(() => _t = DateTime(today.year, today.month, today.day + i, base.hour, base.minute));
                 return;
               }
               final d = await showDatePicker(
@@ -464,32 +456,43 @@ class _DepartureTimeSheetState extends State<_DepartureTimeSheet> {
               if (d != null) setState(() => _t = DateTime(d.year, d.month, d.day, base.hour, base.minute));
             },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(children: [
-            for (final q in quick) ...[
+            for (var i = 0; i < quick.length; i++) ...[
               Expanded(
-                child: ChoiceChipX(
-                  label: q.$1,
-                  selected: q.$2 == null ? _t == null : false,
-                  onTap: () => Navigator.pop(context, q.$2),
+                child: PickButton(
+                  label: quick[i].$1,
+                  selected: quick[i].$2 == null && _t == null,
+                  onTap: () => Navigator.pop(
+                      context, quick[i].$2 == null ? null : now.add(Duration(minutes: quick[i].$2!))),
                 ),
               ),
-              if (q != quick.last) const SizedBox(width: 6),
+              if (i < quick.length - 1) const SizedBox(width: 8),
             ],
           ]),
-          const SizedBox(height: 12),
-          Divider(height: 1, color: c.hair),
-          SizedBox(
+          const SizedBox(height: 16),
+          Container(
+            decoration: BoxDecoration(border: Border(top: BorderSide(color: c.hair))),
             height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(children: [
               const Expanded(child: Text('Uhrzeit', style: TextStyle(fontSize: 16))),
-              TextButton(
-                style: TextButton.styleFrom(backgroundColor: c.fill, foregroundColor: c.ink),
-                onPressed: () async {
-                  final p = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(base));
-                  if (p != null) setState(() => _t = DateTime(base.year, base.month, base.day, p.hour, p.minute));
-                },
-                child: Text(hm(base), style: context.t.number(17)),
+              Material(
+                color: c.fill,
+                borderRadius: BorderRadius.circular(8),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () async {
+                    final p = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(base));
+                    if (p != null) setState(() => _t = DateTime(base.year, base.month, base.day, p.hour, p.minute));
+                  },
+                  child: Container(
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    alignment: Alignment.center,
+                    child: Text(hm(base), style: context.t.number(17)),
+                  ),
+                ),
               ),
             ]),
           ),

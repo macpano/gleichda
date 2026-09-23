@@ -13,8 +13,9 @@ import 'design_demo_screen.dart';
 import 'places_screen.dart';
 import 'profile_screen.dart';
 import 'subscriptions_screen.dart';
+import 'update_screen.dart';
+import '../../state/updates.dart';
 
-const appVersion = '0.2.0';
 
 /// Mehr: Meine Fahrten, Einstellungen, Datenschutz, Pflichtangaben.
 class MoreScreen extends ConsumerWidget {
@@ -28,6 +29,7 @@ class MoreScreen extends ConsumerWidget {
     final alarms = ref.watch(alarmsProvider).value ?? const <Alarm>[];
     final places = ref.watch(placesProvider).value ?? const <SavedPlace>[];
     final subs = ref.watch(subscriptionsProvider).value ?? const <Subscription>[];
+    final update = ref.watch(updateProvider);
     void push(Widget w) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => w));
     final active = alarms.where((a) => a.enabled).length;
     return ListView(
@@ -84,13 +86,19 @@ class MoreScreen extends ConsumerWidget {
           _Row(label: 'Datenquellen', onTap: () => push(const _TextScreen.sources())),
           _Row(label: 'Datenschutzerklärung', onTap: () => push(const _TextScreen.privacy())),
           _Row(label: 'Impressum', onTap: () => push(const _TextScreen.imprint())),
+          _Row(
+            label: 'Aktualisierung',
+            value: update.hasUpdate ? 'Version ${update.latest!.version} verfügbar' : update.current,
+            color: null,
+            onTap: () => push(const UpdateScreen()),
+          ),
           _Row(label: 'Farben und Schriften', onTap: () => push(const DesignDemoScreen())),
         ]),
         const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
-            'Fahrplandaten: VRR, DELFI e. V. Alle Angaben ohne Gewähr. Version $appVersion',
+            'Fahrplandaten: VRR, DELFI e. V. Alle Angaben ohne Gewähr. Version ${update.current}',
             style: TextStyle(fontSize: 12, height: 1.5, color: c.muted),
           ),
         ),
@@ -176,7 +184,7 @@ class _Row extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        constraints: const BoxConstraints(minHeight: 48),
+        constraints: const BoxConstraints(minHeight: 44),
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(children: [
           OneLine(label, style: context.t.listRow.copyWith(color: color ?? c.ink)),
@@ -209,7 +217,7 @@ class _SwitchRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        constraints: const BoxConstraints(minHeight: 48),
+        constraints: const BoxConstraints(minHeight: 44),
         padding: const EdgeInsets.only(left: 16, right: 8),
         child: Row(children: [
           Expanded(child: OneLine(label, style: context.t.listRow)),

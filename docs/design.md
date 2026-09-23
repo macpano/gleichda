@@ -62,7 +62,7 @@ umschaltbar (Hell / Dunkel / System) unter „Mehr → Erscheinungsbild“.
 
 - Systemschrift, nie eine Webschrift im Fließtext:
   iOS `-apple-system / SF Pro`, Android `Roboto`.
-- Größen: 28 px Bildschirmtitel · 17 px Listenzeile (iOS) bzw. 16 px (Android)
+- Größen: 32 px Bildschirmtitel (fett, wie im Canvas; vorher 28 px) · 17 px Listenzeile (iOS) bzw. 16 px (Android)
   · 15 px Sekundärzeile · 13 px Label · 11 px Tableiste.
 - Gewichte: 600 für Zeiten, Titel und Liniennummern, 400 für alles andere.
   Kein Kursiv außer im Wortmarke-Schriftzug.
@@ -75,7 +75,7 @@ umschaltbar (Hell / Dunkel / System) unter „Mehr → Erscheinungsbild“.
 - Bildschirmbreite im Entwurf 390 px, Höhe 844 px.
 - Seitenrand 16 px, alle Screens gleich.
 - Abstände in Vielfachen von 4: 4 · 8 · 12 · 16 · 24.
-- Eckenradius: 12 px Karten und Gruppen, 10 px Eingabefelder und Chips,
+- Eckenradius: 14 px Karten und Gruppen (wie im Canvas; vorher 12 px), 10 px Eingabefelder und Chips,
   8 px Linienplaketten, 22 px Logo-Kachel.
 - Trennlinie 1 px in `hair`, eingerückt bis zur Textkante, nie unter dem
   letzten Element einer Gruppe.
