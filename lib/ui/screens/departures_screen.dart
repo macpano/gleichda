@@ -187,8 +187,8 @@ class _DeparturesScreenState extends ConsumerState<DeparturesScreen> {
                   failed: stops.every((s) => s.error != null)),
           ]),
           const SizedBox(height: 16),
-          // Drei feste Knöpfe nebeneinander, ohne Scrollen: Haltestelle, Zeit,
-          // Verkehrsmittel. Die Haltestelle öffnet immer die Suche (dort auch
+          // Drei feste Knöpfe nebeneinander, ohne Scrollen: Ort, Verkehrsmittel,
+          // Uhrzeit. Die Haltestelle öffnet immer die Suche (dort auch
           // „Mein Standort“ für die Haltestellen in der Nähe).
           Row(children: [
             Expanded(
@@ -200,13 +200,6 @@ class _DeparturesScreenState extends ConsumerState<DeparturesScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            ChoiceChipX(
-              icon: Icons.schedule,
-              label: _time == null ? 'Jetzt' : '${relativeDay(_time!, now) == 'Heute' ? '' : '${relativeDay(_time!, now)} '}${hm(_time!)}',
-              selected: false,
-              onTap: _pickTime,
-            ),
-            const SizedBox(width: 8),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 150),
               child: ChoiceChipX(
@@ -215,6 +208,13 @@ class _DeparturesScreenState extends ConsumerState<DeparturesScreen> {
                 selected: false,
                 onTap: _pickModes,
               ),
+            ),
+            const SizedBox(width: 8),
+            ChoiceChipX(
+              icon: Icons.schedule,
+              label: _time == null ? 'Jetzt' : '${relativeDay(_time!, now) == 'Heute' ? '' : '${relativeDay(_time!, now)} '}${hm(_time!)}',
+              selected: false,
+              onTap: _pickTime,
             ),
           ]),
           const SizedBox(height: 16),
