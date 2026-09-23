@@ -71,4 +71,14 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Positionspunkt statt Bus im Haltestellenverlauf
 - ✅ Verbindungen: Abfahrt – Ankunft ohne Lücke, Linien in kurzen Abschnitten mit voller Nummer
 - ✅ Selbst-Aktualisierung: lädt beim Öffnen im Hintergrund, Meldung „Update verfügbar“ mit „Installieren“
-- ☐ Echter Linienverlauf auf der Karte (VRR liefert keinen; später OSM oder Transitous)
+- ✅ Echter Linienverlauf auf der Karte (seit v0.3.0 aus der EFA-Verbindungsauskunft)
+
+## v0.3.0 (23.09.2026)
+- ✅ Name „Gleich.da“ überall (Wortmarke mit Bernstein-Punkt, App-Name, Texte, Repository)
+- ✅ Linienwege auf der Karte (EFA), kleine Namensnennung
+- ✅ Abfahrt antippen öffnet die ganze Fahrt; lange drücken abonniert die Linie
+- ✅ Meldungen: „Alle“ zuerst, Linie suchen und abonnieren (auch unter Linienabos)
+- ✅ Fahrt: Pfeil zum Aufklappen der Zwischenhalte, „nächster Halt“ nur bei aktiver Begleitung,
+  Uhrzeiten brechen bei großer Schrift nicht mehr um, Karte nur über das Kartensymbol
+- ✅ Benachrichtigung kompakt, nur der Android-Fortschrittsbalken
+- ✅ Feineres Design: kleinere Titel und Knöpfe, schmalere Liniennummern, Haarlinien, niedrigere Leiste

@@ -6,6 +6,7 @@ import '../../domain/product.dart';
 import '../../state/providers.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'line_search_screen.dart';
 
 /// Zeitfenster zur Auswahl. Mehr braucht es im Alltag selten.
 final _windows = <(String, TimeWindow?)>[
@@ -34,8 +35,25 @@ class SubscriptionsScreen extends ConsumerWidget {
         children: [
           const SubpageHeader(title: 'Linienabos', backLabel: 'Zurück'),
           const SizedBox(height: 8),
+          ListGroup(children: [
+            InkWell(
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LineSearchScreen())),
+              child: SizedBox(
+                height: 52,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(children: [
+                    Icon(Icons.add, size: 20, color: c.accent),
+                    const SizedBox(width: 10),
+                    Text('Linie hinzufügen', style: TextStyle(fontSize: 16, color: c.accent)),
+                  ]),
+                ),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 16),
           if (subs.isEmpty)
-            const Notice('Noch keine Linien abonniert. Tippe in einer Meldung oder bei den Abfahrten auf eine Linie, um sie zu abonnieren.')
+            const Notice('Noch keine Linien abonniert. Über „Linie hinzufügen“ suchen, oder bei den Abfahrten lange auf eine Linie drücken.')
           else
             ListGroup(children: [
               for (final s in subs)
@@ -69,7 +87,7 @@ class SubscriptionsScreen extends ConsumerWidget {
             ]),
           const SizedBox(height: 16),
           Text(
-            'Gleichda prüft im Hintergrund etwa alle 15 Minuten, ob es neue Meldungen zu deinen Linien gibt. '
+            'Gleich.da prüft im Hintergrund etwa alle 15 Minuten, ob es neue Meldungen zu deinen Linien gibt. '
             'Android bestimmt den genauen Zeitpunkt; ein Push-Dienst für sofortige Nachrichten folgt später. '
             'Die Abos bleiben auf diesem Gerät.',
             style: context.t.secondary.copyWith(color: c.muted, height: 1.4),

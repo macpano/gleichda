@@ -10,7 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'providers.dart';
 
 /// Neueste Veröffentlichung auf GitHub (öffentliches Repository, kein Token).
-const releasesUrl = 'https://api.github.com/repos/macpano/gleichda/releases/latest';
+const releasesUrl = 'https://api.github.com/repos/macpano/gleich.da/releases/latest';
 
 /// Übergabe an den Android-Installer (MainActivity.kt).
 const _channel = MethodChannel('de.gleichda/update');

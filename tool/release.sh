@@ -12,7 +12,7 @@ cd "$(dirname "$0")/.."
 
 VERSION="${1:?Version angeben, z. B. 0.1.1}"
 NOTES="${2:-}"
-REPO="macpano/gleichda"
+REPO="macpano/gleich.da"
 
 if [ -n "$(git status --porcelain)" ]; then
   echo "Ungespeicherte Änderungen – erst committen." >&2
@@ -27,7 +27,7 @@ sed -i "s/^version: .*/version: $VERSION+$BUILD/" pubspec.yaml
 flutter analyze
 flutter test test
 flutter build apk --release
-APK="build/app/outputs/flutter-apk/gleichda-$VERSION.apk"
+APK="build/app/outputs/flutter-apk/Gleich.da-$VERSION.apk"
 cp build/app/outputs/flutter-apk/app-release.apk "$APK"
 
 git add pubspec.yaml
@@ -36,7 +36,7 @@ git tag "v$VERSION"
 git push origin main "v$VERSION"
 
 TOKEN=$(printf "protocol=https\nhost=github.com\n\n" | git credential fill | sed -n 's/^password=//p')
-BODY=$(python -c 'import json,sys; print(json.dumps({"tag_name":sys.argv[1],"name":"Gleichda "+sys.argv[2],"body":sys.argv[3]}))' "v$VERSION" "$VERSION" "$NOTES")
+BODY=$(python -c 'import json,sys; print(json.dumps({"tag_name":sys.argv[1],"name":"Gleich.da "+sys.argv[2],"body":sys.argv[3]}))' "v$VERSION" "$VERSION" "$NOTES")
 ID=$(curl -sf -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" \
   --data-binary "$BODY" "https://api.github.com/repos/$REPO/releases" \
   | python -c 'import json,sys; print(json.load(sys.stdin)["id"])')

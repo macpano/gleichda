@@ -39,7 +39,7 @@ class AlarmsScreen extends ConsumerWidget {
           const SizedBox(height: 4),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text('Gleichda prüft deine Fahrt vorher mit Echtzeit und weckt dich, wenn du losmusst.',
+            child: Text('Gleich.da prüft deine Fahrt vorher mit Echtzeit und weckt dich, wenn du losmusst.',
                 style: context.t.secondary.copyWith(color: c.muted, height: 1.4)),
           ),
           const SizedBox(height: 16),
@@ -51,12 +51,12 @@ class AlarmsScreen extends ConsumerWidget {
               borderRadius: BorderRadius.circular(Radii.card),
               onTap: add,
               child: SizedBox(
-                height: 50,
+                height: 46,
                 child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Icon(Icons.add, color: c.accent),
                   const SizedBox(width: 8),
                   Text('Wecker hinzufügen',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: c.accent)),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: c.accent)),
                 ]),
               ),
             ),
@@ -302,7 +302,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
             backLabel: 'Wecker',
             trailing: TextButton(
               onPressed: _valid && !_saving ? _save : null,
-              child: const Text('Sichern', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+              child: const Text('Sichern', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             ),
           ),
           const SizedBox(height: 8),

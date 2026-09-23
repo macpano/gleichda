@@ -128,10 +128,10 @@ class _TimeSheetState extends ConsumerState<_TimeSheet> {
       ('Morgen früh', DateTime(now.year, now.month, now.day + 1, 6, 30)),
     ];
     final hint = _t.isNow
-        ? 'Ohne Angabe sucht Gleichda ab jetzt und aktualisiert laufend.'
+        ? 'Ohne Angabe sucht Gleich.da ab jetzt und aktualisiert laufend.'
         : _t.arriveBy
-        ? 'Gleichda zeigt Verbindungen, die bis ${hm(base)} ankommen, und rechnet den Fußweg mit ein.'
-        : 'Gleichda zeigt Verbindungen ab ${hm(base)} und rechnet den Fußweg mit ein.';
+        ? 'Gleich.da zeigt Verbindungen, die bis ${hm(base)} ankommen, und rechnet den Fußweg mit ein.'
+        : 'Gleich.da zeigt Verbindungen ab ${hm(base)} und rechnet den Fußweg mit ein.';
     Widget picker(
       FixedExtentScrollController ctrl,
       int count,

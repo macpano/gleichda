@@ -109,12 +109,12 @@ class ConnectionRow extends StatelessWidget {
             // Lücke für eine Verspätung, die meist gar nicht da ist.
             Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
               FadeText(hm((first ?? trip.departure).best),
-                  style: context.t.time(20).copyWith(color: timeColor(context, first, neutral: c.ink))),
+                  style: context.t.time(18).copyWith(color: timeColor(context, first, neutral: c.ink))),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Text('–', style: context.t.number(20).copyWith(color: c.muted)),
+                child: Text('–', style: context.t.number(18).copyWith(color: c.muted)),
               ),
-              FadeText(hm(trip.arrival.best), style: context.t.time(20).copyWith(color: c.ink)),
+              FadeText(hm(trip.arrival.best), style: context.t.time(18).copyWith(color: c.ink)),
               const Spacer(),
               if (diff != null)
                 Text(diff <= 0 ? '${diff == 0 ? '±0' : diff} min' : '+$diff min',

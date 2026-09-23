@@ -1,13 +1,11 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/companion.dart';
 import '../domain/models.dart';
 import '../domain/product.dart';
 import '../ui/format.dart';
-import '../ui/progress_bitmap.dart';
 import '../ui/theme.dart';
 import '../ui/trip_status.dart';
 import 'notifications.dart';
@@ -74,18 +72,11 @@ class CompanionController extends Notifier<CompanionState> {
     final key = '${text.where}|${text.when}|$percent|${issue?.title}';
     if (key == _lastKey) return;
     _lastKey = key;
-    final bar = await renderProgressBar(
-      progress: step.progress,
-      mode: step.leg?.line?.mode,
-      color: AppColors.light.accent,
-      track: const Color(0xFFD5D9DD),
-    );
     await Notifications.showCompanion(
       header: text.header,
       where: text.where,
       when: text.when,
       progress: percent,
-      bar: bar,
       alertColor: issue == null
           ? ((step.when?.delayMinutes ?? 0) > 0 ? AppColors.light.orange : null)
           : (issue.level == IssueLevel.cancelled ? AppColors.light.red : AppColors.light.orange),

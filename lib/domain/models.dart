@@ -39,6 +39,9 @@ enum TransportMode {
 enum StopStatus { normal, cancelled, diversion, replacement }
 
 /// Eine Zeit mit Plan- und Ist-Wert.
+/// Punkt auf der Karte (WGS84).
+typedef GeoPoint = ({double lat, double lon});
+
 @freezed
 abstract class EventTime with _$EventTime {
   const EventTime._();

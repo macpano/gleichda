@@ -27,7 +27,7 @@ Color lineColor(BuildContext context, Line? line) {
 
 /// Linienplakette: feste Breite, weiße Liniennummer.
 class LineBadge extends StatelessWidget {
-  const LineBadge(this.line, {super.key, this.width = 38, this.height = 22});
+  const LineBadge(this.line, {super.key, this.width = 34, this.height = 20});
 
   final Line? line;
   final double width;
@@ -48,7 +48,7 @@ class LineBadge extends StatelessWidget {
       child: Text(name,
           maxLines: 1,
           overflow: TextOverflow.clip,
-          style: context.t.lineNumber.copyWith(fontSize: height < 22 ? 12 : 13)),
+          style: context.t.lineNumber.copyWith(fontSize: height < 22 ? 12 : 13.5)),
     );
   }
 }
@@ -265,7 +265,7 @@ class ListGroup extends StatelessWidget {
     for (var i = 0; i < children.length; i++) {
       items.add(children[i]);
       if (i < children.length - 1) {
-        items.add(Divider(height: 1, thickness: 1, indent: indent, color: c.hair));
+        items.add(Divider(height: 0.5, thickness: 0.5, indent: indent, color: c.hair));
       }
     }
     return Material(
@@ -363,7 +363,8 @@ class LogoMark extends StatelessWidget {
   }
 }
 
-/// Wortmarke „Gleichda“: Rubik fett kursiv, i-Punkt in Bernstein.
+/// Wortmarke „Gleich.da“: Rubik fett kursiv, der Punkt in Bernstein – wie
+/// der Punkt am Bus im Logo.
 class Wordmark extends StatelessWidget {
   const Wordmark({super.key, this.size = 26});
 
@@ -382,32 +383,15 @@ class Wordmark extends StatelessWidget {
       color: context.c.accent,
     );
     return Semantics(
-      label: 'Gleichda',
+      label: 'Gleich.da',
       child: ExcludeSemantics(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text('Gle', style: style),
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Text('ı', style: style),
-                Positioned(
-                  left: size * 0.17,
-                  top: size * 0.1,
-                  child: Container(
-                    width: size * 0.19,
-                    height: size * 0.19,
-                    decoration: const BoxDecoration(
-                        color: AppColors.amber, shape: BoxShape.circle),
-                  ),
-                ),
-              ],
-            ),
-            Text('chda', style: style),
-          ],
+        child: Text.rich(
+          TextSpan(style: style, children: [
+            const TextSpan(text: 'Gleich'),
+            TextSpan(text: '.', style: style.copyWith(color: AppColors.amber, fontVariations: const [FontVariation('wght', 900)])),
+            const TextSpan(text: 'da'),
+          ]),
+          textScaler: TextScaler.noScaling,
         ),
       ),
     );
@@ -442,7 +426,7 @@ class SubpageHeader extends StatelessWidget {
           Expanded(
               child: Center(
                   child: OneLine(title,
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)))),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)))),
           SizedBox(width: 96, child: Align(alignment: Alignment.centerRight, child: trailing)),
         ]),
       );
@@ -460,7 +444,7 @@ class SubpageHeader extends StatelessWidget {
         ),
         Expanded(
             child: OneLine(title,
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w400, color: c.ink))),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: c.ink))),
         ?trailing,
       ]),
     );
@@ -484,7 +468,7 @@ class RouteSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
-    const name = TextStyle(fontSize: 17, fontWeight: FontWeight.w600, height: 1.3);
+    const name = TextStyle(fontSize: 16, fontWeight: FontWeight.w600, height: 1.3);
     return Padding(
       padding: const EdgeInsets.only(left: 4),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -699,10 +683,10 @@ class SheetHeader extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(
         height: 44,
         child: Row(children: [
-          Expanded(child: OneLine(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600))),
+          Expanded(child: OneLine(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
           GestureDetector(
             onTap: onDone ?? () => Navigator.pop(context),
-            child: Text(done, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: context.c.accent)),
+            child: Text(done, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: context.c.accent)),
           ),
         ]),
       );

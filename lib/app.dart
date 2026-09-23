@@ -15,15 +15,15 @@ import 'ui/theme.dart';
 /// Für Benachrichtigungen, die einen Screen öffnen.
 final navigatorKey = GlobalKey<NavigatorState>();
 
-class GleichdaApp extends ConsumerWidget {
-  const GleichdaApp({super.key});
+class GleichDaApp extends ConsumerWidget {
+  const GleichDaApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mode = ref.watch(themeModeProvider).value ?? ThemeMode.system;
     final platform = Theme.of(context).platform;
     return MaterialApp(
-      title: 'Gleichda',
+      title: 'Gleich.da',
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       themeMode: mode,

@@ -23,7 +23,7 @@ Future<void> main() async {
   // Erst das erste Bild, dann alles Weitere: Nichts davon darf den Start
   // aufhalten (v0.2.0 blieb im Startbild hängen, weil die Einrichtung der
   // Benachrichtigungen vor runApp scheiterte).
-  runApp(UncontrolledProviderScope(container: container, child: const GleichdaApp()));
+  runApp(UncontrolledProviderScope(container: container, child: const GleichDaApp()));
 
   WidgetsBinding.instance.addPostFrameCallback((_) async {
     try {

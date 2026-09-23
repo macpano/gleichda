@@ -23,7 +23,7 @@ final dioProvider = Provider((ref) {
   final dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 25),
-    headers: {'User-Agent': 'Gleichda/0.1 (Android; Entwicklung)'},
+    headers: {'User-Agent': 'Gleich.da/0.1 (Android; Entwicklung)'},
   ));
   ref.onDispose(dio.close);
   return dio;
@@ -273,3 +273,21 @@ class MessagesController extends AsyncNotifier<MessagesState> {
 }
 
 final messagesProvider = AsyncNotifierProvider<MessagesController, MessagesState>(MessagesController.new);
+
+/// Schlüssel für Linienwege: eine Verbindung, gleich über ihre ID (die
+/// Echtzeit-Aktualisierung ändert die Zeiten, nicht den Weg).
+class TripPathKey {
+  const TripPathKey(this.trip);
+
+  final Trip trip;
+
+  @override
+  bool operator ==(Object other) => other is TripPathKey && other.trip.id == trip.id;
+
+  @override
+  int get hashCode => trip.id.hashCode;
+}
+
+/// Linienwege je Abschnitt; null, wo keiner bekannt ist.
+final legPathsProvider = FutureProvider.family<List<List<GeoPoint>?>, TripPathKey>(
+    (ref, key) => ref.watch(transitProvider).legPaths(key.trip));

@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:html/parser.dart' show parseFragment;
 
 import '../../domain/models.dart';
+import '../../domain/product.dart';
 import '../transit_provider.dart';
 
 const _provider = 'vrr-efa';
@@ -112,6 +113,37 @@ class EfaClient {
       'filterOMC': omc,
     });
     return parseAddInfo(json);
+  }
+
+  /// Linienwege der Verbindung von [from] nach [to] ab [departure]
+  /// (Haltestellen-IDs wie „de:05124:11097“).
+  Future<List<EfaLegPath>> legPaths(String from, String to, DateTime departure) async {
+    final l = departure.toLocal();
+    String two(int v) => v.toString().padLeft(2, '0');
+    final json = await _get('XML_TRIP_REQUEST2', {
+      'type_origin': 'stop',
+      'name_origin': from,
+      'type_destination': 'stop',
+      'name_destination': to,
+      'itdDate': '${l.year}${two(l.month)}${two(l.day)}',
+      'itdTime': '${two(l.hour)}${two(l.minute)}',
+      'itdTripDateTimeDepArr': 'dep',
+      'calcNumberOfTrips': '4',
+    });
+    return parseLegPaths(json);
+  }
+
+  /// Linien zum Suchbegriff (Liniennummer), deutschlandweit.
+  Future<List<Line>> searchLines(String query) async {
+    final json = await _get('XML_SERVINGLINES_REQUEST', {'mode': 'line', 'lineName': query});
+    return parseServingLines(json);
+  }
+
+  /// Linien, die an einer Haltestelle halten.
+  Future<List<Line>> linesAt(String stopId) async {
+    final json = await _get('XML_SERVINGLINES_REQUEST',
+        {'mode': 'odv', 'type_sl': 'stopID', 'name_sl': stopId, 'lsShowTrainsExplicit': '1'});
+    return parseServingLines(json);
   }
 
   /// Alle Halte eines Fahrtabschnitts mit Plan- und Echtzeit. null, wenn die
@@ -261,4 +293,97 @@ String? htmlToText(String? html) {
       .map((l) => l.replaceAll(RegExp(r'\s+'), ' ').trim())
       .where((l) => l.isNotEmpty)
       .join('\n');
+}
+
+/// Linienweg eines Fahrtabschnitts aus XML_TRIP_REQUEST2 (`legs[].coords`).
+/// Gemessen 23.09.2026: dichte Punktfolge entlang Straße bzw. Gleis, z. B.
+/// 210 Punkte für einen RE4-Abschnitt. TRIAS liefert keinen Linienweg.
+class EfaLegPath {
+  const EfaLegPath({
+    required this.line,
+    required this.lineName,
+    required this.tripCode,
+    required this.departurePlanned,
+    required this.points,
+  });
+
+  /// Linienkennung wie „wsw:66604: :R:w25“.
+  final String line;
+  final String lineName;
+  final String? tripCode;
+  final DateTime? departurePlanned;
+  final List<GeoPoint> points;
+}
+
+List<EfaLegPath> parseLegPaths(Map<String, dynamic> json) {
+  final out = <EfaLegPath>[];
+  for (final j in (json['journeys'] as List?) ?? const []) {
+    if (j is! Map) continue;
+    for (final l in (j['legs'] as List?) ?? const []) {
+      if (l is! Map) continue;
+      final t = l['transportation'];
+      final coords = l['coords'];
+      if (t is! Map || coords is! List || coords.length < 2) continue;
+      final id = t['id'] as String?;
+      if (id == null) continue;
+      out.add(EfaLegPath(
+        line: id,
+        lineName: (t['disassembledName'] ?? t['number'] ?? '') as String,
+        tripCode: ((t['properties'] as Map?)?['tripCode'])?.toString(),
+        departurePlanned: _t((l['origin'] as Map?)?['departureTimePlanned']),
+        points: [
+          for (final c in coords)
+            if (c is List && c.length >= 2) (lat: (c[0] as num).toDouble(), lon: (c[1] as num).toDouble()),
+        ],
+      ));
+    }
+  }
+  return out;
+}
+
+/// Linien aus XML_SERVINGLINES_REQUEST, je Linie (ohne Richtung und
+/// Fahrplanperiode) einmal.
+List<Line> parseServingLines(Map<String, dynamic> json) {
+  final out = <String, Line>{};
+  for (final raw in (json['lines'] as List?) ?? const []) {
+    if (raw is! Map) continue;
+    final id = raw['id'] as String?;
+    final name = (raw['disassembledName'] ?? raw['number']) as String?;
+    if (id == null || name == null || name.isEmpty) continue;
+    final product = (raw['product'] as Map?) ?? const {};
+    final cls = (product['class'] as num?)?.toInt();
+    final pName = product['name'] as String?;
+    final info = classifyLine(
+      ptMode: switch (cls) {
+        0 || 13 || 14 || 15 || 16 => 'rail',
+        1 => 'rail',
+        2 || 3 => 'metro',
+        4 => 'tram',
+        9 => 'water',
+        _ => 'bus',
+      },
+      submode: switch (cls) {
+        1 => 'suburbanRailway',
+        15 || 16 => 'longDistance',
+        10 => 'demandAndResponseBus',
+        17 => 'railReplacementBus',
+        _ => null,
+      },
+      modeName: pName,
+      published: name,
+      lineRef: id,
+    );
+    out.putIfAbsent(
+      lineKey(id),
+      () => Line(
+        id: id,
+        name: info.name,
+        mode: info.product.mode,
+        operator: ((raw['operator'] as Map?)?['name']) as String?,
+        longName: htmlToText(raw['description'] as String?)?.replaceAll(r'\n', ' ').replaceAll(r'\(', '('),
+        product: info.product.name,
+      ),
+    );
+  }
+  return out.values.toList();
 }

@@ -109,7 +109,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
             Container(
               decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(Radii.card)),
               padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
-              child: Column(children: _rows(context, trip, checks, now)),
+              child: Column(children: _rows(context, trip, checks, now, following: following)),
             ),
             if (trip.messages.isNotEmpty) ...[
               const SizedBox(height: 24),
@@ -137,7 +137,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
               decoration: BoxDecoration(color: c.bar, border: Border(top: BorderSide(color: c.hair))),
               padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + MediaQuery.of(context).padding.bottom),
               child: SizedBox(
-                height: 50,
+                height: 46,
                 child: following
                     ? OutlinedButton(
                         style: OutlinedButton.styleFrom(
@@ -147,7 +147,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                         ),
                         onPressed: () => ref.read(companionProvider.notifier).stop(),
                         child: const Text('Begleitung beenden',
-                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                       )
                     : FilledButton(
                         style: FilledButton.styleFrom(
@@ -158,14 +158,15 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                         // Startet die Begleitung in der Benachrichtigung; die
                         // Fahrt bleibt offen und zeigt oben den nächsten Schritt.
                         onPressed: () => ref.read(companionProvider.notifier).start(),
-                        child: const Text('Losfahren', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                        child: const Text('Losfahren', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                       ),
               ),
             ),
     );
   }
 
-  List<Widget> _rows(BuildContext context, Trip trip, List<TransferCheck> checks, DateTime now) {
+  List<Widget> _rows(BuildContext context, Trip trip, List<TransferCheck> checks, DateTime now,
+      {required bool following}) {
     final c = context.c;
     final walkColor = c.walkText.withValues(alpha: 0.5);
     final rows = <Widget>[];
@@ -255,13 +256,18 @@ class _TripScreenState extends ConsumerState<TripScreen> {
             ),
             const SizedBox(width: 8),
             Text(tag, style: TextStyle(fontSize: 13, color: tagColor)),
+            if (l.intermediates.isNotEmpty) ...[
+              const SizedBox(width: 2),
+              Icon(open ? Icons.expand_less : Icons.expand_more, size: 20, color: c.muted),
+            ],
           ]),
         ),
       ));
 
-      // Aktuelle Position: Fahrzeug nach dem letzten passierten Halt.
+      // Aktuelle Position nach dem letzten passierten Halt – nur, wenn man
+      // mit „Losfahren“ gerade unterwegs ist.
       final stops = [l.from, ...l.intermediates, l.to];
-      final onBoard = isPassed(l.from, now) && !isPassed(l.to, now);
+      final onBoard = following && isPassed(l.from, now) && !isPassed(l.to, now);
       var lastPassed = -1;
       for (var k = 0; k < stops.length; k++) {
         if (isPassed(stops[k], now)) lastPassed = k;
@@ -449,40 +455,46 @@ class _Row extends StatelessWidget {
   final Widget? marker;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-        height: height,
+  Widget build(BuildContext context) {
+    // Große Systemschrift: Zeilen, Zeitspalte und Punkte wachsen mit, damit
+    // Uhrzeiten nicht umbrechen und die Punkte neben dem Namen bleiben.
+    final k = (MediaQuery.textScalerOf(context).scale(16) / 16).clamp(1.0, 1.8);
+    return SizedBox(
+        height: height * k,
         child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           SizedBox(
-            width: 52,
+            width: 52 * k,
             child: Padding(
-              padding: const EdgeInsets.only(top: 9, right: 8),
+              padding: EdgeInsets.only(top: 9 * k, right: 8),
               child: Align(alignment: Alignment.topRight, child: time),
             ),
           ),
           SizedBox(
             width: 24,
             child: Stack(clipBehavior: Clip.none, children: [
-              Positioned.fill(child: CustomPaint(painter: _RailPainter(rail))),
-              if (marker != null) Positioned(left: 0, right: 0, top: 0, height: 36, child: Center(child: marker)),
+              Positioned.fill(child: CustomPaint(painter: _RailPainter(rail, dotY: 20 * k))),
+              if (marker != null)
+                Positioned(left: 0, right: 0, top: 0, height: 36 * k, child: Center(child: marker)),
             ]),
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(left: 8, top: 9),
+              padding: EdgeInsets.only(left: 8, top: 9 * k),
               child: Align(alignment: Alignment.topLeft, child: child),
             ),
           ),
         ]),
       );
+  }
 }
 
 class _RailPainter extends CustomPainter {
-  _RailPainter(this.r);
+  _RailPainter(this.r, {this.dotY = 20});
 
   final _Rail r;
+  final double dotY;
 
   static const _x = 12.0;
-  static const _dotY = 20.0;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -490,8 +502,8 @@ class _RailPainter extends CustomPainter {
       ..color = r.color
       ..strokeWidth = r.dotted ? 3 : 4
       ..strokeCap = r.dotted ? StrokeCap.round : StrokeCap.butt;
-    final top = r.fromTop ? 0.0 : _dotY;
-    final bottom = r.toBottom ? size.height : _dotY;
+    final top = r.fromTop ? 0.0 : dotY;
+    final bottom = r.toBottom ? size.height : dotY;
     if (r.dotted) {
       for (var y = top + 3; y < bottom; y += 7) {
         canvas.drawLine(Offset(_x, y), Offset(_x, y + 0.1), line);
@@ -504,11 +516,11 @@ class _RailPainter extends CustomPainter {
       case _Dot.none:
         break;
       case _Dot.small:
-        canvas.drawCircle(const Offset(_x, _dotY), 5, Paint()..color = dc);
+        canvas.drawCircle(Offset(_x, dotY), 5, Paint()..color = dc);
       case _Dot.big:
-        canvas.drawCircle(const Offset(_x, _dotY), 7, Paint()..color = r.fill ?? Colors.white);
+        canvas.drawCircle(Offset(_x, dotY), 7, Paint()..color = r.fill ?? Colors.white);
         canvas.drawCircle(
-            const Offset(_x, _dotY),
+            Offset(_x, dotY),
             5.5,
             Paint()
               ..style = PaintingStyle.stroke
@@ -516,9 +528,9 @@ class _RailPainter extends CustomPainter {
               ..color = dc);
       case _Dot.cancelled:
       case _Dot.diverted:
-        canvas.drawCircle(const Offset(_x, _dotY), 6, Paint()..color = r.fill ?? Colors.white);
+        canvas.drawCircle(Offset(_x, dotY), 6, Paint()..color = r.fill ?? Colors.white);
         canvas.drawCircle(
-            const Offset(_x, _dotY),
+            Offset(_x, dotY),
             5,
             Paint()
               ..style = PaintingStyle.stroke

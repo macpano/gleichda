@@ -342,7 +342,7 @@ class LastTripCard extends ConsumerWidget {
                 // Ohne Netz sind die Zeiten nicht live: grau statt farbig.
                 if (state.offline)
                   Text(dep == null ? '' : hm(dep.best),
-                      style: context.t.time(30).copyWith(fontWeight: FontWeight.w700, color: c.ink2))
+                      style: context.t.time(28).copyWith(color: c.ink2))
                 else
                   TimeWithDelay(dep, size: 30, delaySize: 15, status: first.from.status),
                 const Spacer(),

@@ -1,4 +1,4 @@
-# Gleichda – Projektstart
+# Gleich.da – Projektstart
 
 
 - `docs/konzept.md` – das vollständige Konzept aus dem Chat, die Anforderungen

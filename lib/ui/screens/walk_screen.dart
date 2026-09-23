@@ -15,6 +15,7 @@ import '../../state/location.dart';
 import '../../state/providers.dart';
 import '../format.dart';
 import '../theme.dart';
+import '../trip_map.dart' show MapCredit;
 import '../widgets.dart';
 
 /// Kartenkacheln: FOSSGIS (tile.openstreetmap.de). Der Kachelserver von
@@ -240,7 +241,7 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
                               ),
                             ),
                         ]),
-                        const SimpleAttributionWidget(source: Text('OpenStreetMap-Mitwirkende')),
+                        const MapCredit(),
                       ],
                     ),
         ),
@@ -268,7 +269,7 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   FadeText(dist == null ? '– m' : distanceText(dist),
-                      style: context.t.time(28).copyWith(fontWeight: FontWeight.w700, color: c.ink)),
+                      style: context.t.time(26).copyWith(color: c.ink)),
                   OneLine(instruction, style: TextStyle(fontSize: 16, color: c.ink2)),
                 ]),
               ),

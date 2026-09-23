@@ -1,4 +1,4 @@
-import 'package:flutter/services.dart' show Color, Uint8List;
+import 'package:flutter/services.dart' show Color;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
@@ -70,13 +70,14 @@ class Notifications {
   static bool _serviceRunning = false;
 
   /// Zeigt bzw. aktualisiert die laufende Unterwegs-Benachrichtigung.
-  /// Nur vier Angaben: Linie und Ziel, wo aussteigen, wann, Fortschritt.
+  /// Kompakt: Linie und Ziel in der Kopfzeile, wo aussteigen, wann, und der
+  /// Fortschrittsbalken von Android (kein eigenes Bild mehr – das ergab
+  /// einen zweiten Balken).
   static Future<void> showCompanion({
     required String header,
     required String where,
     required String when,
     required int progress,
-    required Uint8List bar,
     Color? alertColor,
     String? reason,
   }) async {
@@ -99,12 +100,6 @@ class Notifications {
       showProgress: true,
       maxProgress: 100,
       progress: progress,
-      styleInformation: BigPictureStyleInformation(
-        ByteArrayAndroidBitmap(bar),
-        contentTitle: where,
-        summaryText: reason == null ? when : '$when · $reason',
-        hideExpandedLargeIcon: true,
-      ),
       actions: const [
         AndroidNotificationAction('stop', 'Beenden', showsUserInterface: true, cancelNotification: true),
       ],

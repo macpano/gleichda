@@ -1,4 +1,4 @@
-# Gestaltungsvorgaben Gleichda
+# Gestaltungsvorgaben Gleich.da
 
 Diese Datei ist die verbindliche Umsetzung des Abschnitts „Gestaltung“ aus
 `konzept.md`. Alle Werte stammen aus dem Klick-Prototypen und sind exakt so zu
@@ -120,7 +120,7 @@ Unterschiede ausschließlich dort, wo das System sie vorgibt:
 
 ## 7. Logo und Fahrzeugsymbole
 
-- Wortmarke: **Gleichda**. Schrift vorläufig Rubik fett kursiv
+- Wortmarke: **Gleich.da**. Schrift vorläufig Rubik fett kursiv
   (Alternativen Nunito kursiv, Outfit geneigt) – nur für Wortmarke und
   Startbild, nie im Fließtext.
 - Bildmarke: Zug, Straßenbahn und Bus, um 10° nach vorn geneigt, hintereinander

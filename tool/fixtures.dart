@@ -13,7 +13,7 @@ import 'package:gleichda/data/trias/trias_requests.dart';
 
 const base = 'https://openservice-test.vrr.de/static02';
 final out = Directory('test/fixtures');
-final http = HttpClient()..userAgent = 'Gleichda/0.1 (Entwicklung)';
+final http = HttpClient()..userAgent = 'Gleich.da/0.1 (Entwicklung)';
 
 Future<String> trias(String body) async {
   final req = await http.postUrl(Uri.parse('$base/trias'));

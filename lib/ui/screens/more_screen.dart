@@ -297,7 +297,7 @@ class _TextScreen extends StatelessWidget {
       : title = 'Datenschutz',
         items = const [
           ('Kein Konto, kein Tracking',
-              'Gleichda braucht kein Konto, zeigt keine Werbung und enthält keine Analyse- oder Tracking-Bausteine.'),
+              'Gleich.da braucht kein Konto, zeigt keine Werbung und enthält keine Analyse- oder Tracking-Bausteine.'),
           ('Was auf dem Gerät bleibt',
               'Verlauf, Favoriten, Meine Orte, Fahrtenwecker, Linienabos, Profil und die zuletzt angesehene Fahrt '
                   'liegen nur in der App auf diesem Gerät. „Verlauf löschen“ entfernt Suchen und die letzte Fahrt.'),
@@ -310,7 +310,7 @@ class _TextScreen extends StatelessWidget {
                   'den Weg zum Steig. Unter Mehr → Standort beim Verwenden lässt er sich ganz abschalten.'),
           ('Benachrichtigungen',
               'Unterwegs-Anzeige, Fahrtenwecker und Linienabos werden auf dem Gerät erzeugt. Es gibt keinen Server '
-                  'von Gleichda und kein Push-Token.'),
+                  'von Gleich.da und kein Push-Token.'),
         ];
 
   // TODO: echte Daten – Name und Anschrift der verantwortlichen Person vor
