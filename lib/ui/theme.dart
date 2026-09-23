@@ -299,14 +299,35 @@ ThemeData buildTheme(Brightness brightness, TargetPlatform platform) {
           borderSide: BorderSide.none),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
     ),
-    // Schalter wie im Canvas: weißer Knopf, Spur Petrol bzw. Grau, ohne Rand.
-    switchTheme: SwitchThemeData(
-      thumbColor: const WidgetStatePropertyAll(Colors.white),
-      trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected)
-          ? c.accent
-          : (brightness == Brightness.dark ? const Color(0xFF3A3F46) : const Color(0xFFD3D6DA))),
-      trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
-      thumbIcon: const WidgetStatePropertyAll(null),
+    // Schalter: iPhone wie im Canvas (weißer Knopf, ohne Rand); Android im
+    // Material-Stil (umrandet, eingeschaltet mit Haken im Knopf).
+    switchTheme: platform == TargetPlatform.iOS
+        ? SwitchThemeData(
+            thumbColor: const WidgetStatePropertyAll(Colors.white),
+            trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected)
+                ? c.accent
+                : (brightness == Brightness.dark ? const Color(0xFF3A3F46) : const Color(0xFFD3D6DA))),
+            trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+            thumbIcon: const WidgetStatePropertyAll(null),
+          )
+        : SwitchThemeData(
+            thumbColor: WidgetStateProperty.resolveWith(
+                (s) => s.contains(WidgetState.selected) ? c.onAccent : c.muted),
+            trackColor: WidgetStateProperty.resolveWith(
+                (s) => s.contains(WidgetState.selected) ? c.accent : c.fill),
+            trackOutlineColor: WidgetStateProperty.resolveWith(
+                (s) => s.contains(WidgetState.selected) ? c.accent : c.muted),
+            thumbIcon: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected)
+                ? Icon(Icons.check, size: 16, color: c.accent)
+                : null),
+          ),
+    // Große Knöpfe auf Android als Kapsel (Material).
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        shape: platform == TargetPlatform.iOS
+            ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.card))
+            : const StadiumBorder(),
+      ),
     ),
     listTileTheme: ListTileThemeData(
       titleTextStyle: TextStyle(fontSize: 15, color: c.ink),

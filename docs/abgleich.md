@@ -111,3 +111,7 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Linienabos sichtbar abbestellbar (Symbol je Zeile, „Abo beenden“, Umschalter in der Suche)
 - ✅ Fußnavigation: Lage nur vorwärts, nur echte Abbiegungen, Kehrtwende am Ziel übersprungen; Zentrieren-Knopf mit Mitführen
 - ✅ Beenden über die Benachrichtigung doppelt abgesichert (Dienst stoppt selbst, App erkennt fehlende Benachrichtigung)
+
+## v0.4.0 (23.09.2026)
+- ✅ Android im Material-Stil über die gemeinsamen Bausteine: Einstellungszeilen mit Symbol, Akzent-Abschnittstitel,
+  Filterchips (auch Meldungen), Segmentknopf, Material-Schalter, Kontrollkästchen, Kapselknöpfe, Material-Uhr

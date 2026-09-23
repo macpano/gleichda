@@ -38,19 +38,20 @@ class MoreScreen extends ConsumerWidget {
         Text('Mehr', style: context.t.screenTitle),
         const SizedBox(height: 16),
         ListGroup(children: [
-          _Row(label: 'Fahrtenwecker', value: active == 0 ? (alarms.isEmpty ? '' : 'Aus') : '$active aktiv',
+          _Row(icon: Icons.alarm_outlined, label: 'Fahrtenwecker', value: active == 0 ? (alarms.isEmpty ? '' : 'Aus') : '$active aktiv',
               onTap: () => push(const AlarmsScreen())),
-          _Row(label: 'Meine Orte', value: places.map((p) => p.name).take(2).join(', '),
+          _Row(icon: Icons.place_outlined, label: 'Meine Orte', value: places.map((p) => p.name).take(2).join(', '),
               onTap: () => push(const PlacesScreen())),
-          _Row(label: 'Favoriten und Verlauf', onTap: () => push(const _FavoritesHistoryScreen())),
+          _Row(icon: Icons.star_outline, label: 'Favoriten und Verlauf', onTap: () => push(const _FavoritesHistoryScreen())),
         ]),
         const SizedBox(height: 16),
         const SectionTitle('Allgemein', small: true),
         ListGroup(children: [
-          _Row(label: 'Profil', value: s.isDefault ? 'Standard' : 'Angepasst', onTap: () => push(const ProfileScreen())),
-          _Row(label: 'Linienabos', value: subs.map((x) => x.lineName).take(3).join(', '),
+          _Row(icon: Icons.person_outline, label: 'Profil', value: s.isDefault ? 'Standard' : 'Angepasst', onTap: () => push(const ProfileScreen())),
+          _Row(icon: Icons.notifications_none, label: 'Linienabos', value: subs.map((x) => x.lineName).take(3).join(', '),
               onTap: () => push(const SubscriptionsScreen())),
           _Row(
+            icon: Icons.palette_outlined,
             label: 'Erscheinungsbild',
             value: switch (mode) {
               ThemeMode.light => 'Hell',
@@ -63,36 +64,38 @@ class MoreScreen extends ConsumerWidget {
         const SizedBox(height: 16),
         const SectionTitle('Suche', small: true),
         ListGroup(children: [
-          _Row(label: 'Umsteigezeit', value: s.transferPace.label,
+          _Row(icon: Icons.transfer_within_a_station, label: 'Umsteigezeit', value: s.transferPace.label,
               onTap: () => _pickPace(context, ref, 'Umsteigezeit', s.transferPace, (p) => s.copyWith(transferPace: p))),
-          _Row(label: 'Gehgeschwindigkeit', value: s.walkPace.label,
+          _Row(icon: Icons.directions_walk, label: 'Gehgeschwindigkeit', value: s.walkPace.label,
               onTap: () => _pickPace(context, ref, 'Gehgeschwindigkeit', s.walkPace, (p) => s.copyWith(walkPace: p))),
-          _SwitchRow(label: 'Barrierefreie Wege', value: s.accessible,
+          _SwitchRow(icon: Icons.accessible_outlined, label: 'Barrierefreie Wege', value: s.accessible,
               onChanged: (v) => updateSettings(ref, (x) => x.copyWith(accessible: v))),
         ]),
         const SizedBox(height: 16),
         const SectionTitle('Datenschutz', small: true),
         ListGroup(children: [
           _SwitchRow(
+            icon: Icons.my_location_outlined,
             label: 'Standort beim Verwenden',
             value: s.useLocation,
             onChanged: (v) => updateSettings(ref, (x) => x.copyWith(useLocation: v)),
           ),
-          _Row(label: 'Verlauf löschen', color: c.red, chevron: false, onTap: () => _clearHistory(context, ref)),
+          _Row(icon: Icons.delete_outline, label: 'Verlauf löschen', color: c.red, chevron: false, onTap: () => _clearHistory(context, ref)),
         ]),
         const SizedBox(height: 16),
         const SectionTitle('Info', small: true),
         ListGroup(children: [
-          _Row(label: 'Datenquellen', onTap: () => push(const _TextScreen.sources())),
-          _Row(label: 'Datenschutzerklärung', onTap: () => push(const _TextScreen.privacy())),
-          _Row(label: 'Impressum', onTap: () => push(const _TextScreen.imprint())),
+          _Row(icon: Icons.dataset_outlined, label: 'Datenquellen', onTap: () => push(const _TextScreen.sources())),
+          _Row(icon: Icons.shield_outlined, label: 'Datenschutzerklärung', onTap: () => push(const _TextScreen.privacy())),
+          _Row(icon: Icons.info_outline, label: 'Impressum', onTap: () => push(const _TextScreen.imprint())),
           _Row(
+            icon: Icons.system_update_outlined,
             label: 'Aktualisierung',
             value: update.hasUpdate ? 'Version ${update.latest!.version} verfügbar' : update.current,
             color: null,
             onTap: () => push(const UpdateScreen()),
           ),
-          _Row(label: 'Farben und Schriften', onTap: () => push(const DesignDemoScreen())),
+          _Row(icon: Icons.format_paint_outlined, label: 'Farben und Schriften', onTap: () => push(const DesignDemoScreen())),
         ]),
         const SizedBox(height: 16),
         Padding(
@@ -170,59 +173,34 @@ class MoreScreen extends ConsumerWidget {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.label, this.value, this.onTap, this.color, this.chevron = true});
+  const _Row({required this.label, this.value, this.onTap, this.color, this.chevron = true, this.icon});
 
   final String label;
   final String? value;
   final VoidCallback? onTap;
   final Color? color;
   final bool chevron;
+  final IconData? icon;
 
   @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 44),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(children: [
-          OneLine(label, style: context.t.listRow.copyWith(color: color ?? c.ink)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: value == null
-                ? const SizedBox.shrink()
-                : Text(value!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.right,
-                    style: context.t.listRow.copyWith(color: c.muted)),
-          ),
-          if (chevron) ...[
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_right, size: 18, color: c.chevron),
-          ],
-        ]),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      ValueRow(label: label, value: value, onTap: onTap, labelColor: color, chevron: chevron, icon: icon);
 }
 
 class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({required this.label, required this.value, required this.onChanged});
+  const _SwitchRow({required this.label, required this.value, required this.onChanged, this.icon});
 
   final String label;
   final bool value;
   final ValueChanged<bool> onChanged;
+  final IconData? icon;
 
   @override
-  Widget build(BuildContext context) => Container(
-        constraints: const BoxConstraints(minHeight: 44),
-        padding: const EdgeInsets.only(left: 16, right: 8),
-        child: Row(children: [
-          Expanded(child: OneLine(label, style: context.t.listRow)),
-          Switch(value: value, onChanged: onChanged),
-        ]),
+  Widget build(BuildContext context) => ValueRow(
+        label: label,
+        icon: icon,
+        onTap: () => onChanged(!value),
+        trailing: Switch(value: value, onChanged: onChanged),
       );
 }
 

@@ -75,51 +75,36 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
               FreshnessStamp(updatedAt: state.at, now: now, failed: state.failed, refreshing: async.isLoading),
           ]),
           const SizedBox(height: 16),
-          Segmented<_Filter>(
-            options: const [(_Filter.all, 'Alle'), (_Filter.myLines, 'Meine Linien'), (_Filter.myStops, 'Meine Haltestellen')],
-            value: _filter,
-            onChanged: (f) => setState(() => _filter = f),
+          // Filter als Chips wie bei den Verbindungen – so passen auch lange
+          // Namen wie „Meine Haltestellen“ ohne Kürzung.
+          SizedBox(
+            height: 34,
+            child: ListView(scrollDirection: Axis.horizontal, children: [
+              for (final (f, label) in const [
+                (_Filter.all, 'Alle'),
+                (_Filter.myLines, 'Meine Linien'),
+                (_Filter.myStops, 'Meine Haltestellen'),
+              ])
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChipX(label: label, selected: _filter == f, onTap: () => setState(() => _filter = f)),
+                ),
+            ]),
           ),
           const SizedBox(height: 16),
           ListGroup(children: [
-            InkWell(
-              onTap: () => Navigator.of(context)
-                  .push(MaterialPageRoute(builder: (_) => const SubscriptionsScreen())),
-              child: SizedBox(
-                height: 52,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(children: [
-                    const Text('Benachrichtigungen', style: TextStyle(fontSize: 16)),
-                    const Spacer(),
-                    if (subs.isEmpty)
-                      Text('Keine Linien', style: TextStyle(fontSize: 15, color: c.muted))
-                    else
-                      for (final s in subs.take(4))
-                        Padding(
-                          padding: const EdgeInsets.only(left: 6),
-                          child: LineBadge(Line(id: s.lineId, name: s.lineName, mode: _modeGuess(s.lineName)),
-                              height: 22, width: 34),
-                        ),
-                    const SizedBox(width: 8),
-                    Icon(Icons.chevron_right, size: 18, color: c.chevron),
-                  ]),
-                ),
-              ),
+            ValueRow(
+              icon: Icons.notifications_none,
+              label: 'Linienabos',
+              value: subs.isEmpty ? 'Keine Linien' : subs.map((x) => x.lineName).join(', '),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SubscriptionsScreen())),
             ),
-            InkWell(
+            ValueRow(
+              icon: Icons.search,
+              label: 'Linie suchen und abonnieren',
+              labelColor: c.accent,
+              chevron: false,
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LineSearchScreen())),
-              child: SizedBox(
-                height: 52,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(children: [
-                    Icon(Icons.search, size: 20, color: c.accent),
-                    const SizedBox(width: 10),
-                    Text('Linie suchen und abonnieren', style: TextStyle(fontSize: 16, color: c.accent)),
-                  ]),
-                ),
-              ),
             ),
           ]),
           const SizedBox(height: 16),

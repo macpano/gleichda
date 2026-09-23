@@ -238,6 +238,41 @@ class _TimeSheetState extends ConsumerState<_TimeSheet> {
               ],
             ),
             const SizedBox(height: 16),
+            // Android: große Uhrzeit, ein Tipp öffnet die Material-Uhr;
+            // iPhone: Drehrad wie im Entwurf.
+            if (!context.isIOS)
+              Material(
+                color: c.surface,
+                borderRadius: BorderRadius.circular(Radii.card),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(Radii.card),
+                  onTap: () async {
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.fromDateTime(base),
+                      builder: (ctx, child) => MediaQuery(
+                        data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
+                        child: child!,
+                      ),
+                    );
+                    if (picked != null) {
+                      _set(SearchTime(
+                        time: DateTime(base.year, base.month, base.day, picked.hour, picked.minute),
+                        arriveBy: _t.arriveBy,
+                      ));
+                    }
+                  },
+                  child: SizedBox(
+                    height: 96,
+                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Text(hm(base), style: context.t.time(44).copyWith(color: _t.isNow ? c.muted : c.ink)),
+                      const SizedBox(width: 12),
+                      Icon(Icons.edit_outlined, size: 20, color: c.muted),
+                    ]),
+                  ),
+                ),
+              )
+            else
             Container(
               height: 170,
               decoration: BoxDecoration(

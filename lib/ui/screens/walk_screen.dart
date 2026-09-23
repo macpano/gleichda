@@ -390,7 +390,7 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
                     style: FilledButton.styleFrom(
                       backgroundColor: c.accent,
                       foregroundColor: c.onAccent,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: buttonShape(context),
                     ),
                     onPressed: t == null
                         ? null
@@ -410,7 +410,7 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
                     style: TextButton.styleFrom(
                       backgroundColor: c.fill,
                       foregroundColor: c.ink,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: buttonShape(context),
                     ),
                     onPressed: t == null
                         ? null
