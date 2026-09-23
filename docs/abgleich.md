@@ -347,3 +347,16 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   mittig. `logo.svg`, `logo-dark.svg`, `appicon.svg`, `icon/foreground.svg`; App-Symbol und Startbild neu erzeugt
   (Chrome headless, `flutter_launcher_icons`, `flutter_native_splash`)
 - ✅ Kopf der Startseite: Wortmarke und Leitsatz genau so hoch wie das Logo (oben und unten bündig, gemessen)
+
+## 0.4.13-vorab.3 (24.09.2026)
+- ✅ Kopf: Wortmarke 35 und Leitsatz 13,5 näher zusammen (Abstand 13 → 8), weiter oben und unten bündig mit dem Logo (44)
+- ✅ **Anschlussüberwachung** während der Begleitung (`_watch` in `state/companion.dart`): alle 15 s der nächste
+  bevorstehende Umstieg (`upcomingMissed`, gesicherte Anschlüsse ausgenommen) und Ausfälle. Bei einem Problem sucht die
+  App im Hintergrund eine Alternative (höchstens alle 2 min), ab dem nächsten Halt im Fahrzeug, der Umsteigehaltestelle
+  bzw. vor dem Einsteigen ab dem Standort (`alternativeStart`, auch die Alternativen-Seite). Einmal je Problem ein
+  Hinweis mit Ton („Anschluss in X nicht erreichbar – Alternative: 604 um 18:42 ab …“), Tipp öffnet die Alternativen;
+  die laufende Benachrichtigung nennt sie ebenfalls. Wählt man eine Alternative, begleitet die App sie weiter
+- ✅ **Begleitung übersteht das Schließen der App:** Die Flutter-Engine hängt nicht mehr am Fenster
+  (`MainActivity.provideFlutterEngine` + `FlutterEngineCache`, `shouldDestroyEngineWithHost = false`) und läuft weiter,
+  solange der Vordergrunddienst den Prozess hält. Beendet Android die App ganz, setzt sie beim nächsten Start fort
+  (Einstellung `unterwegs`)

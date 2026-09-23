@@ -218,3 +218,37 @@ CompanionStep nextStep(Trip trip, DateTime now, {GeoPoint? gps}) {
   final p = span <= 0 ? 1.0 : (now.difference(start).inSeconds / span).clamp(0.0, 1.0);
   return CompanionStep(phase: CompanionPhase.toDestination, where: last.to, when: EventTime(planned: end), progress: p);
 }
+
+/// Von wo aus Alternativen gesucht werden: im Fahrzeug ab dem nächsten Halt
+/// (Ankunftszeit dort), beim Umsteigen bzw. Warten ab der Haltestelle, an der
+/// man steht, vor dem ersten Einstieg ab dem eigenen Standort (mit GPS),
+/// sonst ab dem Einstieg. Null, wenn nur noch der Fußweg zum Ziel fehlt.
+({Location from, DateTime time})? alternativeStart(Trip trip, DateTime now, {GeoPoint? gps}) {
+  final step = nextStep(trip, now, gps: gps);
+  switch (step.phase) {
+    case CompanionPhase.onBoard:
+      final next = step.nextStop ?? step.where;
+      final at = (next.arrival ?? next.departure)?.best;
+      return (from: next.stop, time: at != null && at.isAfter(now) ? at : now);
+    case CompanionPhase.transfer:
+    case CompanionPhase.waiting:
+      return (from: step.where.stop, time: now);
+    case CompanionPhase.toStop:
+      if (gps != null) {
+        return (
+          from: Location(
+              id: 'coord:${gps.lat}:${gps.lon}',
+              providerId: 'gps',
+              name: 'Mein Standort',
+              lat: gps.lat,
+              lon: gps.lon,
+              type: LocationType.coordinate),
+          time: now,
+        );
+      }
+      return (from: step.where.stop, time: now);
+    case CompanionPhase.toDestination:
+    case CompanionPhase.arrived:
+      return null;
+  }
+}

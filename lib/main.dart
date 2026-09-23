@@ -13,6 +13,7 @@ import 'state/alarm_planner.dart';
 import 'state/companion.dart';
 import 'state/notifications.dart';
 import 'state/providers.dart';
+import 'ui/screens/alternatives_screen.dart';
 import 'ui/screens/trip_screen.dart';
 import 'ui/screens/connections_screen.dart';
 import 'ui/screens/messages_screen.dart';
@@ -63,6 +64,12 @@ Future<void> handleNotification(ProviderContainer container, String? payload, St
             (_) => WalkScreen(target: step.where.stop, platform: step.where.platform, departure: step.when));
       }
     }
+    return;
+  }
+  if (payload == 'alternativen') {
+    final trip = container.read(lastTripProvider).value?.trip;
+    pushOnce(nav, 'fahrt', (_) => const TripScreen());
+    if (trip != null) pushOnce(nav, 'alternativen', (_) => AlternativesScreen(trip: trip));
     return;
   }
   if (payload != null && payload.startsWith('alarm:')) {

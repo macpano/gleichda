@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../state/companion.dart';
+
+import '../../domain/companion.dart';
+
 import '../../data/transit_provider.dart';
 import '../../domain/models.dart';
 import '../../domain/settings.dart';
@@ -39,17 +43,17 @@ class _AlternativesScreenState extends ConsumerState<AlternativesScreen> {
     _load();
   }
 
-  /// Wer schon unterwegs ist, sucht ab dem nächsten erreichbaren Halt; sonst
-  /// ab dem ursprünglichen Start.
-  static Location _startPoint(Trip trip, DateTime now) {
-    for (final r in trip.rides) {
-      final dep = r.from.departure?.best;
-      if (dep != null && dep.isAfter(now)) return r.from.stop;
-      final arr = r.to.arrival?.best;
-      if (arr != null && arr.isAfter(now)) return r.to.stop;
-    }
-    return trip.origin;
+  /// Wer schon unterwegs ist, sucht ab dem nächsten Halt (im Fahrzeug) bzw.
+  /// der Umsteigehaltestelle, vor dem Einsteigen ab dem eigenen Standort –
+  /// wie die Überwachung während der Begleitung (`alternativeStart`).
+  Location _startPoint(Trip trip, DateTime now) {
+    final gps = ref.read(companionProvider).freshGps(now);
+    final start = alternativeStart(trip, now, gps: gps);
+    _startTime = start?.time;
+    return start?.from ?? trip.origin;
   }
+
+  DateTime? _startTime;
 
   Future<List<Trip>> _search(DateTime time) {
     final settings = ref.read(settingsProvider).value ?? const AppSettings();
@@ -89,7 +93,8 @@ class _AlternativesScreenState extends ConsumerState<AlternativesScreen> {
       _error = null;
     });
     try {
-      final trips = await _search(DateTime.now());
+      final at = _startTime ?? DateTime.now();
+      final trips = dropStarted(await _search(at), at);
       if (!mounted) return;
       setState(() {
         _trips = trips.where((t) => tripSignature(t) != tripSignature(widget.trip)).toList();
@@ -123,7 +128,11 @@ class _AlternativesScreenState extends ConsumerState<AlternativesScreen> {
     final later = rest.where((i) => i.trip.arrival.best.isAfter(arr)).toList();
 
     void open(Trip t) {
-      ref.read(lastTripProvider.notifier).open(t);
+      final following = ref.read(companionProvider).active;
+      ref.read(lastTripProvider.notifier).open(t).then((_) {
+        // Lief die Begleitung, geht sie mit der neuen Verbindung weiter.
+        if (following) ref.read(companionProvider.notifier).start();
+      });
       Navigator.of(context).pushReplacement(MaterialPageRoute(settings: const RouteSettings(name: 'fahrt'), builder: (_) => const TripScreen()));
     }
 
