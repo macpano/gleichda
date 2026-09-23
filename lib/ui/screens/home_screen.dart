@@ -107,14 +107,17 @@ class _Brand extends StatelessWidget {
       child: Row(children: [
         const LogoMark(size: 42),
         const SizedBox(width: 12),
+        // Leitsatz klein und dicht unter dem Namen, etwa so breit wie er –
+        // Name und Leitsatz wirken als ein Block (Nutzervorgabe 24.09.2026).
         Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Wordmark(size: 26),
-          const SizedBox(height: 3),
-          Padding(
-            padding: const EdgeInsets.only(left: 1),
+          // Die Wortmarke hält unten Platz für Unterlängen, die „Gleich.da“
+          // nicht hat – der Leitsatz rückt deshalb in diesen Raum.
+          Transform.translate(
+            offset: const Offset(1, -3),
             child: Text('Bus und Bahn in Echtzeit',
                 textScaler: TextScaler.noScaling,
-                style: TextStyle(fontSize: 12, letterSpacing: 0.2, color: c.muted, height: 1)),
+                style: TextStyle(fontSize: 10, letterSpacing: 0.2, color: c.muted, height: 1)),
           ),
         ]),
       ]),
