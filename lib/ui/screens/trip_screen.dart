@@ -234,7 +234,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
         TransferState.tight => ('Anschluss knapp', c.orange),
         TransferState.missed => ('Anschluss nicht erreichbar', c.red),
         TransferState.staySeated => ('', c.muted),
-        TransferState.guaranteed => ('Anschluss wartet in der Regel', c.green),
+        TransferState.guaranteed => ('Anschluss wartet', c.green),
         null => ('', c.muted),
       };
       return _Row(
