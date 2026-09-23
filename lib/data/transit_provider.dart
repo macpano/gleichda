@@ -125,6 +125,9 @@ abstract class TransitProvider {
   /// Endhaltestelle, als Verbindung mit einem Abschnitt. null, wenn unbekannt.
   Future<Trip?> tripOfDeparture(Departure departure);
 
+  /// Linien, die an den Haltestellen nahe [near] halten (für „In deiner Nähe“).
+  Future<List<Line>> linesNear(GeoPoint near);
+
   /// Linien zum Suchbegriff (Liniennummer), etwa zum Abonnieren –
   /// deutschlandweit, Linien in der Nähe von [near] zuerst.
   Future<List<Line>> searchLines(String query, {GeoPoint? near});

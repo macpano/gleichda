@@ -17,6 +17,21 @@ enum _Filter { all, myLines, myStops }
 /// Gilt erst in der Zukunft (z. B. „ab 25.09.“).
 bool _upcoming(Message m, DateTime now) => m.validFrom != null && m.validFrom!.isAfter(now);
 
+/// Abschnitte der Liste: „In deiner Nähe“, „Weitere in der Umgebung“,
+/// „Demnächst“. Ohne Standort (keine Linien in der Nähe) eine Liste ohne Titel.
+List<(String?, List<Message>)> _sections(List<Message> list, MessagesState state, DateTime now) {
+  final current = list.where((m) => !_upcoming(m, now)).toList();
+  final upcoming = list.where((m) => _upcoming(m, now)).toList()
+    ..sort((a, b) => a.validFrom!.compareTo(b.validFrom!));
+  final near = current.where(state.isNear).toList();
+  final rest = current.where((m) => !state.isNear(m)).toList();
+  return [
+    if (near.isNotEmpty) ('In deiner Nähe', near),
+    (near.isEmpty ? null : 'Weitere in der Umgebung', rest),
+    ('Demnächst', upcoming),
+  ];
+}
+
 /// Meldungen: Störungen und Hinweise, gefiltert nach Abos und Haltestellen.
 class MessagesScreen extends ConsumerStatefulWidget {
   const MessagesScreen({super.key});
@@ -63,7 +78,9 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
     final subKeys = subs.map((s) => s.lineId).toSet();
     final stopKeys = _myStops();
     final list = (state?.messages ?? const <Message>[]).where((m) => switch (_filter) {
-          _Filter.all => true,
+          // Alle: in der Nähe und im eigenen Ort; Nachbargemeinden nur mit
+          // Linien, die hier halten.
+          _Filter.all => state!.isRelevant(m),
           _Filter.myLines => m.lineIds.any(subKeys.contains),
           _Filter.myStops => m.stopIds.map(stopAreaId).any(stopKeys.contains),
         }).toList();
@@ -125,24 +142,19 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
               _Filter.all => 'Keine aktuellen Meldungen.',
             })
           else ...[
-            // Jetzt gültig zuerst, darunter „Demnächst“ (z. B. Sperrung am Wochenende).
-            if (list.any((m) => !_upcoming(m, now)))
-              ListGroup(children: [
-                for (final m in list.where((m) => !_upcoming(m, now))) MessageCard(message: m, subscribed: subKeys),
-              ]),
-            if (list.any((m) => _upcoming(m, now))) ...[
-              const SizedBox(height: 16),
-              const SectionTitle('Demnächst', small: true),
-              ListGroup(children: [
-                for (final m in list.where((m) => _upcoming(m, now))..toList().sort((a, b) => a.validFrom!.compareTo(b.validFrom!)))
-                  MessageCard(message: m, subscribed: subKeys),
-              ]),
-            ],
+            // In deiner Nähe (Linien, die hier halten) zuerst, dann der Rest
+            // des eigenen Orts, zuletzt „Demnächst“ (z. B. Sperrung am Wochenende).
+            for (final (title, group) in _sections(list, state, now))
+              if (group.isNotEmpty) ...[
+                if (title != null) SectionTitle(title, small: true),
+                ListGroup(children: [for (final m in group) MessageCard(message: m, subscribed: subKeys)]),
+                const SizedBox(height: 16),
+              ],
           ],
           if (state != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text('Quelle: VRR-Auskunft (EFA), dein Ort und die Gemeinden im Umkreis von etwa 5 km.',
+              child: Text('Quelle: VRR-Auskunft (EFA). „In deiner Nähe“: Linien, die an Haltestellen im Umkreis von 1,5 km halten.',
                   style: TextStyle(fontSize: 12, color: c.muted)),
             ),
         ],

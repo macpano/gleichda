@@ -97,6 +97,9 @@ class FakeProvider implements TransitProvider {
   Future<Trip?> tripOfDeparture(Departure departure) async => null;
 
   @override
+  Future<List<Line>> linesNear(GeoPoint near) async => const [];
+
+  @override
   Future<List<Line>> searchLines(String query, {GeoPoint? near}) async => const [
         Line(id: 'wsw:66604', name: '604', mode: TransportMode.bus, product: 'bus', longName: 'Langerfeld – Rott'),
         Line(id: 'wsw:64060', name: '60', mode: TransportMode.suspension, product: 'suspension', longName: 'Oberbarmen – Vohwinkel'),

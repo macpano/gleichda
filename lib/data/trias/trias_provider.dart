@@ -133,6 +133,9 @@ class TriasProvider implements TransitProvider {
   @override
   Future<List<Line>> searchLines(String query, {GeoPoint? near}) async => const [];
 
+  @override
+  Future<List<Line>> linesNear(GeoPoint near) async => const [];
+
   /// TRIAS kennt über die Suche nur die Haltestelle selbst, keine Steige.
   @override
   Future<List<Platform>> platforms(Location stop) async {

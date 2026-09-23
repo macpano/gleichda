@@ -246,6 +246,9 @@ _Message _$MessageFromJson(Map<String, dynamic> json) => _Message(
       ? null
       : DateTime.parse(json['validTo'] as String),
   source: json['source'] as String?,
+  regions:
+      (json['regions'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      const <String>[],
 );
 
 Map<String, dynamic> _$MessageToJson(_Message instance) => <String, dynamic>{
@@ -258,6 +261,7 @@ Map<String, dynamic> _$MessageToJson(_Message instance) => <String, dynamic>{
   'validFrom': ?instance.validFrom?.toIso8601String(),
   'validTo': ?instance.validTo?.toIso8601String(),
   'source': ?instance.source,
+  'regions': instance.regions,
 };
 
 _TimeWindow _$TimeWindowFromJson(Map<String, dynamic> json) => _TimeWindow(

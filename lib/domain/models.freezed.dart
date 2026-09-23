@@ -2270,7 +2270,8 @@ mixin _$Message {
 
  String get id; String get title; String? get text; List<String> get lineIds;/// Liniennummern passend zu [lineIds], für die Anzeige als Plaketten.
  List<String> get lineNames; List<String> get stopIds; DateTime? get validFrom; DateTime? get validTo;/// Datenquelle, z. B. „VRR“ oder „DB“.
- String? get source;
+ String? get source;/// Gebiete (Gemeindeschlüssel), unter denen die Auskunft sie führt.
+ List<String> get regions;
 /// Create a copy of Message
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2284,20 +2285,20 @@ $MessageCopyWith<Message> get copyWith => _$MessageCopyWithImpl<Message>(this as
 @override
 bool operator ==(Object other) {
   final _this = this as Message;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Message&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.title, _this.title) || other.title == _this.title)&&(identical(other.text, _this.text) || other.text == _this.text)&&const DeepCollectionEquality().equals(other.lineIds, _this.lineIds)&&const DeepCollectionEquality().equals(other.lineNames, _this.lineNames)&&const DeepCollectionEquality().equals(other.stopIds, _this.stopIds)&&(identical(other.validFrom, _this.validFrom) || other.validFrom == _this.validFrom)&&(identical(other.validTo, _this.validTo) || other.validTo == _this.validTo)&&(identical(other.source, _this.source) || other.source == _this.source));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Message&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.title, _this.title) || other.title == _this.title)&&(identical(other.text, _this.text) || other.text == _this.text)&&const DeepCollectionEquality().equals(other.lineIds, _this.lineIds)&&const DeepCollectionEquality().equals(other.lineNames, _this.lineNames)&&const DeepCollectionEquality().equals(other.stopIds, _this.stopIds)&&(identical(other.validFrom, _this.validFrom) || other.validFrom == _this.validFrom)&&(identical(other.validTo, _this.validTo) || other.validTo == _this.validTo)&&(identical(other.source, _this.source) || other.source == _this.source)&&const DeepCollectionEquality().equals(other.regions, _this.regions));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Message;
-  return Object.hash(runtimeType,_this.id,_this.title,_this.text,const DeepCollectionEquality().hash(_this.lineIds),const DeepCollectionEquality().hash(_this.lineNames),const DeepCollectionEquality().hash(_this.stopIds),_this.validFrom,_this.validTo,_this.source);
+  return Object.hash(runtimeType,_this.id,_this.title,_this.text,const DeepCollectionEquality().hash(_this.lineIds),const DeepCollectionEquality().hash(_this.lineNames),const DeepCollectionEquality().hash(_this.stopIds),_this.validFrom,_this.validTo,_this.source,const DeepCollectionEquality().hash(_this.regions));
 }
 
 @override
 String toString() {
   final _this = this as Message;
-  return 'Message(id: ${_this.id}, title: ${_this.title}, text: ${_this.text}, lineIds: ${_this.lineIds}, lineNames: ${_this.lineNames}, stopIds: ${_this.stopIds}, validFrom: ${_this.validFrom}, validTo: ${_this.validTo}, source: ${_this.source})';
+  return 'Message(id: ${_this.id}, title: ${_this.title}, text: ${_this.text}, lineIds: ${_this.lineIds}, lineNames: ${_this.lineNames}, stopIds: ${_this.stopIds}, validFrom: ${_this.validFrom}, validTo: ${_this.validTo}, source: ${_this.source}, regions: ${_this.regions})';
 }
 
 
@@ -2308,7 +2309,7 @@ abstract mixin class $MessageCopyWith<$Res>  {
   factory $MessageCopyWith(Message value, $Res Function(Message) _then) = _$MessageCopyWithImpl;
 @useResult
 $Res call({
- String id, String title, String? text, List<String> lineIds, List<String> lineNames, List<String> stopIds, DateTime? validFrom, DateTime? validTo, String? source
+ String id, String title, String? text, List<String> lineIds, List<String> lineNames, List<String> stopIds, DateTime? validFrom, DateTime? validTo, String? source, List<String> regions
 });
 
 
@@ -2325,7 +2326,7 @@ class _$MessageCopyWithImpl<$Res>
 
 /// Create a copy of Message
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? text = freezed,Object? lineIds = null,Object? lineNames = null,Object? stopIds = null,Object? validFrom = freezed,Object? validTo = freezed,Object? source = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? text = freezed,Object? lineIds = null,Object? lineNames = null,Object? stopIds = null,Object? validFrom = freezed,Object? validTo = freezed,Object? source = freezed,Object? regions = null,}) {
   return _then(Message(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -2336,7 +2337,8 @@ as List<String>,stopIds: null == stopIds ? _self.stopIds : stopIds // ignore: ca
 as List<String>,validFrom: freezed == validFrom ? _self.validFrom : validFrom // ignore: cast_nullable_to_non_nullable
 as DateTime?,validTo: freezed == validTo ? _self.validTo : validTo // ignore: cast_nullable_to_non_nullable
 as DateTime?,source: freezed == source ? _self.source : source // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,regions: null == regions ? _self.regions : regions // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 
@@ -2421,10 +2423,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String? text,  List<String> lineIds,  List<String> lineNames,  List<String> stopIds,  DateTime? validFrom,  DateTime? validTo,  String? source)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String? text,  List<String> lineIds,  List<String> lineNames,  List<String> stopIds,  DateTime? validFrom,  DateTime? validTo,  String? source,  List<String> regions)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Message() when $default != null:
-return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.lineNames,_that.stopIds,_that.validFrom,_that.validTo,_that.source);case _:
+return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.lineNames,_that.stopIds,_that.validFrom,_that.validTo,_that.source,_that.regions);case _:
   return orElse();
 
 }
@@ -2442,10 +2444,10 @@ return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.lineNames,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String? text,  List<String> lineIds,  List<String> lineNames,  List<String> stopIds,  DateTime? validFrom,  DateTime? validTo,  String? source)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String? text,  List<String> lineIds,  List<String> lineNames,  List<String> stopIds,  DateTime? validFrom,  DateTime? validTo,  String? source,  List<String> regions)  $default,) {final _that = this;
 switch (_that) {
 case _Message():
-return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.lineNames,_that.stopIds,_that.validFrom,_that.validTo,_that.source);case _:
+return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.lineNames,_that.stopIds,_that.validFrom,_that.validTo,_that.source,_that.regions);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2462,10 +2464,10 @@ return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.lineNames,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String? text,  List<String> lineIds,  List<String> lineNames,  List<String> stopIds,  DateTime? validFrom,  DateTime? validTo,  String? source)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String? text,  List<String> lineIds,  List<String> lineNames,  List<String> stopIds,  DateTime? validFrom,  DateTime? validTo,  String? source,  List<String> regions)?  $default,) {final _that = this;
 switch (_that) {
 case _Message() when $default != null:
-return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.lineNames,_that.stopIds,_that.validFrom,_that.validTo,_that.source);case _:
+return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.lineNames,_that.stopIds,_that.validFrom,_that.validTo,_that.source,_that.regions);case _:
   return null;
 
 }
@@ -2477,7 +2479,7 @@ return $default(_that.id,_that.title,_that.text,_that.lineIds,_that.lineNames,_t
 @JsonSerializable()
 
 class _Message implements Message {
-  const _Message({required this.id, required this.title, this.text,  List<String> lineIds = const <String>[],  List<String> lineNames = const <String>[],  List<String> stopIds = const <String>[], this.validFrom, this.validTo, this.source}): _lineIds = lineIds,_lineNames = lineNames,_stopIds = stopIds;
+  const _Message({required this.id, required this.title, this.text,  List<String> lineIds = const <String>[],  List<String> lineNames = const <String>[],  List<String> stopIds = const <String>[], this.validFrom, this.validTo, this.source,  List<String> regions = const <String>[]}): _lineIds = lineIds,_lineNames = lineNames,_stopIds = stopIds,_regions = regions;
   factory _Message.fromJson(Map<String, dynamic> json) => _$MessageFromJson(json);
 
 @override final  String id;
@@ -2510,6 +2512,15 @@ class _Message implements Message {
 @override final  DateTime? validTo;
 /// Datenquelle, z. B. „VRR“ oder „DB“.
 @override final  String? source;
+/// Gebiete (Gemeindeschlüssel), unter denen die Auskunft sie führt.
+ final  List<String> _regions;
+/// Gebiete (Gemeindeschlüssel), unter denen die Auskunft sie führt.
+@override@JsonKey() List<String> get regions {
+  if (_regions is EqualUnmodifiableListView) return _regions;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_regions);
+}
+
 
 /// Create a copy of Message
 /// with the given fields replaced by the non-null parameter values.
@@ -2524,18 +2535,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Message&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.text, text) || other.text == text)&&const DeepCollectionEquality().equals(other.lineIds, _lineIds)&&const DeepCollectionEquality().equals(other.lineNames, _lineNames)&&const DeepCollectionEquality().equals(other.stopIds, _stopIds)&&(identical(other.validFrom, validFrom) || other.validFrom == validFrom)&&(identical(other.validTo, validTo) || other.validTo == validTo)&&(identical(other.source, source) || other.source == source));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Message&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.text, text) || other.text == text)&&const DeepCollectionEquality().equals(other.lineIds, _lineIds)&&const DeepCollectionEquality().equals(other.lineNames, _lineNames)&&const DeepCollectionEquality().equals(other.stopIds, _stopIds)&&(identical(other.validFrom, validFrom) || other.validFrom == validFrom)&&(identical(other.validTo, validTo) || other.validTo == validTo)&&(identical(other.source, source) || other.source == source)&&const DeepCollectionEquality().equals(other.regions, _regions));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,title,text,const DeepCollectionEquality().hash(_lineIds),const DeepCollectionEquality().hash(_lineNames),const DeepCollectionEquality().hash(_stopIds),validFrom,validTo,source);
+    return Object.hash(runtimeType,id,title,text,const DeepCollectionEquality().hash(_lineIds),const DeepCollectionEquality().hash(_lineNames),const DeepCollectionEquality().hash(_stopIds),validFrom,validTo,source,const DeepCollectionEquality().hash(_regions));
 }
 
 @override
 String toString() {
-    return 'Message(id: $id, title: $title, text: $text, lineIds: $lineIds, lineNames: $lineNames, stopIds: $stopIds, validFrom: $validFrom, validTo: $validTo, source: $source)';
+    return 'Message(id: $id, title: $title, text: $text, lineIds: $lineIds, lineNames: $lineNames, stopIds: $stopIds, validFrom: $validFrom, validTo: $validTo, source: $source, regions: $regions)';
 }
 
 
@@ -2546,7 +2557,7 @@ abstract mixin class _$MessageCopyWith<$Res> implements $MessageCopyWith<$Res> {
   factory _$MessageCopyWith(_Message value, $Res Function(_Message) _then) = __$MessageCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String title, String? text, List<String> lineIds, List<String> lineNames, List<String> stopIds, DateTime? validFrom, DateTime? validTo, String? source
+ String id, String title, String? text, List<String> lineIds, List<String> lineNames, List<String> stopIds, DateTime? validFrom, DateTime? validTo, String? source, List<String> regions
 });
 
 
@@ -2563,7 +2574,7 @@ class __$MessageCopyWithImpl<$Res>
 
 /// Create a copy of Message
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? text = freezed,Object? lineIds = null,Object? lineNames = null,Object? stopIds = null,Object? validFrom = freezed,Object? validTo = freezed,Object? source = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? text = freezed,Object? lineIds = null,Object? lineNames = null,Object? stopIds = null,Object? validFrom = freezed,Object? validTo = freezed,Object? source = freezed,Object? regions = null,}) {
   return _then(_Message(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -2574,7 +2585,8 @@ as List<String>,stopIds: null == stopIds ? _self._stopIds : stopIds // ignore: c
 as List<String>,validFrom: freezed == validFrom ? _self.validFrom : validFrom // ignore: cast_nullable_to_non_nullable
 as DateTime?,validTo: freezed == validTo ? _self.validTo : validTo // ignore: cast_nullable_to_non_nullable
 as DateTime?,source: freezed == source ? _self.source : source // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,regions: null == regions ? _self._regions : regions // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 

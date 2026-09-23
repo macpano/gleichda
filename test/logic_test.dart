@@ -288,6 +288,17 @@ void main() {
     expect(behind.progress, greaterThan(0.8));
   });
 
+  test('Meldungen: Nähe über Linien, fremde Betriebe fallen heraus', () {
+    Message m(String id, List<String> lines, [List<String> regions = const ['5914000']]) =>
+        Message(id: id, title: id, lineIds: lines, regions: regions);
+    final st = MessagesState(const [], DateTime(2026), nearLines: const {'hst:50542', 'hst:50512'}, homeRegion: '5914000');
+    expect(st.isNear(m('a', ['hst:50542'])), isTrue);
+    expect(st.isRelevant(m('b', ['hst:50539'])), isTrue, reason: 'gleicher Betrieb');
+    expect(st.isRelevant(m('c', ['mvg:10013'])), isFalse, reason: 'MVG in Iserlohn, unter Hagen geführt');
+    expect(st.isRelevant(m('d', [])), isTrue, reason: 'allgemein, eigener Ort');
+    expect(st.isRelevant(m('e', [], ['5913000'])), isFalse, reason: 'allgemein, Nachbarort');
+  });
+
   group('Verbindungsliste', () {
     Trip t(String id, int h, int m) => Trip(id: id, legs: [ride('A', at(h, m), 'B', at(h, m + 20))]);
 

@@ -78,12 +78,15 @@ class VrrProvider implements TransitProvider {
     final lists = await Future.wait(omcs.map((o) => efa.messages(omc: o).then<List<Message>?>((l) => l,
         onError: (Object _) => null)));
     if (lists.every((l) => l == null)) throw const ProviderException('Meldungen nicht abrufbar');
-    final seen = <String>{};
-    final all = [
-      for (final l in lists)
-        for (final m in l ?? const <Message>[])
-          if (seen.add(m.id)) m,
-    ];
+    // Je Meldung einmal, mit allen Gebieten, unter denen sie steht.
+    final byId = <String, Message>{};
+    for (var i = 0; i < lists.length; i++) {
+      for (final m in lists[i] ?? const <Message>[]) {
+        final prev = byId[m.id];
+        byId[m.id] = (prev ?? m).copyWith(regions: [...?prev?.regions, omcs[i]]);
+      }
+    }
+    final all = byId.values.toList();
     if (lineIds.isEmpty) return all;
     final keys = lineIds.map(lineKey).toSet();
     return all.where((m) => m.lineIds.any(keys.contains)).toList();
@@ -230,6 +233,9 @@ class VrrProvider implements TransitProvider {
     if (parts.first == 'ddb' && parts.length > 1 && parts[1].length > 2) return 'ddb:${parts[1][2]}';
     return parts.first;
   }
+
+  @override
+  Future<List<Line>> linesNear(GeoPoint near) => _linesNear(near);
 
   GeoPoint? _nearAt;
   Future<List<Line>>? _near;
