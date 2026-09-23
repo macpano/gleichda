@@ -26,16 +26,17 @@ extension PaceLabel on Pace {
       };
 }
 
-/// Suchprofil der Verbindungssuche.
-enum SearchProfile { all, fastest, fewChanges, lessWalking, accessible }
+/// Sortierung der Verbindungen. Alle Varianten kommen aus einer Suche
+/// (schnellste, wenig Umstiege, wenig Fußweg zusammen); umsortiert wird
+/// sofort, ohne neue Anfrage.
+enum ConnectionSort { departure, fastest, fewChanges, lessWalking }
 
-extension SearchProfileLabel on SearchProfile {
+extension ConnectionSortLabel on ConnectionSort {
   String get label => switch (this) {
-        SearchProfile.all => 'Alle',
-        SearchProfile.fastest => 'Schnellste',
-        SearchProfile.fewChanges => 'Wenig Umstiege',
-        SearchProfile.lessWalking => 'Wenig Fußweg',
-        SearchProfile.accessible => 'Barrierefrei',
+        ConnectionSort.departure => 'Abfahrt',
+        ConnectionSort.fastest => 'Schnellste',
+        ConnectionSort.fewChanges => 'Wenig Umstiege',
+        ConnectionSort.lessWalking => 'Wenig Fußweg',
       };
 }
 

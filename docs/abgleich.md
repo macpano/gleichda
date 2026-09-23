@@ -135,3 +135,7 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Alternativen: „Spätere Verbindungen“
 - ✅ Suchprofile und Meldungsfilter ohne seitliches Scrollen (Umbruch), „Mein Standort“ nie als Ziel,
   Von/Nach bündig untereinander
+
+## v0.4.6 (23.09.2026)
+- ✅ Verbindungen: statt fünf Profil-Chips eine Zeile – Sortierung als Menü (Abfahrt, Schnellste, Wenig Umstiege,
+  Wenig Fußweg; sortiert sofort ohne neue Anfrage, weil alle Varianten aus einer Suche kommen) und „Barrierefrei“

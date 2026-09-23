@@ -527,12 +527,16 @@ class MiniRoutePainter extends CustomPainter {
 /// Auswahl-Chip für Filter und Profile. Android: Material-Filterchip
 /// (umrandet, gewählt gefüllt mit Haken); iPhone: Kapsel, gewählt schwarz.
 class ChoiceChipX extends StatelessWidget {
-  const ChoiceChipX({super.key, required this.label, required this.selected, required this.onTap, this.icon});
+  const ChoiceChipX(
+      {super.key, required this.label, required this.selected, required this.onTap, this.icon, this.dropdown = false});
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
   final IconData? icon;
+
+  /// Öffnet ein Menü: Pfeil nach unten am Ende.
+  final bool dropdown;
 
   @override
   Widget build(BuildContext context) {
@@ -564,6 +568,7 @@ class ChoiceChipX extends StatelessWidget {
                     maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 14, color: fg, fontWeight: !ios && selected ? FontWeight.w600 : FontWeight.w400)),
               ),
+              if (dropdown) ...[const SizedBox(width: 2), Icon(Icons.arrow_drop_down, size: 20, color: fg)],
             ]),
           ),
         ),

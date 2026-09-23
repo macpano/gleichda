@@ -255,6 +255,15 @@ void main() {
     expect(joined.single.to.stop.name, trip.destination.name);
   });
 
+  test('Sortierung ohne neue Suche: schnellste, wenig Umstiege', () {
+    final slow = Trip(id: 'slow', legs: [ride('A', at(14, 0), 'B', at(14, 50))]);
+    final fast = Trip(id: 'fast', legs: [ride('A', at(14, 10), 'C', at(14, 20)), ride('C', at(14, 25), 'B', at(14, 40))]);
+    final items = rateConnections([slow, fast], transferMinutes: 3);
+    expect(sortConnections(items, ConnectionSort.departure).first.trip.id, 'slow');
+    expect(sortConnections(items, ConnectionSort.fastest).first.trip.id, 'fast');
+    expect(sortConnections(items, ConnectionSort.fewChanges).first.trip.id, 'slow');
+  });
+
   group('Verbindungsliste', () {
     Trip t(String id, int h, int m) => Trip(id: id, legs: [ride('A', at(h, m), 'B', at(h, m + 20))]);
 
