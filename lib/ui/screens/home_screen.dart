@@ -96,26 +96,44 @@ class _PlaceShortcuts extends ConsumerWidget {
 class _Brand extends StatelessWidget {
   const _Brand();
 
-  /// Name und Zeichen dezent abgehoben: etwas größer, darunter leise die
-  /// Aufgabe der App – ohne Fläche, Schatten oder Verlauf.
+  /// Name und Zeichen dezent abgehoben: Schriftzug und Leitsatz stehen genau
+  /// so hoch wie das Logo – oben bündig mit der Kachel, unten bündig mit ihr
+  /// (Nutzervorgabe 24.09.2026). Die Schrift hat über den Großbuchstaben und
+  /// unter der Grundlinie Luft; die Verschiebungen gleichen das aus.
+  static const _logo = 46.0;
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 6),
       child: Row(children: [
-        const LogoMark(size: 34),
+        const LogoMark(size: _logo),
         const SizedBox(width: 12),
-        Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Wordmark(size: 30),
-          const SizedBox(height: 3),
-          Text('Bus und Bahn in Echtzeit',
-              textScaler: TextScaler.noScaling,
-              style: TextStyle(fontSize: 12.5, letterSpacing: 0.2, color: c.muted, height: 1)),
-        ]),
+        SizedBox(
+          height: _logo,
+          child: Stack(clipBehavior: Clip.none, children: [
+            const Positioned(left: 0, top: _wordTop, child: Wordmark(size: 32)),
+            Positioned(
+              left: 2,
+              bottom: _tagBottom,
+              child: Text('Bus und Bahn in Echtzeit',
+                  textScaler: TextScaler.noScaling,
+                  style: TextStyle(fontSize: 13, letterSpacing: 0.2, color: c.muted, height: 1)),
+            ),
+            // Breite für den Stack: so breit wie der Schriftzug.
+            const Opacity(opacity: 0, child: Wordmark(size: 32)),
+          ]),
+        ),
       ]),
     );
   }
+
+  /// Oberkante „G“ auf Höhe der Kachel (Rubik: Luft über den Versalien).
+  static const _wordTop = -3.7;
+
+  /// Unterkante des Leitsatzes auf Höhe der Kachel (Luft unter der Grundlinie).
+  static const _tagBottom = -2.0;
 }
 
 // --- Suchfelder ---

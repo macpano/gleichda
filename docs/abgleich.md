@@ -340,3 +340,10 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Rückmeldung meldete „Senden hat nicht geklappt“, obwohl die Nachricht ankam: FormSubmit schickt JSON als
   `text/html`, die App erwartete JSON. Jetzt als Text gelesen und selbst ausgewertet (`feedbackAccepted`)
 - ✅ Name und Zeichen dezent abgehoben: Logo 34, Wortmarke 30, darunter leise „Bus und Bahn in Echtzeit“
+
+## 0.4.13-vorab.2 (24.09.2026)
+- ✅ Zeichen neu gestaffelt: Die Fahrzeuge steigen nach rechts oben an, wie die kursive Wortmarke (Nutzerwunsch). Versatz
+  je Fahrzeug halbiert (12/6/0 statt 0/12/24), weil die Schrägstellung ihn in diese Richtung verstärkt; Breite wie vorher,
+  mittig. `logo.svg`, `logo-dark.svg`, `appicon.svg`, `icon/foreground.svg`; App-Symbol und Startbild neu erzeugt
+  (Chrome headless, `flutter_launcher_icons`, `flutter_native_splash`)
+- ✅ Kopf der Startseite: Wortmarke und Leitsatz genau so hoch wie das Logo (oben und unten bündig, gemessen)
