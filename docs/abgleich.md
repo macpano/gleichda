@@ -144,3 +144,16 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Verbindungen standardmäßig nach „Schnellste“ sortiert
 - ✅ Fußnavigation beim Umsteigen: Gehsymbol in jeder Umsteigezeile (zum Steig des Anschlusses, mit dessen Abfahrt),
   in der Unterwegs-Leiste vor jedem Einsteigen und als Knopf „Weg zum Steig“ in der Benachrichtigung
+
+## Unveröffentlicht (nach Rückmeldungen von Timo, 23.09.2026)
+- ✅ Sortierung „Früheste Ankunft“ als Standard, „Kürzeste Fahrzeit“ statt „Schnellste“; Von–bis inklusive Fußweg;
+  keine doppelten Etiketten („ohne Umstieg“)
+- ✅ Umstieg „nicht erreichbar“ erst, wenn nicht einmal der Umsteigeweg (am selben Halt 1 min) passt; die persönliche
+  Umsteigezeit bedeutet nur „knapp“. Hinweise „Anschluss wird gehalten“ liefert die Auskunft nicht (geprüft)
+- ✅ Weiterfahrt im selben Fahrzeug in der Übersicht nicht mehr als Fußweg, zählt nicht zu „min zu Fuß“
+- ✅ Über eine Abfahrt geöffnete Fahrt ohne „ohne Umstieg“
+- ✅ Suchtreffer: Haltestellen immer vor Orten und Adressen
+- ✅ Meldungen: Gemeinden im Umkreis von 5 km (EFA `XML_COORD_REQUEST`, voller Gemeindeschlüssel aus `placeID`),
+  Abschnitt „Demnächst“ für künftige Sperrungen, Linien je Meldung einmal
+- ✅ Weg zum Steig aus der Ferne (> 2 km): Vorschau des Umsteigewegs statt Führung vom Standort
+- ✅ Schnellziele Zuhause/Arbeit unter der Suche

@@ -14,6 +14,9 @@ import 'subscriptions_screen.dart';
 
 enum _Filter { all, myLines, myStops }
 
+/// Gilt erst in der Zukunft (z. B. „ab 25.09.“).
+bool _upcoming(Message m, DateTime now) => m.validFrom != null && m.validFrom!.isAfter(now);
+
 /// Meldungen: Störungen und Hinweise, gefiltert nach Abos und Haltestellen.
 class MessagesScreen extends ConsumerStatefulWidget {
   const MessagesScreen({super.key});
@@ -121,12 +124,25 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
               _Filter.myStops => 'Keine Meldungen zu deinen Haltestellen.',
               _Filter.all => 'Keine aktuellen Meldungen.',
             })
-          else
-            ListGroup(children: [for (final m in list) MessageCard(message: m, subscribed: subKeys)]),
+          else ...[
+            // Jetzt gültig zuerst, darunter „Demnächst“ (z. B. Sperrung am Wochenende).
+            if (list.any((m) => !_upcoming(m, now)))
+              ListGroup(children: [
+                for (final m in list.where((m) => !_upcoming(m, now))) MessageCard(message: m, subscribed: subKeys),
+              ]),
+            if (list.any((m) => _upcoming(m, now))) ...[
+              const SizedBox(height: 16),
+              const SectionTitle('Demnächst', small: true),
+              ListGroup(children: [
+                for (final m in list.where((m) => _upcoming(m, now))..toList().sort((a, b) => a.validFrom!.compareTo(b.validFrom!)))
+                  MessageCard(message: m, subscribed: subKeys),
+              ]),
+            ],
+          ],
           if (state != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text('Quelle: VRR-Auskunft (EFA), Gebiet Wuppertal.',
+              child: Text('Quelle: VRR-Auskunft (EFA), dein Ort und die Gemeinden im Umkreis von etwa 5 km.',
                   style: TextStyle(fontSize: 12, color: c.muted)),
             ),
         ],
@@ -142,7 +158,7 @@ String validityText(Message m) {
   }
 
   if (m.validFrom == null && m.validTo == null) return '';
-  if (m.validTo == null) return 'seit ${d(m.validFrom!)}';
+  if (m.validTo == null) return m.validFrom!.isAfter(DateTime.now()) ? 'ab ${d(m.validFrom!)}' : 'seit ${d(m.validFrom!)}';
   if (m.validFrom == null) return 'bis ${d(m.validTo!)}';
   return '${d(m.validFrom!)} – ${d(m.validTo!)}';
 }

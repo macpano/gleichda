@@ -131,8 +131,10 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 - Liniensuche: `XML_SERVINGLINES_REQUEST mode=line` deutschlandweit (bricht bei kurzen Nummern nach
   ~160 Treffern ab), sortiert nach Standort: Linien an den 4 nächsten Haltestellen, dann gleicher
   Betrieb (bei `ddb` die Region, 3. Zeichen der Kennung), dann Rest. `XML_LINELIST_REQUEST` liefert nichts.
-- Meldungen: `XML_ADDINFO_REQUEST` ohne `filterOMC` liefert >1000 Meldungen (4 MB) – deshalb Gebiet aus
-  der nächsten Haltestelle (`de:05111:…` → OMC 5111000), gemerkt in Einstellung `messagesRegion`.
+- Meldungen: `XML_ADDINFO_REQUEST` ohne `filterOMC` liefert >1000 Meldungen (4 MB). Die EFA braucht den
+  **vollen Gemeindeschlüssel** (Herdecke 5954020); der Kreisschlüssel aus der Haltestellenkennung (5954000)
+  liefert nichts. Deshalb `XML_COORD_REQUEST` an der Mitte und acht Punkten in 5 km → `placeID:<OMC>:…`,
+  bis zu 6 Gemeinden, gemerkt in `messagesRegions`. Künftige Meldungen kommen mit (Abschnitt „Demnächst“).
 - Haltestellennamen immer mit Ort (`fullStopName`, EFA `name` statt `disassembledName`).
 - Unterwegs per GPS (`locateOnLeg` in `lib/domain/companion.dart`): Position auf die Haltestellenfolge
   gelegt, ≤ 250 m sonst Uhrzeit. Fahrzeugpositionen der Betriebe sind nicht offen – das Fahrzeug ist die

@@ -146,10 +146,10 @@ class TriasProvider implements TransitProvider {
   }
 
   @override
-  Future<String?> regionOf(GeoPoint near) async => null;
+  Future<List<String>> regionsOf(GeoPoint near) async => const [];
 
   @override
-  Future<List<Message>> messages({List<String> lineIds = const [], String? region}) async {
+  Future<List<Message>> messages({List<String> lineIds = const [], List<String> regions = const []}) async {
     // TODO: Meldungsliste (Schritt 12) – TRIAS liefert Meldungen nur im
     // Kontext von Abfahrten und Verbindungen, die EFA über XML_ADDINFO_REQUEST.
     return const [];
@@ -199,8 +199,12 @@ List<Location> rankLocations(
     return d == null ? double.infinity : (d / 250).floorToDouble();
   }
 
+  // Haltestellen immer vor Orten, Adressen und Sonderzielen.
+  int kind(Location l) => l.type == LocationType.stop ? 0 : 1;
   final keyed = [for (final l in list) (l, tier(l), bucket(l), quality(l))];
   keyed.sort((a, b) {
+    final k = kind(a.$1).compareTo(kind(b.$1));
+    if (k != 0) return k;
     final t = a.$2.compareTo(b.$2);
     if (t != 0) return t;
     final d = a.$3.compareTo(b.$3);

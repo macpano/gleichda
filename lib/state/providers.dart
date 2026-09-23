@@ -271,6 +271,12 @@ class MessagesState {
   final String? error;
 }
 
+/// Zuletzt genutzte Gebiete für Meldungen (auch für die Hintergrundprüfung).
+Future<List<String>> savedMessageRegions(Repository repo) async {
+  final s = await repo.setting('messagesRegions');
+  return s == null || s.isEmpty ? const [] : s.split(',');
+}
+
 /// Meldungen für den Ort, an dem man ist (Gebiet der nächsten Haltestelle).
 /// Das Gebiet wird gemerkt – ohne Standort und in der Hintergrundprüfung der
 /// Linienabos gilt das zuletzt genutzte.
@@ -281,16 +287,16 @@ class MessagesController extends AsyncNotifier<MessagesState> {
   Future<List<Message>> _load() async {
     final p = ref.read(transitProvider);
     final repo = ref.read(repositoryProvider);
-    String? region;
+    var regions = <String>[];
     try {
       final here = await ref.read(locationServiceProvider).current(preferRecent: true);
-      region = await p.regionOf((lat: here.lat, lon: here.lon));
-      if (region != null) await repo.setSetting('messagesRegion', region);
+      regions = await p.regionsOf((lat: here.lat, lon: here.lon));
+      if (regions.isNotEmpty) await repo.setSetting('messagesRegions', regions.join(','));
     } catch (_) {
-      // Ohne Standort: zuletzt genutztes Gebiet.
+      // Ohne Standort: zuletzt genutzte Gebiete.
     }
-    region ??= await repo.setting('messagesRegion');
-    return p.messages(region: region);
+    if (regions.isEmpty) regions = await savedMessageRegions(repo);
+    return p.messages(regions: regions);
   }
 
   Future<void> refresh() async {

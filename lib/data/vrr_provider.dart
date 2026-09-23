@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../domain/models.dart';
 import 'efa/efa_client.dart';
 import 'transit_provider.dart';
@@ -24,14 +26,41 @@ class VrrProvider implements TransitProvider {
   /// Ohne bekannten Ort: Wuppertal (Gemeindeschlüssel 05124 → OMC 5124000).
   static const defaultRegion = '5124000';
 
-  /// Gemeindeschlüssel aus der Kennung der nächsten Haltestelle:
-  /// „de:05111:18235“ → Kreis 05111 → OMC „5111000“. Ohne Gebietsfilter
-  /// liefert die EFA über 1000 Meldungen (4 MB, gemessen 23.09.2026).
+  /// Gebiete rund um einen Ort: die Gemeinden an der Mitte und an acht
+  /// Punkten im Abstand von 5 km. Eine Sperrung in Herdecke betrifft auch
+  /// Hagener Linien, steht bei der EFA aber nur unter Herdecke (gemessen
+  /// 23.09.2026: 518/519 nur unter OMC 5954020). Die EFA braucht den vollen
+  /// Gemeindeschlüssel; aus der Haltestellenkennung („de:05954:…“) ergäbe
+  /// sich nur der Kreis, und der liefert keine Meldungen.
   @override
-  Future<String?> regionOf(GeoPoint near) async {
-    final stops = await trias.searchLocations('', near: near, limit: 1, radiusMeters: 3000);
-    return stops.isEmpty ? null : regionFromStopId(stops.first.id);
+  Future<List<String>> regionsOf(GeoPoint near) async {
+    final last = _regionsAt;
+    if (_regions != null && last != null && _distance(last, near) < 1000) return _regions!;
+    final k = math.cos(near.lat * math.pi / 180);
+    final points = [
+      near,
+      for (var a = 0; a < 360; a += 45)
+        (
+          lat: near.lat + 5000 * math.cos(a * math.pi / 180) / 110540,
+          lon: near.lon + 5000 * math.sin(a * math.pi / 180) / (111320 * k),
+        ),
+    ];
+    final sets = await Future.wait(points.map((p) => efa.placesNear(p.lat, p.lon).catchError((Object _) => <String>{})));
+    final out = <String>[];
+    for (final s in sets) {
+      for (final omc in s) {
+        if (!out.contains(omc)) out.add(omc);
+      }
+    }
+    _regionsAt = near;
+    return _regions = out.take(6).toList();
   }
+
+  GeoPoint? _regionsAt;
+  List<String>? _regions;
+
+  static double _distance(GeoPoint a, GeoPoint b) =>
+      distanceBetween(Location(id: '', providerId: '', name: '', lat: a.lat, lon: a.lon), b) ?? double.infinity;
 
   @override
   Future<DepartureBoard> departures(Location stop,
@@ -44,8 +73,17 @@ class VrrProvider implements TransitProvider {
   /// Meldungsliste aus der EFA (XML_ADDINFO_REQUEST), weil TRIAS Meldungen
   /// nur im Zusammenhang einer Abfahrt oder Verbindung liefert.
   @override
-  Future<List<Message>> messages({List<String> lineIds = const [], String? region}) async {
-    final all = await efa.messages(omc: region ?? defaultRegion);
+  Future<List<Message>> messages({List<String> lineIds = const [], List<String> regions = const []}) async {
+    final omcs = regions.isEmpty ? const [defaultRegion] : regions;
+    final lists = await Future.wait(omcs.map((o) => efa.messages(omc: o).then<List<Message>?>((l) => l,
+        onError: (Object _) => null)));
+    if (lists.every((l) => l == null)) throw const ProviderException('Meldungen nicht abrufbar');
+    final seen = <String>{};
+    final all = [
+      for (final l in lists)
+        for (final m in l ?? const <Message>[])
+          if (seen.add(m.id)) m,
+    ];
     if (lineIds.isEmpty) return all;
     final keys = lineIds.map(lineKey).toSet();
     return all.where((m) => m.lineIds.any(keys.contains)).toList();
@@ -278,8 +316,3 @@ Leg? mergeLeg(Leg leg, List<StopTime> stops) {
   );
 }
 
-/// „de:05111:18235“ → „5111000“; null bei anderen Kennungen.
-String? regionFromStopId(String id) {
-  final m = RegExp(r'^de:0?(\d{4,5}):').firstMatch(id);
-  return m == null ? null : '${int.parse(m[1]!)}000';
-}

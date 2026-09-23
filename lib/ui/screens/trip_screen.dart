@@ -92,7 +92,12 @@ class _TripScreenState extends ConsumerState<TripScreen> {
               child: Row(children: [
                 Expanded(
                   child: OneLine(
-                    '${hm(trip.departure.best)} – ${hm(trip.arrival.best)} · ${durationText(trip.duration)} · ${interchangesText(trip.interchanges)}',
+                    [
+                      '${hm(trip.departure.best)} – ${hm(trip.arrival.best)}',
+                      durationText(trip.duration),
+                      // Über eine Abfahrt geöffnet: keine Umstiegsangabe.
+                      if (!trip.id.startsWith('abfahrt:')) interchangesText(trip.interchanges),
+                    ].join(' · '),
                     style: context.t.number(14).copyWith(color: c.muted),
                   ),
                 ),
@@ -199,7 +204,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     var transfer = 0;
 
     Widget walkRow(String text,
-        {TransferCheck? check, Location? target, String? platform, EventTime? departure}) {
+        {TransferCheck? check, Location? target, String? platform, EventTime? departure, Location? origin}) {
       final (String state, Color color) = switch (check?.state) {
         TransferState.safe => ('Anschluss sicher', c.green),
         TransferState.tight => ('Anschluss knapp', c.orange),
@@ -220,7 +225,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
             InkResponse(
               radius: 20,
               onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => WalkScreen(target: target, platform: platform, departure: departure))),
+                  builder: (_) => WalkScreen(target: target, platform: platform, departure: departure, origin: origin))),
               child: Tooltip(
                 message: platform == null ? 'Weg zur Haltestelle' : 'Weg zu Steig $platform',
                 child: Padding(
@@ -258,7 +263,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
               Icon(Icons.airline_seat_recline_normal, size: 16, color: c.ink2),
               const SizedBox(width: 6),
               Expanded(
-                child: OneLine('Weiterfahrt im selben Fahrzeug · sitzen bleiben',
+                child: OneLine('Weiterfahrt im selben Fahrzeug',
                     style: TextStyle(fontSize: 14, color: c.ink2)),
               ),
             ]),
@@ -267,11 +272,13 @@ class _TripScreenState extends ConsumerState<TripScreen> {
         } else {
           // Umstieg: Weg zum Steig des Anschlusses.
           final next = trip.legs.skip(i + 1).where((x) => x.type == LegType.ride).firstOrNull?.from;
+          final arrived = trip.legs.take(i).where((x) => x.type == LegType.ride).lastOrNull?.to;
           rows.add(walkRow(l.type == LegType.walk ? '$m min Fußweg' : '$m min Umstieg',
               check: transfer < checks.length ? checks[transfer] : null,
               target: next?.stop,
               platform: next?.platform,
-              departure: next?.departure));
+              departure: next?.departure,
+              origin: arrived?.stop));
           transfer++;
         }
         continue;
@@ -284,7 +291,8 @@ class _TripScreenState extends ConsumerState<TripScreen> {
             check: transfer < checks.length ? checks[transfer] : null,
             target: l.from.stop,
             platform: l.from.platform,
-            departure: l.from.departure));
+            departure: l.from.departure,
+            origin: trip.legs[i - 1].to.stop));
         transfer++;
       }
       final color = lineColor(context, l.line);

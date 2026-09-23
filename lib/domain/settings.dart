@@ -29,12 +29,13 @@ extension PaceLabel on Pace {
 /// Sortierung der Verbindungen. Alle Varianten kommen aus einer Suche
 /// (schnellste, wenig Umstiege, wenig Fußweg zusammen); umsortiert wird
 /// sofort, ohne neue Anfrage.
-enum ConnectionSort { departure, fastest, fewChanges, lessWalking }
+enum ConnectionSort { arrival, departure, fastest, fewChanges, lessWalking }
 
 extension ConnectionSortLabel on ConnectionSort {
   String get label => switch (this) {
+        ConnectionSort.arrival => 'Früheste Ankunft',
         ConnectionSort.departure => 'Abfahrt',
-        ConnectionSort.fastest => 'Schnellste',
+        ConnectionSort.fastest => 'Kürzeste Fahrzeit',
         ConnectionSort.fewChanges => 'Wenig Umstiege',
         ConnectionSort.lessWalking => 'Wenig Fußweg',
       };
