@@ -200,3 +200,8 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   die erste Aktualisierung räumte sie als „angekommen“ weg. Jetzt bleiben sie, solange man sie ansieht
 - Geprüft: Die Meldung zur 511 (Hagen Stadtmitte/Volme Galerie) steht seit vorab.4 wieder in der Liste (Abschnitt VER),
   in Hagen-Boele, Hagen-Vorhalle und Herdecke (`test_live/meldungen_live_test.dart`)
+
+## 0.4.11-vorab.6 (23.09.2026)
+- ✅ Bildmarke in der App: Zug, Straßenbahn und Bus wieder versetzt. flutter_svg verrechnete `skewX` mit den
+  verschachtelten `translate` der Fahrzeuge falsch (alle bündig links); jetzt eine `matrix` je Fahrzeug
+  (`assets/logo.svg`, `logo-dark.svg`, `appicon.svg`)
