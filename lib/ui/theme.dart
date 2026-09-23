@@ -335,36 +335,100 @@ ThemeData buildTheme(Brightness brightness, TargetPlatform platform) {
       minVerticalPadding: 8,
     ),
     pageTransitionsTheme: const PageTransitionsTheme(builders: {
-      TargetPlatform.android: SlidePageTransitionsBuilder(),
-      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+      TargetPlatform.android: CompanionAwareTransitions(SlidePageTransitionsBuilder()),
+      TargetPlatform.iOS: CompanionAwareTransitions(CupertinoPageTransitionsBuilder()),
     }),
     extensions: [c, text],
   );
 }
 
-/// Screenwechsel: horizontales Schieben, 250 ms, easeOutCubic.
-/// Bei „Bewegung reduzieren“ ohne Übergang.
+/// Eine Bewegungssprache für die ganze App: wenige Dauern, eine Kurve.
+/// Seitenwechsel und die Unterwegs-Leiste teilen sich dieselbe Animation,
+/// kleinere Übergänge (Einblenden, Aufklappen) sind kürzer.
+abstract final class Motion {
+  /// Seitenwechsel; die Unterwegs-Leiste läuft exakt mit.
+  static const page = Duration(milliseconds: 320);
+
+  /// Einblenden von Inhalten, Aufklappen, Leiste erscheint.
+  static const medium = Duration(milliseconds: 220);
+
+  /// Zustandswechsel (Farbe, Deckkraft).
+  static const short = Duration(milliseconds: 150);
+
+  /// Ausklingend: schnell los, weich an.
+  static const curve = Curves.easeOutCubic;
+
+  /// Nur bei „Bewegung reduzieren“ aus.
+  static Duration of(BuildContext context, Duration d) =>
+      MediaQuery.of(context).disableAnimations ? Duration.zero : d;
+}
+
+/// Höhe der Unterwegs-Leiste, solange sie sichtbar ist (sonst 0). Jede Seite
+/// außer der Startseite hält unten diesen Platz frei – in der Seite selbst,
+/// damit er beim Wechsel mitgleitet und die Startseite dahinter ruhig bleibt.
+final companionReserve = ValueNotifier<double>(0);
+
+/// Screenwechsel: horizontales Schieben ([Motion.page], [Motion.curve]);
+/// iPhone wie gewohnt. Bei „Bewegung reduzieren“ ohne Übergang.
 class SlidePageTransitionsBuilder extends PageTransitionsBuilder {
   const SlidePageTransitionsBuilder();
 
   @override
-  Duration get transitionDuration => const Duration(milliseconds: 250);
+  Duration get transitionDuration => Motion.page;
 
   @override
   Widget buildTransitions<T>(PageRoute<T> route, BuildContext context,
       Animation<double> animation, Animation<double> secondary, Widget child) {
     if (MediaQuery.of(context).disableAnimations) return child;
-    final inCurve = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
-    final outCurve =
-        CurvedAnimation(parent: secondary, curve: Curves.easeOutCubic);
+    final inCurve = CurvedAnimation(parent: animation, curve: Motion.curve);
+    final outCurve = CurvedAnimation(parent: secondary, curve: Motion.curve);
     return SlideTransition(
-      position: Tween(begin: const Offset(1, 0), end: Offset.zero)
-          .animate(inCurve),
+      position: Tween(begin: const Offset(1, 0), end: Offset.zero).animate(inCurve),
       child: SlideTransition(
-        position: Tween(begin: Offset.zero, end: const Offset(-0.25, 0))
-            .animate(outCurve),
+        position: Tween(begin: Offset.zero, end: const Offset(-0.25, 0)).animate(outCurve),
         child: child,
       ),
+    );
+  }
+}
+
+/// Hält unter jeder Seite außer der ersten den Platz der Unterwegs-Leiste
+/// frei und gibt dann an [inner] weiter.
+class CompanionAwareTransitions extends PageTransitionsBuilder {
+  const CompanionAwareTransitions(this.inner);
+
+  final PageTransitionsBuilder inner;
+
+  @override
+  Duration get transitionDuration => inner.transitionDuration;
+
+  @override
+  Duration get reverseTransitionDuration => inner.reverseTransitionDuration;
+
+  @override
+  Widget buildTransitions<T>(PageRoute<T> route, BuildContext context,
+          Animation<double> animation, Animation<double> secondary, Widget child) =>
+      inner.buildTransitions(route, context, animation, secondary,
+          route.isFirst ? child : _CompanionReserve(child: child));
+}
+
+class _CompanionReserve extends StatelessWidget {
+  const _CompanionReserve({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final inset = MediaQuery.paddingOf(context).bottom;
+    final bar = Theme.of(context).extension<AppColors>()!.bar;
+    // Immer derselbe Aufbau – sonst ginge beim Losfahren der Zustand der Seite verloren.
+    return ValueListenableBuilder<double>(
+      valueListenable: companionReserve,
+      child: child,
+      builder: (context, h, child) => Column(children: [
+        Expanded(child: MediaQuery.removePadding(context: context, removeBottom: h > 0, child: child!)),
+        ColoredBox(color: bar, child: SizedBox(width: double.infinity, height: h > 0 ? h + inset : 0)),
+      ]),
     );
   }
 }

@@ -27,7 +27,7 @@ class _UpdateToastState extends ConsumerState<UpdateToast> {
     final show = (u.ready || u.phase == UpdatePhase.installing) && _dismissed != version;
     final c = context.c;
     return AnimatedSwitcher(
-      duration: MediaQuery.of(context).disableAnimations ? Duration.zero : const Duration(milliseconds: 250),
+      duration: Motion.of(context, Motion.medium),
       transitionBuilder: (child, a) => FadeTransition(
         opacity: a,
         child: SlideTransition(

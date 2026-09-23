@@ -86,7 +86,7 @@ class _OptionsSheet extends ConsumerWidget {
                       // Android: Kontrollkästchen; iPhone: Haken.
                       if (context.isIOS)
                         AnimatedOpacity(
-                          duration: const Duration(milliseconds: 150),
+                          duration: Motion.of(context, Motion.short),
                           opacity: s.excludedModes.contains(g) ? 0 : 1,
                           child: Icon(Icons.check, size: 22, color: c.accent),
                         )

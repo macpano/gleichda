@@ -179,6 +179,7 @@ class _DeparturesScreenState extends ConsumerState<DeparturesScreen> {
     final walkPace = (ref.watch(settingsProvider).value ?? const AppSettings()).walkPace;
     final stops = _stops;
     return RefreshIndicator(
+        edgeOffset: MediaQuery.paddingOf(context).top,
       onRefresh: _load,
       child: ListView(
         padding: pagePadding(context),
@@ -229,28 +230,34 @@ class _DeparturesScreenState extends ConsumerState<DeparturesScreen> {
             ),
           ]),
           const SizedBox(height: 16),
-          if (stops == null)
-            for (var i = 0; i < 2; i++) ...[
-              const SkeletonBlock(height: 22, width: 180),
-              const SizedBox(height: 8),
-              ListGroup(children: [for (var j = 0; j < 3; j++) const _DepartureSkeleton()]),
-              const SizedBox(height: 16),
-            ]
-          else if (stops.isEmpty)
-            Notice(_error ?? 'Keine Haltestellen.', action: 'Haltestelle wählen', onAction: _pickStop)
-          else
-            for (final s in stops) ...[
-              _StopSection(
-                data: s,
-                now: now,
-                hidden: _hidden,
-                walkMinutes: s.distance == null
-                    ? null
-                    : (s.distance! * 1.3 / (1.3 * walkPace.walkPercent / 100) / 60).ceil(),
-                onToggle: () => setState(() => s.expanded = !s.expanded),
-              ),
-              const SizedBox(height: 16),
-            ],
+          // Platzhalter → Abfahrten: kurz überblendet.
+          FadeSwitch(
+            state: stops == null ? 'laden' : (stops.isEmpty ? 'leer' : 'liste'),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            if (stops == null)
+              for (var i = 0; i < 2; i++) ...[
+                const SkeletonBlock(height: 22, width: 180),
+                const SizedBox(height: 8),
+                ListGroup(children: [for (var j = 0; j < 3; j++) const _DepartureSkeleton()]),
+                const SizedBox(height: 16),
+              ]
+            else if (stops.isEmpty)
+              Notice(_error ?? 'Keine Haltestellen.', action: 'Haltestelle wählen', onAction: _pickStop)
+            else
+              for (final s in stops) ...[
+                _StopSection(
+                  data: s,
+                  now: now,
+                  hidden: _hidden,
+                  walkMinutes: s.distance == null
+                      ? null
+                      : (s.distance! * 1.3 / (1.3 * walkPace.walkPercent / 100) / 60).ceil(),
+                  onToggle: () => setState(() => s.expanded = !s.expanded),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ]),
+          ),
         ],
       ),
     );
@@ -402,7 +409,7 @@ class DepartureRowState extends ConsumerState<DepartureRow> {
       // Lange drücken: Linie abonnieren.
       onLongPress: () => _lineSheet(context, ref, d.line),
       child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 150),
+        duration: Motion.of(context, Motion.short),
         opacity: _busy ? 0.5 : 1,
         child: SizedBox(
         height: 56 * textGrowth(context),

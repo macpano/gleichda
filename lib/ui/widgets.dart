@@ -85,7 +85,7 @@ class FadeText extends StatelessWidget {
         style: style);
     if (MediaQuery.of(context).disableAnimations) return child;
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 150),
+      duration: Motion.of(context, Motion.short),
       layoutBuilder: (current, previous) => Stack(
         alignment: align == TextAlign.right ? Alignment.centerRight : Alignment.centerLeft,
         children: [...previous, ?current],
@@ -657,7 +657,7 @@ class Segmented<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.c;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final fast = MediaQuery.of(context).disableAnimations ? Duration.zero : const Duration(milliseconds: 150);
+    final fast = Motion.of(context, Motion.short);
     if (!context.isIOS) {
       final h = height < 40 ? 40.0 : height;
       return Container(
@@ -971,3 +971,25 @@ class _PositionDotPainter extends CustomPainter {
 /// Faktor der Systemschrift (1,0–1,8): feste Zeilenhöhen wachsen damit mit,
 /// damit große Schrift nicht abgeschnitten wird.
 double textGrowth(BuildContext context) => (MediaQuery.textScalerOf(context).scale(16) / 16).clamp(1.0, 1.8);
+
+/// Wechsel zwischen Zuständen (Platzhalter → Ergebnis → Hinweis): kurz
+/// überblendet, oben ausgerichtet. Neue Einträge im selben Zustand springen
+/// nicht – nur ein anderer [state] blendet über.
+class FadeSwitch extends StatelessWidget {
+  const FadeSwitch({super.key, required this.state, required this.child});
+
+  final Object state;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => AnimatedSwitcher(
+        duration: Motion.of(context, Motion.medium),
+        switchInCurve: Motion.curve,
+        switchOutCurve: Motion.curve,
+        layoutBuilder: (current, previous) => Stack(
+          alignment: Alignment.topCenter,
+          children: [...previous, ?current],
+        ),
+        child: KeyedSubtree(key: ValueKey(state), child: child),
+      );
+}

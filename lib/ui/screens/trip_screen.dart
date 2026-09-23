@@ -84,6 +84,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     }
     return Scaffold(
       body: RefreshIndicator(
+        edgeOffset: MediaQuery.paddingOf(context).top,
         onRefresh: () => ref.read(lastTripProvider.notifier).refresh(),
         child: ListView(
           padding: pagePadding(context),
@@ -416,14 +417,22 @@ class _TripScreenState extends ConsumerState<TripScreen> {
         rows.add(position(stops[lastPassed + 1]));
         placed = true;
       }
+      // Zwischenhalte klappen weich auf und zu.
+      final mid = <Widget>[];
       for (final s in shown) {
-        rows.add(_stopRow(context, s, color, now));
+        mid.add(_stopRow(context, s, color, now));
         final k = stops.indexOf(s);
         if (onLeg && !placed && k == lastPassed) {
-          rows.add(position(stops[k + 1]));
+          mid.add(position(stops[k + 1]));
           placed = true;
         }
       }
+      rows.add(AnimatedSize(
+        duration: Motion.of(context, Motion.medium),
+        curve: Motion.curve,
+        alignment: Alignment.topCenter,
+        child: Column(mainAxisSize: MainAxisSize.min, children: mid),
+      ));
       rows.add(_stopRow(context, l.to, color, now, departure: false, last: true));
     }
     return rows;
