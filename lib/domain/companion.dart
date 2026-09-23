@@ -125,9 +125,12 @@ CompanionStep nextStep(Trip trip, DateTime now, {GeoPoint? gps}) {
     final r = rides[i];
     final dep = _t(r.from);
     final arr = _t(r.to, arrival: true);
-    final fix = gps == null ? null : locateOnLeg(r, gps);
+    var fix = gps == null ? null : locateOnLeg(r, gps);
     if (fix != null && fix.passed >= r.intermediates.length + 1) continue; // per GPS am Ziel vorbei
-    if (arr != null && !arr.isAfter(now) && fix == null) continue; // Abschnitt vorbei
+    // Ankunft (mit Echtzeit) über eine Minute vorbei: erledigt, egal wo das
+    // GPS steht – sonst sprang der Balken nach dem Ausstieg auf Anfang zurück,
+    // wenn man nicht (mehr) im Fahrzeug war.
+    if (arr != null && now.isAfter(arr.add(const Duration(minutes: 1)))) continue;
     // Per GPS schon unterwegs (Bus früher oder Uhr ungenau): im Fahrzeug.
     final movingByGps = fix != null && fix.passed >= 1;
     if (dep != null && now.isBefore(dep) && !movingByGps) {
@@ -144,16 +147,19 @@ CompanionStep nextStep(Trip trip, DateTime now, {GeoPoint? gps}) {
     }
     // Im Fahrzeug: mit GPS die Lage auf der Strecke, sonst nach Uhrzeit.
     final stops = [...r.intermediates, r.to];
-    int left;
+    // Nach Uhrzeit (mit Echtzeit) …
+    var left = stops.where((s) => (_t(s, arrival: true) ?? arr ?? now).isAfter(now)).length.clamp(1, stops.length);
     var p = 0.0;
+    if (dep != null && arr != null && arr.isAfter(dep)) {
+      p = (now.difference(dep).inSeconds / arr.difference(dep).inSeconds).clamp(0.0, 1.0);
+    }
+    // … und per GPS, wenn es dazu passt: vor der Uhrzeit (Bus früher) oder
+    // höchstens ein Viertel dahinter. Liegt die Position weit zurück, ist man
+    // vermutlich nicht in diesem Fahrzeug – dann gilt die Uhrzeit.
+    if (fix != null && fix.progress < p - 0.25) fix = null;
     if (fix != null) {
       left = (stops.length - fix.passed).clamp(1, stops.length);
       p = fix.progress;
-    } else {
-      left = stops.where((s) => (_t(s, arrival: true) ?? arr ?? now).isAfter(now)).length.clamp(1, stops.length);
-      if (dep != null && arr != null && arr.isAfter(dep)) {
-        p = (now.difference(dep).inSeconds / arr.difference(dep).inSeconds).clamp(0.0, 1.0);
-      }
     }
     return CompanionStep(
       phase: CompanionPhase.onBoard,
