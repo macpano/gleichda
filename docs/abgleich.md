@@ -332,3 +332,6 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Meldungen aus TRIAS als Klartext (`htmlToText` für Titel und Text; vorher „&auml;“, „<strong>“)
 - ✅ Mehr → Rückmeldung: „Funktion vorschlagen“ und „Fehler melden“ (`FeedbackScreen`), Versand über FormSubmit an eine
   Kennung statt Adresse (`feedbackEndpoint`) – noch leer, bis die Kennung eingerichtet ist
+
+## 0.4.12-vorab.11 (24.09.2026)
+- ✅ Rückmeldeformular freigeschaltet: FormSubmit-Kennung eingetragen (statt Adresse), Test über die Kennung angenommen
