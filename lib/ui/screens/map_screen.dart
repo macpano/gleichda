@@ -36,6 +36,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   /// Steige mit genauer Lage (EFA); die Haltestelle steht an deren Mitte.
   List<Platform> _platforms = const [];
   bool _loadingStops = false;
+
+  /// Letzter Abruf fehlgeschlagen (Netz weg, Server langsam).
+  bool _stopsFailed = false;
+
+  /// Zu weit herausgezoomt für Haltestellen.
+  bool _tooFar = false;
+  int _stopsSeq = 0;
   LatLng? _me;
 
   /// Auf der Karte gezeigte Fahrt (nach Tipp auf eine Abfahrt).
@@ -84,8 +91,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   /// Haltestellen im Ausschnitt: Umkreis um die Mitte bis zur Ecke, höchstens 3 km.
   Future<void> _loadStops() async {
     final cam = _map.camera;
+    final seq = ++_stopsSeq;
     if (cam.zoom < _minZoom) {
-      if (_stops.isNotEmpty) setState(() => _stops = const []);
+      setState(() {
+        _stops = const [];
+        _platforms = const [];
+        _stopsFailed = false;
+        _loadingStops = false;
+      });
       return;
     }
     final center = cam.center;
@@ -99,16 +112,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         p.searchLocations('', near: at, limit: 60, radiusMeters: radius),
         p.platformsNear(at, radiusMeters: radius).catchError((Object _) => <Platform>[]),
       ]);
-      if (mounted) {
+      // Nur die neueste Anfrage zählt – eine ältere, langsamere überschreibt sie nicht.
+      if (mounted && seq == _stopsSeq) {
         setState(() {
           _stops = (results[0] as List<Location>).where((l) => l.lat != null).toList();
           _platforms = results[1] as List<Platform>;
+          _stopsFailed = false;
         });
       }
-    } on ProviderException {
-      // Netz weg: vorhandene Haltestellen bleiben stehen.
+    } catch (_) {
+      // Netz weg: vorhandene Haltestellen bleiben stehen, Hinweis zum Wiederholen.
+      if (mounted && seq == _stopsSeq) setState(() => _stopsFailed = true);
     } finally {
-      if (mounted) setState(() => _loadingStops = false);
+      if (mounted && seq == _stopsSeq) setState(() => _loadingStops = false);
     }
   }
 
@@ -215,7 +231,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final tripLine = paths != null && paths.isNotEmpty && paths.first != null
         ? [for (final p in paths.first!) LatLng(p.lat, p.lon)]
         : [for (final s in tripStops) if (s.stop.lat != null) LatLng(s.stop.lat!, s.stop.lon!)];
-    final zoomedOut = _stops.isEmpty && !_loadingStops;
 
     return Stack(children: [
       FlutterMap(
@@ -224,10 +239,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           initialCenter: _me ?? _fallback,
           initialZoom: 15.5,
           interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
+          // Auch Bewegungen per Knopf (Zentrieren, Fahrt zeigen) laden nach.
           onPositionChanged: (camera, gesture) {
-            if (gesture) _scheduleStops();
+            _scheduleStops();
             final detail = camera.zoom >= _platformZoom;
-            if (detail != _detail) setState(() => _detail = detail);
+            final tooFar = camera.zoom < _minZoom;
+            if (detail != _detail || tooFar != _tooFar) {
+              setState(() {
+                _detail = detail;
+                _tooFar = tooFar;
+              });
+            }
           },
           onMapReady: _scheduleStops,
         ),
@@ -288,8 +310,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               _Pill(text: 'Karte', bold: true),
               if (_loadingStops || _loadingTrip)
                 const _Pill(text: 'Wird geladen …')
-              else if (zoomedOut)
-                const _Pill(text: 'Hineinzoomen für Haltestellen'),
+              else if (_tooFar)
+                const _Pill(text: 'Hineinzoomen für Haltestellen')
+              else if (_stopsFailed)
+                GestureDetector(
+                  onTap: _loadStops,
+                  child: const _Pill(text: 'Haltestellen nicht geladen · erneut laden'),
+                ),
             ]),
           ),
           MapButton(

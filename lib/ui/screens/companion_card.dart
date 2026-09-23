@@ -7,6 +7,9 @@ import '../theme.dart';
 import '../trip_status.dart';
 import '../widgets.dart';
 
+/// Höhe der Unterwegs-Leiste ohne unteren Bildschirmrand (Strich + Zeile).
+const companionBarHeight = 64.5;
+
 /// Unterwegs: der nächste Schritt als feste Leiste am unteren Rand – in jeder
 /// Ansicht an derselben Stelle (wie der Mini-Player einer Musik-App), zusammen
 /// mit „Beenden“. Oben ein feiner Fortschrittsstrich. Dieselben Angaben wie die
@@ -34,7 +37,7 @@ class CompanionBar extends StatelessWidget {
   /// Weg zum Steig des nächsten Einstiegs.
   final void Function(CompanionStep step) onWalk;
 
-  /// Fahrt öffnen (Tipp auf die Leiste im Fahrzeug).
+  /// Fahrt öffnen (Tipp auf die Leiste; zum Weg geht es über das Laufsymbol).
   final VoidCallback onOpen;
   final TripIssue? issue;
 
@@ -84,8 +87,9 @@ class CompanionBar extends StatelessWidget {
           backgroundColor: Colors.transparent,
         ),
         InkWell(
-          // Vor dem Einsteigen führt ein Tipp zum Weg zum Steig, sonst zur Fahrt.
-          onTap: boarding ? () => onWalk(step) : onOpen,
+          // Ein Tipp öffnet immer die Fahrt; vor dem Einsteigen führt das
+          // Laufsymbol rechts zum Weg zum Steig.
+          onTap: onOpen,
           child: SizedBox(
             height: 62,
             child: Padding(

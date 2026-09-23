@@ -52,15 +52,15 @@ Future<void> handleNotification(ProviderContainer container, String? payload, St
       await container.read(companionProvider.notifier).stop();
       return;
     }
-    nav?.push(MaterialPageRoute(builder: (_) => const TripScreen()));
+    pushOnce(nav, 'fahrt', (_) => const TripScreen());
     // „Weg zum Steig“: zum Einstieg des nächsten Schritts (auch beim Umsteigen).
     final trip = container.read(lastTripProvider).value?.trip;
     if (action == 'walk' && trip != null) {
       final gps = container.read(companionProvider).freshGps(DateTime.now());
       final step = nextStep(trip, DateTime.now(), gps: gps);
       if (step.boarding) {
-        nav?.push(MaterialPageRoute(
-            builder: (_) => WalkScreen(target: step.where.stop, platform: step.where.platform, departure: step.when)));
+        pushOnce(nav, 'weg:${step.where.stop.id}',
+            (_) => WalkScreen(target: step.where.stop, platform: step.where.platform, departure: step.when));
       }
     }
     return;

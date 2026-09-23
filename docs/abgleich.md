@@ -215,3 +215,12 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 ## 0.4.11-vorab.8 (23.09.2026)
 - ✅ Gesicherter Anschluss kurz „Anschluss wartet“ (wie „Anschluss sicher/knapp“); „… wartet in der Regel“ wurde
   bei großer Schrift abgeschnitten
+
+## 0.4.11-vorab.9 (23.09.2026)
+- ✅ Unterwegs-Leiste: ein Tipp öffnet immer die Fahrt (vorher vor dem Einsteigen nur den Fußweg); zum Weg das Laufsymbol
+- ✅ Eine einzige Leiste in `appFrame`, die beim Ansichtwechsel in 260 ms an ihren Platz gleitet (über den Reitern ↔
+  ganz unten); über Blättern von unten auf der Startseite tritt sie zurück
+- ✅ Keine doppelten Ansichten: `pushOnce` (Fahrt, Karte, Weg zum Steig) springt zu einer offenen Ansicht zurück,
+  statt sie erneut zu öffnen – vorher musste man teils mehrmals zurück
+- ✅ Karte: Hinweis nach Zoomstufe statt nach leerer Liste; Laden auch nach Bewegung per Knopf; bei Fehler
+  „Haltestellen nicht geladen · erneut laden“; nur die neueste Anfrage zählt
