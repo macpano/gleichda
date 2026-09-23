@@ -114,7 +114,7 @@ class _Brand extends StatelessWidget {
           // Die Wortmarke hält unten Platz für Unterlängen, die „Gleich.da“
           // nicht hat – der Leitsatz rückt deshalb in diesen Raum.
           Transform.translate(
-            offset: const Offset(1, -3),
+            offset: const Offset(1, -1.5),
             child: Text('Bus und Bahn in Echtzeit',
                 textScaler: TextScaler.noScaling,
                 style: TextStyle(fontSize: 10, letterSpacing: 0.2, color: c.muted, height: 1)),

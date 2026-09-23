@@ -373,3 +373,8 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Kopf der Startseite: Leitsatz kleiner (10) und dicht unter dem Namen, etwa so breit wie er; Name und Leitsatz als
   Block mittig neben dem Logo (42), kleiner als die Kachel. Streifen-Varianten durch den Schriftzug entworfen und
   verworfen (Nutzerentscheidung: ohne Strich)
+
+## 0.4.14 (24.09.2026)
+- ✅ Leitsatz wieder etwas vom Namen abgerückt (zu nah in 0.4.13)
+- GitHub aufgeräumt: nur die zwei neuesten regulären Versionen bleiben; `tool/release.sh` löscht bei jedem regulären
+  Release die Vorabversionen samt Kennzeichen
