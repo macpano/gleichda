@@ -94,3 +94,7 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Zielsuche ohne „In der Nähe“, Suchtreffer nach Entfernung sortiert
 - ✅ Fußnavigation entlang von Gehwegen (FOSSGIS-Router) mit Abbiegehinweisen, neu berechnet bei Abweichung
 - ✅ Hinweise in der Fahrt eingeklappt, Streifen hinter der Statusleiste, Versionsabgleich bei jedem Öffnen
+
+## v0.3.2 (23.09.2026)
+- ✅ Unterwegs als schmale Zeile mit feinem Fortschrittsstrich, ausblendbar
+- ✅ Eigene Symbole für Liste/Zeitraster
