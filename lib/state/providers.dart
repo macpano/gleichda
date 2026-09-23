@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart' show Geolocator;
 
 import '../data/db/database.dart';
 import '../data/efa/efa_client.dart';
@@ -107,8 +108,22 @@ class LastTripState {
 /// „Zuletzt angesehene Fahrt“: sofort aus dem Speicher, parallel frisch
 /// von der Auskunft; alle 30 s neu, solange jemand hinsieht.
 /// 2 Minuten nach der (Echtzeit-)Ankunft gilt eine Fahrt als erledigt.
-bool arrivedLongAgo(Trip trip, DateTime now) =>
-    now.isAfter(trip.arrival.best.add(const Duration(minutes: 2)));
+bool arrivedLongAgo(Trip trip, DateTime now) => now.isAfter(tripEnd(trip).add(const Duration(minutes: 2)));
+
+/// Ankunft am Ziel: letzte Fahrt (mit Echtzeit) plus Fußweg danach. Der
+/// Fußweg zur Zieladresse hat nur Planzeiten – bei Verspätung stünde die
+/// Fahrt sonst zu früh als angekommen da und verschwände von der Startseite.
+DateTime tripEnd(Trip trip) {
+  var end = trip.arrival.best;
+  final i = trip.legs.lastIndexWhere((l) => l.type == LegType.ride);
+  final arr = i < 0 ? null : trip.legs[i].to.arrival?.best;
+  if (arr != null) {
+    final walk = trip.legs.skip(i + 1).fold<int>(0, (m, l) => m + (l.durationMinutes ?? 0));
+    final byRide = arr.add(Duration(minutes: walk));
+    if (byRide.isAfter(end)) end = byRide;
+  }
+  return end;
+}
 
 class LastTripController extends AsyncNotifier<LastTripState?> {
   Timer? _timer;
@@ -147,7 +162,9 @@ class LastTripController extends AsyncNotifier<LastTripState?> {
     _openedPast = arrivedLongAgo(trip, DateTime.now());
     state = AsyncData(LastTripState(trip: trip, updatedAt: at));
     await ref.read(repositoryProvider).saveLastTrip(trip, updatedAt: at);
-    _schedule(immediately: DateTime.now().difference(at) > const Duration(seconds: 20));
+    // Sofort aktualisieren: bringt Echtzeit und die Lage der Haltestellen
+    // (TRIAS liefert in der Verbindungssuche keine Koordinaten).
+    _schedule(immediately: true);
   }
 
   /// Ziel erreicht: Die Fahrt verschwindet von der Startseite, auch wenn
@@ -395,6 +412,54 @@ class TripPathKey {
 /// Gesicherte Anschlüsse der Fahrt (Indizes in `trip.legs`).
 final guaranteedProvider = FutureProvider.family<Set<int>, TripPathKey>(
     (ref, key) => ref.watch(transitProvider).guaranteedConnections(key.trip));
+
+/// Schlüssel für die Gehwege: Fahrt und Lage aller Fußweg-Enden. Die Lage
+/// der Haltestellen kommt erst mit der ersten Aktualisierung (EFA) – dann
+/// werden die Gehwege neu gerechnet statt leer gemerkt.
+class WalkPathKey {
+  WalkPathKey(this.trip)
+      : _sig = '${trip.id}|${[for (var i = 0; i < trip.legs.length; i++) walkEnds(trip, i)].join(';')}';
+
+  final Trip trip;
+  final String _sig;
+
+  @override
+  bool operator ==(Object other) => other is WalkPathKey && other._sig == _sig;
+
+  @override
+  int get hashCode => _sig.hashCode;
+}
+
+/// Anfang und Ende eines Fußwegs: vom Ausstieg davor zum Einstieg danach
+/// (bzw. vom Start / bis zum Ziel). null ohne Koordinaten.
+(GeoPoint, GeoPoint)? walkEnds(Trip trip, int i) {
+  final l = trip.legs[i];
+  if (l.type == LegType.ride || l.staySeated) return null;
+  final a = i > 0 ? trip.legs[i - 1].to.stop : l.from.stop;
+  final b = i + 1 < trip.legs.length ? trip.legs[i + 1].from.stop : l.to.stop;
+  if (a.lat == null || a.lon == null || b.lat == null || b.lon == null) return null;
+  return ((lat: a.lat!, lon: a.lon!), (lat: b.lat!, lon: b.lon!));
+}
+
+/// Fußwege der Fahrt als Gehweg (FOSSGIS); null, wo keiner nötig oder
+/// abrufbar ist – dann zeichnet die Karte eine gerade gepunktete Linie.
+final walkPathsProvider = FutureProvider.family<List<List<GeoPoint>?>, WalkPathKey>((ref, key) {
+  final router = ref.watch(walkRouterProvider);
+  final trip = key.trip;
+  Future<List<GeoPoint>?> one(int i) async {
+    final ends = walkEnds(trip, i);
+    if (ends == null) return null;
+    final (a, b) = ends;
+    if (Geolocator.distanceBetween(a.lat, a.lon, b.lat, b.lon) < 20) return null;
+    try {
+      return (await router.route(a, b))?.points;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  return Future.wait([for (var i = 0; i < trip.legs.length; i++) one(i)]);
+});
 
 /// Linienwege je Abschnitt; null, wo keiner bekannt ist.
 final legPathsProvider = FutureProvider.family<List<List<GeoPoint>?>, TripPathKey>(

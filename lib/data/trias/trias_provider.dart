@@ -93,7 +93,7 @@ class TriasProvider implements TransitProvider {
           TripOptimization.minChanges => 'minChanges',
           TripOptimization.leastWalking => 'leastWalking',
         }));
-    var trips = parseTrips(xml);
+    var trips = [for (final t in parseTrips(xml)) withEndpoints(t, query.from, query.to)];
     if (query.excludedModes.isNotEmpty) {
       trips = trips.where((t) => !t.rides.any((r) => query.excludedModes.contains(r.line?.mode))).toList();
     }
@@ -246,4 +246,17 @@ Trip? matchTrip(Trip old, List<Trip> candidates) {
     if (ok) return c;
   }
   return null;
+}
+
+/// Fußweg am Anfang bzw. Ende ohne Koordinaten (Adresse als `AddressRef`):
+/// die Lage aus der Suche übernehmen – sonst fehlt auf der Karte der Weg vom
+/// Ausstieg zur Zieladresse.
+Trip withEndpoints(Trip t, Location from, Location to) {
+  if (t.legs.isEmpty) return t;
+  final legs = [...t.legs];
+  StopTime fill(StopTime s, Location q) =>
+      s.stop.lat != null || q.lat == null ? s : s.copyWith(stop: s.stop.copyWith(lat: q.lat, lon: q.lon));
+  if (legs.first.type != LegType.ride) legs[0] = legs.first.copyWith(from: fill(legs.first.from, from));
+  if (legs.last.type != LegType.ride) legs[legs.length - 1] = legs.last.copyWith(to: fill(legs.last.to, to));
+  return t.copyWith(legs: legs);
 }

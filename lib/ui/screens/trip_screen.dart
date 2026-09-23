@@ -253,7 +253,11 @@ class _TripScreenState extends ConsumerState<TripScreen> {
               onTap: () => pushOnce(Navigator.of(context), 'weg:${target.id}',
                   (_) => WalkScreen(target: target, platform: platform, departure: departure, origin: origin)),
               child: Tooltip(
-                message: platform == null ? 'Weg zur Haltestelle' : 'Weg zu Steig $platform',
+                message: target.type != LocationType.stop
+                    ? 'Weg zum Ziel'
+                    : platform == null
+                        ? 'Weg zur Haltestelle'
+                        : 'Weg zu Steig $platform',
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 6),
                   child: Icon(Icons.directions_walk, size: 20, color: c.accent),
@@ -278,7 +282,10 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           final next = i + 1 < trip.legs.length ? trip.legs[i + 1].from : null;
           rows.add(walkRow('$m min Fußweg', target: next?.stop, platform: next?.platform, departure: next?.departure));
         } else if (isLast) {
-          rows.add(walkRow('$m min Fußweg zum Ziel'));
+          // Vom Ausstieg zur Zieladresse: auch dieser Weg mit Karte.
+          final exit = trip.legs.take(i).where((x) => x.type == LegType.ride).lastOrNull?.to;
+          rows.add(walkRow('$m min Fußweg zum Ziel',
+              target: l.to.stop.lat == null ? null : l.to.stop, origin: exit?.stop));
         } else if (l.staySeated) {
           // Im selben Fahrzeug weiter: Linie durchgezogen, kein Umstieg.
           final prev = trip.legs.take(i).lastWhere((x) => x.type == LegType.ride, orElse: () => l);

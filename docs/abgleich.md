@@ -224,3 +224,13 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   statt sie erneut zu öffnen – vorher musste man teils mehrmals zurück
 - ✅ Karte: Hinweis nach Zoomstufe statt nach leerer Liste; Laden auch nach Bewegung per Knopf; bei Fehler
   „Haltestellen nicht geladen · erneut laden“; nur die neueste Anfrage zählt
+
+## 0.4.11-vorab.10 (23.09.2026)
+- ✅ Alle Fußwege auf der Karte als Gehweg (FOSSGIS): Start → Einstieg, Umstiege, Ausstieg → Zieladresse; Start- und
+  Zieladresse als Punkt. TRIAS gibt Adressen ohne Lage zurück – `withEndpoints` übernimmt sie aus der Suche. Die Lage
+  der Haltestellen kommt erst mit der EFA-Aktualisierung; deshalb wird eine geöffnete Fahrt sofort aktualisiert und die
+  Gehwege hängen an der Lage ihrer Enden (`WalkPathKey`). Live: Alter Markt → Friedrich-Ebert-Str. 100, letzter Weg 146 m
+  (`test_live/fussweg_ziel_live_test.dart`)
+- ✅ Fußweg zum Ziel mit Laufsymbol (Weg zum Ziel auf der Karte)
+- ✅ Startseite: Die Fahrt bleibt bis zur Ankunft an der Zieladresse – `tripEnd` = letzte Fahrt mit Echtzeit + Fußweg
+  (vorher Planzeit des Fußwegs, bei Verspätung zu früh weg)

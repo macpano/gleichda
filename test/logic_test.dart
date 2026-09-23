@@ -15,7 +15,8 @@ import 'package:gleichda/domain/connections.dart';
 import 'package:gleichda/domain/models.dart';
 import 'package:gleichda/domain/settings.dart';
 import 'package:gleichda/state/alarm_planner.dart';
-import 'package:gleichda/state/providers.dart' show MessagesState, arrivedLongAgo;
+import 'package:gleichda/data/trias/trias_provider.dart' show withEndpoints;
+import 'package:gleichda/state/providers.dart' show MessagesState, arrivedLongAgo, tripEnd, walkEnds;
 import 'package:gleichda/ui/connection_views.dart';
 import 'package:gleichda/ui/screens/connections_screen.dart' show mergeTrips, dropStarted;
 
@@ -65,6 +66,41 @@ void main() {
       expect(checkTransfers(trip(delay: 5), guaranteed: {1}).single.state, TransferState.guaranteed);
       expect(checkTransfers(trip(walk: 6), guaranteed: {2}).single.state, TransferState.guaranteed);
       expect(checkTransfers(trip(delay: 5), guaranteed: {0}).single.state, TransferState.missed);
+    });
+
+    test('Fahrtende: Verspätung der letzten Fahrt plus Fußweg zum Ziel', () {
+      final t = Trip(id: 'z', legs: [
+        ride('A', at(14, 0), 'B', at(14, 10, delay: 6)),
+        Leg(
+          type: LegType.walk,
+          from: StopTime(stop: stop('B'), departure: at(14, 10)),
+          to: StopTime(
+              stop: const Location(id: 'coord', providerId: 't', name: 'Ziel', lat: 51.2, lon: 7.1),
+              arrival: at(14, 18)),
+          durationMinutes: 8,
+        ),
+      ]);
+      // Plan sagt 14:18, tatsächlich 14:16 aus dem Bus + 8 min = 14:24.
+      expect(tripEnd(t), at(14, 24).planned);
+      expect(arrivedLongAgo(t, at(14, 21).planned), isFalse);
+      expect(arrivedLongAgo(t, at(14, 27).planned), isTrue);
+      expect(walkEnds(t, 1), isNull); // Ausstieg B ohne Koordinaten
+    });
+
+    test('Zieladresse ohne Koordinaten übernimmt die Lage aus der Suche', () {
+      final t = Trip(id: 'z', legs: [
+        ride('A', at(14, 0), 'B', at(14, 10)),
+        Leg(
+          type: LegType.walk,
+          from: StopTime(stop: stop('B'), departure: at(14, 10)),
+          to: StopTime(stop: const Location(id: 'streetID:1', providerId: 't', name: 'Ziel'), arrival: at(14, 18)),
+          durationMinutes: 8,
+        ),
+      ]);
+      const ziel = Location(id: 'streetID:1', providerId: 't', name: 'Ziel', lat: 51.25, lon: 7.15);
+      final filled = withEndpoints(t, stop('A'), ziel);
+      expect(filled.legs.last.to.stop.lat, 51.25);
+      expect(filled.legs.first.from.stop.lat, isNull); // Fahrt beginnt an der Haltestelle
     });
 
     test('mit Umsteigeweg zählt die Gehzeit statt der persönlichen Umsteigezeit', () {

@@ -96,6 +96,7 @@ class _TripMapState extends ConsumerState<TripMap> {
     // Linienwege aus der EFA; bis sie da sind (oder wo sie fehlen), verbindet
     // die Karte die Haltestellen gerade.
     final paths = ref.watch(legPathsProvider(TripPathKey(trip))).value;
+    final walks = ref.watch(walkPathsProvider(WalkPathKey(trip))).value;
     final lines = <Polyline>[];
     final stops = <Marker>[];
     for (var i = 0; i < trip.legs.length; i++) {
@@ -106,11 +107,31 @@ class _TripMapState extends ConsumerState<TripMap> {
           ? [for (final p in known) LatLng(p.lat, p.lon)]
           : [for (final s in seq) ?_ll(s)];
       if (l.type != LegType.ride) {
-        // Fußweg: vom Ende des vorigen zum Anfang des nächsten Abschnitts.
-        final a = i > 0 ? _ll(trip.legs[i - 1].to) : _ll(l.from);
-        final b = i + 1 < trip.legs.length ? _ll(trip.legs[i + 1].from) : _ll(l.to);
-        if (a != null && b != null) {
-          lines.add(Polyline(points: [a, b], color: c.muted, strokeWidth: 4, pattern: StrokePattern.dotted()));
+        // Fußweg als Gehweg (FOSSGIS), bis er da ist gerade: vom Ende des
+        // vorigen zum Anfang des nächsten Abschnitts, auch vom Start und
+        // bis zur Zieladresse.
+        final ends = walkEnds(trip, i);
+        if (ends == null) continue;
+        final walk = walks != null && i < walks.length ? walks[i] : null;
+        final pts = walk != null && walk.length >= 2
+            ? [for (final p in walk) LatLng(p.lat, p.lon)]
+            : [LatLng(ends.$1.lat, ends.$1.lon), LatLng(ends.$2.lat, ends.$2.lon)];
+        lines.add(Polyline(points: pts, color: c.walkText, strokeWidth: 4, pattern: StrokePattern.dotted()));
+        // Start- bzw. Zieladresse als Punkt in Schrift­farbe.
+        final end = i == 0 ? _ll(l.from) : (i == trip.legs.length - 1 ? _ll(l.to) : null);
+        if (end != null && (i == 0 ? l.from : l.to).stop.type != LocationType.stop) {
+          stops.add(Marker(
+            point: end,
+            width: 16,
+            height: 16,
+            child: Container(
+              decoration: BoxDecoration(
+                color: i == 0 ? c.surface : c.ink,
+                shape: BoxShape.circle,
+                border: Border.all(color: c.ink, width: 3),
+              ),
+            ),
+          ));
         }
         continue;
       }
