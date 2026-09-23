@@ -96,44 +96,30 @@ class _PlaceShortcuts extends ConsumerWidget {
 class _Brand extends StatelessWidget {
   const _Brand();
 
-  /// Name und Zeichen dezent abgehoben: Schriftzug und Leitsatz stehen genau
-  /// so hoch wie das Logo – oben bündig mit der Kachel, unten bündig mit ihr
-  /// (Nutzervorgabe 24.09.2026). Die Schrift hat über den Großbuchstaben und
-  /// unter der Grundlinie Luft; die Verschiebungen gleichen das aus.
-  static const _logo = 44.0;
-
+  /// Name und Zeichen dezent abgehoben: Schriftzug und Leitsatz etwas
+  /// kleiner als das Logo und mittig daneben – nie höher oder tiefer als die
+  /// Kachel (Nutzervorgabe 24.09.2026).
   @override
   Widget build(BuildContext context) {
     final c = context.c;
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 6),
       child: Row(children: [
-        const LogoMark(size: _logo),
+        const LogoMark(size: 42),
         const SizedBox(width: 12),
-        SizedBox(
-          height: _logo,
-          child: Stack(clipBehavior: Clip.none, children: [
-            const Positioned(left: 0, top: _wordTop, child: Wordmark(size: 35)),
-            Positioned(
-              left: 2,
-              bottom: _tagBottom,
-              child: Text('Bus und Bahn in Echtzeit',
-                  textScaler: TextScaler.noScaling,
-                  style: TextStyle(fontSize: 13.5, letterSpacing: 0.2, color: c.muted, height: 1)),
-            ),
-            // Breite für den Stack: so breit wie der Schriftzug.
-            const Opacity(opacity: 0, child: Wordmark(size: 35)),
-          ]),
-        ),
+        Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Wordmark(size: 26),
+          const SizedBox(height: 3),
+          Padding(
+            padding: const EdgeInsets.only(left: 1),
+            child: Text('Bus und Bahn in Echtzeit',
+                textScaler: TextScaler.noScaling,
+                style: TextStyle(fontSize: 12, letterSpacing: 0.2, color: c.muted, height: 1)),
+          ),
+        ]),
       ]),
     );
   }
-
-  /// Oberkante „G“ auf Höhe der Kachel (Rubik: Luft über den Versalien).
-  static const _wordTop = -3.3;
-
-  /// Unterkante des Leitsatzes auf Höhe der Kachel (Luft unter der Grundlinie).
-  static const _tagBottom = -3.0;
 }
 
 // --- Suchfelder ---

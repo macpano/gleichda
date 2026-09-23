@@ -16,6 +16,7 @@ import 'package:gleichda/domain/companion.dart';
 import 'package:gleichda/domain/connections.dart';
 import 'package:gleichda/domain/models.dart';
 import 'package:gleichda/domain/settings.dart';
+import 'package:gleichda/domain/subscriptions.dart';
 import 'package:gleichda/state/alarm_planner.dart';
 import 'package:gleichda/data/trias/trias_provider.dart' show withEndpoints;
 import 'package:gleichda/ui/trip_status.dart' show isReplacement, sevStopHint;
@@ -58,6 +59,17 @@ void main() {
     expect(feedbackAccepted('{"success":"true","message":"The form was submitted successfully."}'), isTrue);
     expect(feedbackAccepted('{"success":"false","message":"This form needs Activation."}'), isFalse);
     expect(feedbackAccepted('<html>Fehler</html>'), isFalse);
+  });
+
+  test('Abo für ein Verkehrsunternehmen deckt alle seine Linien', () {
+    const wsw = Subscription(lineId: 'netz:wsw', providerId: 'vrr', lineName: 'WSW');
+    const line = Subscription(lineId: 'wsw:66604', providerId: 'vrr', lineName: '604');
+    const m1 = Message(id: '1', title: 'Umleitung 611', lineIds: ['wsw:66611']);
+    const m2 = Message(id: '2', title: 'S9 Bauarbeiten', lineIds: ['ddb:92S09']);
+    expect(subscriptionCovers(wsw, m1), isTrue);
+    expect(subscriptionCovers(wsw, m2), isFalse);
+    expect(subscriptionCovers(line, m1), isFalse);
+    expect(subscriptionCovers(line, const Message(id: '3', title: 'x', lineIds: ['wsw:66604'])), isTrue);
   });
 
   group('Ersatzverkehr', () {

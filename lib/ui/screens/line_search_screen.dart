@@ -7,11 +7,13 @@ import '../../data/efa/efa_client.dart' show lineKey;
 import '../../data/transit_provider.dart';
 import '../../domain/models.dart';
 import '../../domain/product.dart';
+import '../../domain/subscriptions.dart';
 import '../../state/location.dart';
 import '../../state/providers.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'line_screen.dart';
+import 'operator_screen.dart';
 
 /// Linie suchen und abonnieren: Nummer eingeben („604“, „CE64“, „S8“),
 /// Treffer mit Linienverlauf, rechts abonnieren.
@@ -86,7 +88,7 @@ class _LineSearchScreenState extends ConsumerState<LineSearchScreen> {
       body: ListView(
         padding: pagePadding(context),
         children: [
-          const SubpageHeader(title: 'Linie suchen', backLabel: 'Zurück'),
+          const SubpageHeader(title: 'Linie oder Unternehmen', backLabel: 'Zurück'),
           const SizedBox(height: 8),
           TextField(
             controller: _ctrl,
@@ -95,7 +97,7 @@ class _LineSearchScreenState extends ConsumerState<LineSearchScreen> {
             textInputAction: TextInputAction.search,
             onSubmitted: _search,
             decoration: InputDecoration(
-              hintText: 'Liniennummer, z. B. 604, U79, S8, RE1',
+              hintText: 'Linie oder Unternehmen, z. B. 604, S8, WSW',
               prefixIcon: Icon(Icons.search, color: c.muted, size: 20),
               suffixIcon: _loading
                   ? Padding(
@@ -110,12 +112,15 @@ class _LineSearchScreenState extends ConsumerState<LineSearchScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          // Verkehrsunternehmen der Umgebung: ganz abonnieren oder ihre Meldungen ansehen.
+          ..._operators(context),
           if (_error != null)
             Notice(_error!)
           else if (results == null)
             Text(
-              'Gesucht wird deutschlandweit; Linien in deiner Nähe stehen oben. Ein Tipp auf eine Linie zeigt '
-              'ihre aktuellen Störungen. Abonnierte Linien melden sich, sobald es neue Störungen oder Umleitungen gibt.',
+              'Gesucht wird deutschlandweit; Linien in deiner Nähe stehen oben. Ein Tipp auf eine Linie oder ein '
+              'Unternehmen zeigt die aktuellen Störungen – ganz ohne Abo. Abonnieren nur, wer bei neuen Störungen '
+              'benachrichtigt werden möchte.',
               style: context.t.secondary.copyWith(color: c.muted, height: 1.4),
             )
           else if (results.isEmpty && !_loading)
@@ -139,6 +144,48 @@ class _LineSearchScreenState extends ConsumerState<LineSearchScreen> {
         ],
       ),
     );
+  }
+}
+
+/// Unternehmen passend zur Eingabe (ohne Eingabe alle der Umgebung).
+extension on _LineSearchScreenState {
+  List<Widget> _operators(BuildContext context) {
+    final c = context.c;
+    final all = ref.watch(messagesProvider).value?.operators ?? const <String, String>{};
+    final q = _ctrl.text.trim().toLowerCase();
+    final list = all.entries.where((e) => q.isEmpty || e.value.toLowerCase().contains(q) || e.key.contains(q)).toList()
+      ..sort((a, b) => a.value.compareTo(b.value));
+    if (list.isEmpty) return const [];
+    final subs = ref.watch(subscriptionsProvider).value ?? const <Subscription>[];
+    return [
+      const SectionTitle('Verkehrsunternehmen', small: true),
+      ListGroup(children: [
+        for (final e in list)
+          InkWell(
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => OperatorScreen(network: e.key, name: e.value))),
+            child: SizedBox(
+              height: 56,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16, right: 8),
+                child: Row(children: [
+                  Icon(Icons.apartment, size: 20, color: c.ink2),
+                  const SizedBox(width: 12),
+                  Expanded(child: OneLine(e.value, style: TextStyle(fontSize: 15, color: c.ink))),
+                  SubscribeButton(
+                    subscribed: subs.any((s) => s.lineId == operatorSubId(e.key)),
+                    onToggle: (on) => on
+                        ? ref.read(repositoryProvider).subscribe(
+                            Subscription(lineId: operatorSubId(e.key), providerId: 'vrr', lineName: e.value))
+                        : ref.read(repositoryProvider).unsubscribe(operatorSubId(e.key)),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+      ]),
+      const SizedBox(height: 16),
+    ];
   }
 }
 

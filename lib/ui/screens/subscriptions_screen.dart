@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models.dart';
+import '../../domain/subscriptions.dart';
 import '../../domain/product.dart';
 import '../../state/providers.dart';
 import '../theme.dart';
@@ -53,7 +54,8 @@ class SubscriptionsScreen extends ConsumerWidget {
           ]),
           const SizedBox(height: 16),
           if (subs.isEmpty)
-            const Notice('Noch keine Linien abonniert. Über „Linie hinzufügen“ suchen, oder bei den Abfahrten lange auf eine Linie drücken.')
+            const Notice('Noch nichts abonniert. Über „Linie hinzufügen“ eine Linie oder ein ganzes Verkehrsunternehmen wählen, '
+                'oder bei den Abfahrten lange auf eine Linie drücken.')
           else
             ListGroup(children: [
               for (final s in subs)
@@ -75,11 +77,13 @@ class SubscriptionsScreen extends ConsumerWidget {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Row(children: [
-                          LineBadge(Line(id: s.lineId, name: s.lineName, mode: guessProduct(s.lineName).mode)),
+                          isOperatorSub(s)
+                              ? _OperatorBadge(name: s.lineName)
+                              : LineBadge(Line(id: s.lineId, name: s.lineName, mode: guessProduct(s.lineName).mode)),
                           const SizedBox(width: 12),
                           Expanded(child: OneLine(windowLabel(s.window), style: TextStyle(fontSize: 15, color: c.muted))),
                           IconButton(
-                            tooltip: 'Linie ${s.lineName} abbestellen',
+                            tooltip: '${isOperatorSub(s) ? s.lineName : 'Linie ${s.lineName}'} abbestellen',
                             icon: Icon(Icons.notifications_off_outlined, size: 20, color: c.muted),
                             onPressed: () => ref.read(repositoryProvider).unsubscribe(s.lineId),
                           ),
@@ -129,5 +133,29 @@ class SubscriptionsScreen extends ConsumerWidget {
     );
     if (picked == null) return;
     await ref.read(repositoryProvider).subscribe(s.copyWith(window: picked.$2));
+  }
+}
+
+/// Zeichen für ein abonniertes Verkehrsunternehmen (statt Linienschild).
+class _OperatorBadge extends StatelessWidget {
+  const _OperatorBadge({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Container(
+      height: 24,
+      constraints: const BoxConstraints(maxWidth: 140),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(border: Border.all(color: c.ink2, width: 1.2), borderRadius: BorderRadius.circular(5)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.apartment, size: 14, color: c.ink2),
+        const SizedBox(width: 4),
+        Flexible(child: OneLine(name, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: c.ink2))),
+      ]),
+    );
   }
 }

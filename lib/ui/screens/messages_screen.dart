@@ -5,6 +5,7 @@ import '../../data/efa/efa_client.dart' show lineKey;
 import '../../data/transit_provider.dart';
 import '../../data/trias/trias_parser.dart' show stopAreaId;
 import '../../domain/models.dart';
+import '../../domain/subscriptions.dart';
 import '../../domain/product.dart';
 import '../../state/providers.dart';
 import '../theme.dart';
@@ -12,7 +13,7 @@ import '../widgets.dart';
 import 'line_search_screen.dart';
 import 'subscriptions_screen.dart';
 
-enum _Filter { all, myLines, myStops }
+enum _Filter { all, myLines, myStops, operator }
 
 /// Gilt erst in der Zukunft (z. B. „ab 25.09.“).
 bool _upcoming(Message m, DateTime now) => m.validFrom != null && m.validFrom!.isAfter(now);
@@ -59,6 +60,9 @@ class MessagesScreen extends ConsumerStatefulWidget {
 class _MessagesScreenState extends ConsumerState<MessagesScreen> {
   _Filter _filter = _Filter.all;
 
+  /// Gewähltes Verkehrsunternehmen (Netzkürzel) beim Filter „Unternehmen“.
+  String? _operator;
+
   Set<String> _myStops() {
     final ids = <String>{};
     for (final f in ref.read(favoritesProvider).value ?? const []) {
@@ -97,9 +101,11 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
           // Alle: in der Nähe und im eigenen Ort; Nachbargemeinden nur mit
           // Linien, die hier halten.
           _Filter.all => state!.isRelevant(m),
-          _Filter.myLines => m.lineIds.any(subKeys.contains),
+          _Filter.myLines => subs.any((s) => subscriptionCovers(s, m)),
           _Filter.myStops => m.stopIds.map(stopAreaId).any(stopKeys.contains),
+          _Filter.operator => m.lineIds.any((k) => networkOf(k) == _operator),
         }).toList();
+    final operators = (state?.operators.entries.toList() ?? [])..sort((a, b) => a.value.compareTo(b.value));
     return RefreshIndicator(
         edgeOffset: MediaQuery.paddingOf(context).top,
       onRefresh: () => ref.read(messagesProvider.notifier).refresh(),
@@ -124,18 +130,39 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChipX(label: label, selected: _filter == f, onTap: () => setState(() => _filter = f)),
                 ),
+              // Verkehrsunternehmen der Umgebung (statt einzelner Linien).
+              if (operators.isNotEmpty)
+                MenuAnchor(
+                  builder: (context, menu, _) => ChoiceChipX(
+                    label: _filter == _Filter.operator ? (state!.operators[_operator] ?? 'Unternehmen') : 'Unternehmen',
+                    selected: _filter == _Filter.operator,
+                    dropdown: true,
+                    onTap: () => menu.isOpen ? menu.close() : menu.open(),
+                  ),
+                  menuChildren: [
+                    for (final o in operators)
+                      MenuItemButton(
+                        leadingIcon: Icon(_filter == _Filter.operator && _operator == o.key ? Icons.check : null, size: 18),
+                        onPressed: () => setState(() {
+                          _filter = _Filter.operator;
+                          _operator = o.key;
+                        }),
+                        child: Text(o.value),
+                      ),
+                  ],
+                ),
           ]),
           const SizedBox(height: 16),
           ListGroup(children: [
             ValueRow(
               icon: Icons.notifications_none,
-              label: 'Linienabos',
-              value: subs.isEmpty ? 'Keine Linien' : subs.map((x) => x.lineName).join(', '),
+              label: 'Abos',
+              value: subs.isEmpty ? 'Keine Linien oder Unternehmen' : subs.map((x) => x.lineName).join(', '),
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SubscriptionsScreen())),
             ),
             ValueRow(
               icon: Icons.search,
-              label: 'Linie suchen und abonnieren',
+              label: 'Linie oder Unternehmen suchen',
               labelColor: c.accent,
               chevron: false,
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LineSearchScreen())),
@@ -156,6 +183,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                   ? 'Noch keine Linien abonniert. Über „Linie suchen und abonnieren“ oder eine Linie in einer Meldung.'
                   : 'Keine Meldungen zu deinen Linien.',
               _Filter.myStops => 'Keine Meldungen zu deinen Haltestellen.',
+              _Filter.operator => 'Keine Meldungen von ${state.operators[_operator] ?? 'diesem Unternehmen'}.',
               _Filter.all => 'Keine aktuellen Meldungen.',
             })
           else ...[
