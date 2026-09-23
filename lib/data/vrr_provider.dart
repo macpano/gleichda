@@ -203,49 +203,97 @@ class VrrProvider implements TransitProvider {
 
   final _guaranteed = <String, Set<int>>{};
 
-  /// Gesicherte Anschlüsse: dieselbe Verbindung bei der EFA suchen (alle
-  /// Fahrtabschnitte gleich, über Linie und Fahrtnummer bzw. Linienname und
-  /// Abfahrt) und deren Abschnitte „gesicherter Anschluss“ übernehmen.
-  @override
-  Future<Set<int>> guaranteedConnections(Trip trip) async {
-    final rides = [
-      for (var i = 0; i < trip.legs.length; i++)
-        if (trip.legs[i].type == LegType.ride && trip.legs[i].from.departure != null) i,
-    ];
-    if (rides.length < 2) return const {};
-    final first = trip.legs[rides.first];
-    final last = trip.legs[rides.last];
-    final cacheKey = [for (final i in rides) '${trip.legs[i].journeyRef}|${trip.legs[i].from.departure!.planned}']
-        .join(';');
-    final cached = _guaranteed[cacheKey];
-    if (cached != null) return cached;
-    try {
-      final found = await efa.rides(
-          stopAreaId(first.from.stop.id), stopAreaId(last.to.stop.id), first.from.departure!.planned);
-      bool same(Leg l, EfaRide r) {
-        final dep = l.from.departure!.planned;
-        final key = l.journeyRef == null ? null : EfaTripKey.fromJourneyRef(l.journeyRef!, '', dep);
-        if (key != null && r.tripCode == key.tripCode && lineKey(r.line) == lineKey(key.line)) return true;
-        return r.lineName.replaceAll(' ', '') == (l.line?.name ?? '').replaceAll(' ', '') &&
-            r.departurePlanned == dep;
-      }
+  static List<int> _rideIdx(Trip trip) => [
+        for (var i = 0; i < trip.legs.length; i++)
+          if (trip.legs[i].type == LegType.ride && trip.legs[i].from.departure != null) i,
+      ];
 
-      for (final j in found) {
-        if (j.length != rides.length) continue;
-        var match = true;
-        for (var k = 0; k < rides.length && match; k++) {
-          match = same(trip.legs[rides[k]], j[k]);
-        }
-        if (!match) continue;
-        return _guaranteed[cacheKey] = {
+  static String _cacheKey(Trip trip, List<int> rides) =>
+      [for (final i in rides) '${trip.legs[i].journeyRef}|${trip.legs[i].from.departure!.planned}'].join(';');
+
+  /// Dieselbe Verbindung unter den EFA-Verbindungen (alle Fahrtabschnitte
+  /// gleich, über Linie und Fahrtnummer bzw. Linienname und Abfahrt); null,
+  /// wenn sie nicht dabei ist.
+  static Set<int>? _match(Trip trip, List<int> rides, List<List<EfaRide>> found) {
+    bool same(Leg l, EfaRide r) {
+      final dep = l.from.departure!.planned;
+      final key = l.journeyRef == null ? null : EfaTripKey.fromJourneyRef(l.journeyRef!, '', dep);
+      if (key != null && r.tripCode == key.tripCode && lineKey(r.line) == lineKey(key.line)) return true;
+      return r.lineName.replaceAll(' ', '') == (l.line?.name ?? '').replaceAll(' ', '') && r.departurePlanned == dep;
+    }
+
+    for (final j in found) {
+      if (j.length != rides.length) continue;
+      var match = true;
+      for (var k = 0; k < rides.length && match; k++) {
+        match = same(trip.legs[rides[k]], j[k]);
+      }
+      if (match) {
+        return {
           for (var k = 0; k < rides.length; k++)
             if (j[k].guaranteedBefore) rides[k],
         };
       }
-      return _guaranteed[cacheKey] = const {};
+    }
+    return null;
+  }
+
+  /// Gesicherte Anschlüsse: dieselbe Verbindung bei der EFA suchen und deren
+  /// Abschnitte „gesicherter Anschluss“ übernehmen.
+  @override
+  Future<Set<int>> guaranteedConnections(Trip trip) async {
+    final rides = _rideIdx(trip);
+    if (rides.length < 2) return const {};
+    final cacheKey = _cacheKey(trip, rides);
+    final cached = _guaranteed[cacheKey];
+    if (cached != null) return cached;
+    final first = trip.legs[rides.first];
+    final last = trip.legs[rides.last];
+    try {
+      final found = await efa.rides(
+          stopAreaId(first.from.stop.id), stopAreaId(last.to.stop.id), first.from.departure!.planned);
+      return _guaranteed[cacheKey] = _match(trip, rides, found) ?? const {};
     } on ProviderException {
       return const {};
     }
+  }
+
+  /// Für die Verbindungsliste: je Paar aus erstem Einstieg und letztem
+  /// Ausstieg eine EFA-Anfrage (ab der frühesten Abfahrt), höchstens drei.
+  /// Nicht gefundene Verbindungen fehlen im Ergebnis.
+  @override
+  Future<Map<String, Set<int>>> guaranteedForTrips(List<Trip> trips) async {
+    final out = <String, Set<int>>{};
+    final groups = <String, List<Trip>>{};
+    for (final t in trips) {
+      final rides = _rideIdx(t);
+      if (rides.length < 2) continue;
+      final cached = _guaranteed[_cacheKey(t, rides)];
+      if (cached != null) {
+        out[t.id] = cached;
+        continue;
+      }
+      final key = '${stopAreaId(t.legs[rides.first].from.stop.id)}>${stopAreaId(t.legs[rides.last].to.stop.id)}';
+      groups.putIfAbsent(key, () => []).add(t);
+    }
+    await Future.wait(groups.entries.take(3).map((g) async {
+      final list = g.value;
+      final start = list
+          .map((t) => t.legs[_rideIdx(t).first].from.departure!.planned)
+          .reduce((a, b) => a.isBefore(b) ? a : b);
+      final parts = g.key.split('>');
+      try {
+        final found = await efa.rides(parts[0], parts[1], start);
+        for (final t in list) {
+          final rides = _rideIdx(t);
+          final hit = _match(t, rides, found);
+          if (hit != null) out[t.id] = _guaranteed[_cacheKey(t, rides)] = hit;
+        }
+      } on ProviderException {
+        // Ohne EFA bleibt es bei der Prüfung nach Uhrzeit.
+      }
+    }));
+    return out;
   }
 
   /// Fahrtverlauf per XML_TRIPSTOPTIMES_REQUEST, ab der Haltestelle der

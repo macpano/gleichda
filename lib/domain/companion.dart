@@ -2,7 +2,8 @@ import 'dart:math' as math;
 
 import 'models.dart';
 
-enum CompanionPhase { toStop, waiting, onBoard, transfer, arrived }
+/// [toDestination]: nach dem letzten Ausstieg zu Fuß zur Zieladresse.
+enum CompanionPhase { toStop, waiting, onBoard, transfer, toDestination, arrived }
 
 /// Der nächste Schritt einer begleiteten Fahrt – genau das, was die
 /// Unterwegs-Anzeige und die Benachrichtigung zeigen.
@@ -46,7 +47,22 @@ class CompanionStep {
   StopTime? get nextBeforeExit => nextStop == null || identical(nextStop, where) ? null : nextStop;
 
   bool get boarding => phase == CompanionPhase.toStop || phase == CompanionPhase.waiting || phase == CompanionPhase.transfer;
+
+  /// Zu Fuß unterwegs (zum Einstieg oder zum Ziel): Weg zum Ziel anbieten.
+  bool get walking => boarding || phase == CompanionPhase.toDestination;
 }
+
+double _meters(GeoPoint a, GeoPoint b) {
+  const r = 6371000.0;
+  final dLat = (b.lat - a.lat) * math.pi / 180;
+  final dLon = (b.lon - a.lon) * math.pi / 180;
+  final h = math.pow(math.sin(dLat / 2), 2) +
+      math.cos(a.lat * math.pi / 180) * math.cos(b.lat * math.pi / 180) * math.pow(math.sin(dLon / 2), 2);
+  return 2 * r * math.asin(math.sqrt(h));
+}
+
+/// So nah an der Zieladresse gilt man als angekommen.
+const arrivedMeters = 40.0;
 
 DateTime? _t(StopTime s, {bool arrival = false}) =>
     (arrival ? (s.arrival ?? s.departure) : (s.departure ?? s.arrival))?.best;
@@ -173,5 +189,32 @@ CompanionStep nextStep(Trip trip, DateTime now, {GeoPoint? gps}) {
     );
   }
   final last = trip.legs.last;
-  return CompanionStep(phase: CompanionPhase.arrived, where: last.to, when: last.to.arrival, progress: 1);
+  final arrived = CompanionStep(phase: CompanionPhase.arrived, where: last.to, when: last.to.arrival, progress: 1);
+  // Nach dem letzten Ausstieg (oder bei einem reinen Fußweg): zu Fuß zum
+  // Ziel, bis man per GPS dort ist – ohne GPS bis zur berechneten Ankunft.
+  if (last.type == LegType.ride) return arrived;
+  final lastRide = rides.isEmpty ? null : rides.last;
+  final start = lastRide == null ? trip.departure.best : _t(lastRide.to, arrival: true);
+  if (start == null) return arrived;
+  final walk = trip.legs
+      .skip(trip.legs.lastIndexWhere((l) => l.type == LegType.ride) + 1)
+      .fold<int>(0, (m, l) => m + (l.durationMinutes ?? 0));
+  final end = start.add(Duration(minutes: walk));
+  final dest = last.to.stop.lat == null ? null : (lat: last.to.stop.lat!, lon: last.to.stop.lon!);
+  final from = lastRide?.to.stop ?? trip.legs.first.from.stop;
+  final origin = from.lat == null ? null : (lat: from.lat!, lon: from.lon!);
+  if (gps != null && dest != null) {
+    final left = _meters(gps, dest);
+    if (left <= arrivedMeters) return arrived;
+    // Wer trödelt, wird noch 10 min begleitet.
+    if (now.isAfter(end.add(const Duration(minutes: 10)))) return arrived;
+    final total = origin == null ? null : _meters(origin, dest);
+    final p = total == null || total <= 0 ? 0.0 : (1 - left / total).clamp(0.0, 1.0);
+    return CompanionStep(
+        phase: CompanionPhase.toDestination, where: last.to, when: EventTime(planned: end), progress: p, byGps: true);
+  }
+  if (walk == 0 || now.isAfter(end.add(const Duration(minutes: 1)))) return arrived;
+  final span = end.difference(start).inSeconds;
+  final p = span <= 0 ? 1.0 : (now.difference(start).inSeconds / span).clamp(0.0, 1.0);
+  return CompanionStep(phase: CompanionPhase.toDestination, where: last.to, when: EventTime(planned: end), progress: p);
 }

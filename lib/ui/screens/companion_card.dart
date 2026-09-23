@@ -59,12 +59,12 @@ class CompanionBar extends StatelessWidget {
             : (step.when?.hasRealtime ?? false)
                 ? c.green
                 : c.ink;
-    final boarding = step.phase == CompanionPhase.toStop ||
-        step.phase == CompanionPhase.transfer ||
-        step.phase == CompanionPhase.waiting;
+    final boarding = step.boarding;
+    final walking = step.walking;
     final label = switch (step.phase) {
       CompanionPhase.arrived => 'Angekommen',
       CompanionPhase.onBoard => 'Aussteigen',
+      CompanionPhase.toDestination => 'Zu Fuß zum Ziel',
       _ => 'Einsteigen',
     };
     final detail = [
@@ -95,7 +95,10 @@ class CompanionBar extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.only(left: 16, right: 6),
               child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                if (leg != null) ...[LineBadge(leg.line), const SizedBox(width: 12)],
+                if (step.phase == CompanionPhase.toDestination)
+                  ...[Icon(Icons.directions_walk, color: c.ink2), const SizedBox(width: 12)]
+                else if (leg != null)
+                  ...[LineBadge(leg.line), const SizedBox(width: 12)],
                 Expanded(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -129,10 +132,10 @@ class CompanionBar extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                // Vor dem Einsteigen (auch beim Umsteigen): Weg zum Steig.
-                if (boarding)
+                // Zu Fuß (zum Einstieg, beim Umsteigen, zum Ziel): der Weg.
+                if (walking)
                   IconButton(
-                    tooltip: 'Weg zum Steig',
+                    tooltip: boarding ? 'Weg zum Steig' : 'Weg zum Ziel',
                     icon: Icon(Icons.directions_walk, color: c.accent),
                     onPressed: () => onWalk(step),
                   ),

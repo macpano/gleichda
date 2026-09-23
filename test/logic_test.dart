@@ -43,6 +43,42 @@ Leg ride(String from, EventTime dep, String to, EventTime arr, {List<StopTime> v
     );
 
 void main() {
+  group('Zu Fuß zum Ziel', () {
+    const home = Location(id: 'addr', providerId: 't', name: 'Zuhause', type: LocationType.address, lat: 51.2600, lon: 7.1500);
+    const exit = Location(id: 'B', providerId: 't', name: 'B', type: LocationType.stop, lat: 51.2600, lon: 7.1400);
+    Trip trip() => Trip(id: 'z', legs: [
+          Leg(
+            type: LegType.ride,
+            from: StopTime(stop: stop('A'), departure: at(14, 0)),
+            to: StopTime(stop: exit, arrival: at(14, 10)),
+            line: const Line(id: 'wsw:66640::H', name: '640', mode: TransportMode.bus),
+          ),
+          Leg(
+            type: LegType.walk,
+            from: StopTime(stop: exit, departure: at(14, 10)),
+            to: StopTime(stop: home, arrival: at(14, 20)),
+            durationMinutes: 10,
+          ),
+        ]);
+
+    test('nach dem Ausstieg: zu Fuß zum Ziel, nach Uhrzeit', () {
+      final s = nextStep(trip(), at(14, 15).planned);
+      expect(s.phase, CompanionPhase.toDestination);
+      expect(s.where.stop.name, 'Zuhause');
+      expect(s.progress, closeTo(0.5, 0.01));
+      expect(s.walking, isTrue);
+      expect(nextStep(trip(), at(14, 22).planned).phase, CompanionPhase.arrived);
+    });
+
+    test('per GPS: angekommen erst an der Adresse, auch wenn es länger dauert', () {
+      const halfway = (lat: 51.2600, lon: 7.1450);
+      const door = (lat: 51.2601, lon: 7.1500);
+      expect(nextStep(trip(), at(14, 25).planned, gps: halfway).phase, CompanionPhase.toDestination);
+      expect(nextStep(trip(), at(14, 15).planned, gps: door).phase, CompanionPhase.arrived);
+      expect(nextStep(trip(), at(14, 31).planned, gps: halfway).phase, CompanionPhase.arrived); // 10 min Nachlauf
+    });
+  });
+
   group('Anschlussprüfung', () {
     Trip trip({int delay = 0, int walk = 0}) => Trip(id: 't', legs: [
           ride('A', at(14, 0), 'B', at(14, 10, delay: delay)),

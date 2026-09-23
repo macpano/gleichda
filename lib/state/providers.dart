@@ -177,7 +177,10 @@ class LastTripController extends AsyncNotifier<LastTripState?> {
   /// die App die ganze Zeit offen war.
   Future<bool> _dropIfArrived() async {
     final cur = state.value;
-    if (cur == null || _openedPast || tripViewers > 0 || !arrivedLongAgo(cur.trip, DateTime.now())) return false;
+    // Läuft die Begleitung (keepAlive), beendet sie sich selbst am Ziel.
+    if (cur == null || _openedPast || tripViewers > 0 || keepAlive || !arrivedLongAgo(cur.trip, DateTime.now())) {
+      return false;
+    }
     _timer?.cancel();
     state = const AsyncData(null);
     await ref.read(repositoryProvider).clearLastTrip();

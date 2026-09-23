@@ -29,5 +29,12 @@ void main() {
       }
     }
     expect(seen, greaterThan(0));
+    // Verbindungsliste: eine Anfrage für alle.
+    final all = await VrrProvider(TriasProvider(dio), EfaClient(dio)).guaranteedForTrips(trips);
+    // ignore: avoid_print
+    print('Liste: $all');
+    for (final t in trips.where((t) => t.rides.map((r) => r.line?.name).join(',') == '602,632')) {
+      expect(all[t.id], isNotEmpty);
+    }
   }, timeout: const Timeout(Duration(minutes: 2)));
 }

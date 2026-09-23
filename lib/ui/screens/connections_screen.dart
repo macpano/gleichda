@@ -116,6 +116,22 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
   bool _loadingMore = false;
   ConnectionSort _sort = ConnectionSort.arrival;
 
+  /// Gesicherte Anschlüsse je Fahrt (EFA), nachgeladen nach jeder Suche.
+  Map<String, Set<int>> _guaranteed = const {};
+
+  Future<void> _loadGuaranteed() async {
+    final trips = _trips;
+    if (trips == null) return;
+    final missing = trips.where((t) => !_guaranteed.containsKey(t.id) && t.rides.length > 1).toList();
+    if (missing.isEmpty) return;
+    try {
+      final found = await ref.read(transitProvider).guaranteedForTrips(missing);
+      if (mounted && found.isNotEmpty) setState(() => _guaranteed = {..._guaranteed, ...found});
+    } catch (_) {
+      // Ohne Angabe bleibt es bei der Prüfung nach Uhrzeit.
+    }
+  }
+
   /// Gesuchte Zeit (null = jetzt); in der Liste über „Heute ab …“ änderbar.
   late DateTime? _time = widget.time;
   late bool _arriveBy = widget.arriveBy;
@@ -249,6 +265,7 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
         _loading = false;
         _error = null;
       });
+      _loadGuaranteed();
       if (!_accessible && widget.via == null) {
         await ref.read(repositoryProvider).recordSearch(widget.from, widget.to, result: trips);
       }
@@ -285,6 +302,7 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
           (later || t.departure.best.isBefore(trips.first.departure.best)));
       setState(() => _trips = [...trips, ...add]
         ..sort((a, b) => a.departure.best.compareTo(b.departure.best)));
+      _loadGuaranteed();
     } on ProviderException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } on LocationException catch (e) {
@@ -307,7 +325,10 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
     final grid = settings.connectionsGrid;
     final items = _trips == null
         ? null
-        : sortConnections(rateConnections(_trips!, transferMinutes: settings.transferPace.transferMinutes), _sort);
+        : sortConnections(
+            rateConnections(_trips!,
+                transferMinutes: settings.transferPace.transferMinutes, guaranteed: _guaranteed),
+            _sort);
     final unreachable = items?.where((i) => !i.reachable).length ?? 0;
     return Scaffold(
       body: RefreshIndicator(
