@@ -106,6 +106,10 @@ class LastTripState {
 
 /// „Zuletzt angesehene Fahrt“: sofort aus dem Speicher, parallel frisch
 /// von der Auskunft; alle 30 s neu, solange jemand hinsieht.
+/// 2 Minuten nach der (Echtzeit-)Ankunft gilt eine Fahrt als erledigt.
+bool arrivedLongAgo(Trip trip, DateTime now) =>
+    now.isAfter(trip.arrival.best.add(const Duration(minutes: 2)));
+
 class LastTripController extends AsyncNotifier<LastTripState?> {
   Timer? _timer;
   bool _busy = false;
@@ -118,7 +122,7 @@ class LastTripController extends AsyncNotifier<LastTripState?> {
     final saved = await ref.read(repositoryProvider).lastTrip();
     if (saved == null) return null;
     // Nach Ankunft verschwindet die Karte; die Suche steht im Verlauf.
-    if (saved.trip.arrival.best.isBefore(DateTime.now().subtract(const Duration(minutes: 10)))) {
+    if (arrivedLongAgo(saved.trip, DateTime.now())) {
       await ref.read(repositoryProvider).clearLastTrip();
       return null;
     }
@@ -140,7 +144,19 @@ class LastTripController extends AsyncNotifier<LastTripState?> {
     _schedule(immediately: DateTime.now().difference(at) > const Duration(seconds: 20));
   }
 
+  /// Ziel erreicht: Die Fahrt verschwindet von der Startseite, auch wenn
+  /// die App die ganze Zeit offen war.
+  Future<bool> _dropIfArrived() async {
+    final cur = state.value;
+    if (cur == null || !arrivedLongAgo(cur.trip, DateTime.now())) return false;
+    _timer?.cancel();
+    state = const AsyncData(null);
+    await ref.read(repositoryProvider).clearLastTrip();
+    return true;
+  }
+
   Future<void> refresh() async {
+    if (await _dropIfArrived()) return;
     final cur = state.value;
     if (cur == null || _busy) return;
     _busy = true;

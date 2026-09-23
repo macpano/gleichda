@@ -15,6 +15,7 @@ import 'package:gleichda/domain/connections.dart';
 import 'package:gleichda/domain/models.dart';
 import 'package:gleichda/domain/settings.dart';
 import 'package:gleichda/state/alarm_planner.dart';
+import 'package:gleichda/state/providers.dart' show arrivedLongAgo;
 import 'package:gleichda/ui/connection_views.dart';
 import 'package:gleichda/ui/screens/connections_screen.dart' show mergeTrips, dropStarted;
 
@@ -223,6 +224,22 @@ void main() {
       final early = nextStep(trip, DateTime(2026, 9, 23, 14, 1), gps: (lat: 51.25, lon: 7.105));
       expect(early.nextBeforeExit?.stop.id, 'B');
     });
+  });
+
+  test('Anzeigename mit Ort', () {
+    Location l(String n, String? p, [LocationType t = LocationType.stop]) =>
+        Location(id: n, providerId: 't', name: n, place: p, type: t);
+    expect(l('Hbf', 'Wuppertal').label, 'Wuppertal Hbf');
+    expect(l('Wuppertal Hbf', 'Wuppertal').label, 'Wuppertal Hbf');
+    expect(l('W-Barmen Bf', 'Wuppertal').label, 'W-Barmen Bf');
+    expect(l('Hofaue 12', 'Wuppertal', LocationType.address).label, 'Hofaue 12, Wuppertal');
+    expect(l('Alter Markt', null).label, 'Alter Markt');
+  });
+
+  test('Fahrt gilt 2 Minuten nach der Ankunft als erledigt', () {
+    final t = Trip(id: 'x', legs: [ride('A', at(14, 0), 'B', at(14, 20))]);
+    expect(arrivedLongAgo(t, DateTime(2026, 9, 23, 14, 21)), isFalse);
+    expect(arrivedLongAgo(t, DateTime(2026, 9, 23, 14, 23)), isTrue);
   });
 
   group('Verbindungsliste', () {

@@ -94,7 +94,7 @@ class _SearchCard extends ConsumerWidget {
                 Row(children: [
                   if (isHere(value)) ...[Icon(Icons.my_location, size: 15, color: c.accent), const SizedBox(width: 6)],
                   Expanded(
-                    child: OneLine(value?.name ?? hint,
+                    child: OneLine(value?.label ?? hint,
                         style: TextStyle(fontSize: 16, color: value == null ? c.muted : c.ink)),
                   ),
                 ]),
@@ -138,7 +138,7 @@ class _SearchCard extends ConsumerWidget {
         const SizedBox(width: 8),
         _Chip(
           icon: optionsActive(route, settings) ? Icons.tune : null,
-          label: route.via != null ? 'über ${route.via!.name}' : 'Optionen',
+          label: route.via != null ? 'über ${route.via!.label}' : 'Optionen',
           onTap: () => showOptionsSheet(context),
           maxWidth: 130,
         ),
@@ -266,8 +266,9 @@ class _LastTripSection extends ConsumerWidget {
         child: SkeletonBlock(height: 150, radius: Radii.card),
       );
     }
-    if (s == null) return const SizedBox.shrink();
     final now = ref.watch(clockProvider).value ?? DateTime.now();
+    // Ziel erreicht: ausblenden (der Speicher wird bei der nächsten Prüfung geleert).
+    if (s == null || arrivedLongAgo(s.trip, now)) return const SizedBox.shrink();
     final c = context.c;
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
@@ -338,8 +339,8 @@ class LastTripCard extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              OneLine(first.from.stop.name, style: TextStyle(fontSize: 15, color: c.ink2, height: 1.35)),
-              OneLine('nach ${trip.destination.name}',
+              OneLine(first.from.stop.label, style: TextStyle(fontSize: 15, color: c.ink2, height: 1.35)),
+              OneLine('nach ${trip.destination.label}',
                   style: TextStyle(fontSize: 15, color: c.ink2, height: 1.35)),
               const SizedBox(height: 8),
               Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
@@ -487,9 +488,9 @@ class _FavoritesSectionState extends ConsumerState<_FavoritesSection> {
                   child: Row(children: [
                     Expanded(
                       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        OneLine(f.to!.name, style: context.t.listRow),
+                        OneLine(f.to!.label, style: context.t.listRow),
                         const SizedBox(height: 1),
-                        OneLine('${f.from!.name} → ${f.to!.name}', style: TextStyle(fontSize: 13, color: c.muted)),
+                        OneLine('${f.from!.label} → ${f.to!.label}', style: TextStyle(fontSize: 13, color: c.muted)),
                       ]),
                     ),
                     const SizedBox(width: 12),
@@ -569,7 +570,7 @@ class _HistorySection extends ConsumerWidget {
                   height: 52,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(children: [
-                    Expanded(child: OneLine('${h.from.name} → ${h.to.name}', style: context.t.listRow)),
+                    Expanded(child: OneLine('${h.from.label} → ${h.to.label}', style: context.t.listRow)),
                     const SizedBox(width: 12),
                     Text(dayText(h.lastUsed, now), style: TextStyle(fontSize: 13, color: c.muted)),
                   ]),

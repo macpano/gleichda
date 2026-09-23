@@ -105,7 +105,7 @@ class _AlarmCard extends ConsumerWidget {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     OneLine(a.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 2),
-                    OneLine('${a.from.name} → ${a.to.name}', style: TextStyle(fontSize: 15, color: c.muted)),
+                    OneLine('${a.from.label} → ${a.to.label}', style: TextStyle(fontSize: 15, color: c.muted)),
                   ]),
                 ),
                 Switch(
@@ -289,7 +289,7 @@ class _AlarmEditScreenState extends ConsumerState<AlarmEditScreen> {
             height: 52,
             child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(label, style: TextStyle(fontSize: 12, color: c.muted)),
-              OneLine(l?.name ?? 'Ort wählen', style: TextStyle(fontSize: 16, color: l == null ? c.accent : c.ink)),
+              OneLine(l?.label ?? 'Ort wählen', style: TextStyle(fontSize: 16, color: l == null ? c.accent : c.ink)),
             ]),
           ),
         );
