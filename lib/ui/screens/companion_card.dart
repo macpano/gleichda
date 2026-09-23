@@ -111,6 +111,15 @@ class CompanionBar extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
+                // Vor dem Einsteigen (auch beim Umsteigen): Weg zum Steig.
+                if (boarding)
+                  IconButton(
+                    tooltip: 'Weg zum Steig',
+                    icon: Icon(Icons.directions_walk, color: c.accent),
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) =>
+                            WalkScreen(target: step.where.stop, platform: step.where.platform, departure: step.when))),
+                  ),
                 TextButton(
                   style: TextButton.styleFrom(foregroundColor: c.muted),
                   onPressed: onStop,

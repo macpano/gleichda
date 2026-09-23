@@ -139,3 +139,8 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 ## v0.4.6 (23.09.2026)
 - ✅ Verbindungen: statt fünf Profil-Chips eine Zeile – Sortierung als Menü (Abfahrt, Schnellste, Wenig Umstiege,
   Wenig Fußweg; sortiert sofort ohne neue Anfrage, weil alle Varianten aus einer Suche kommen) und „Barrierefrei“
+
+## v0.4.7 (23.09.2026)
+- ✅ Verbindungen standardmäßig nach „Schnellste“ sortiert
+- ✅ Fußnavigation beim Umsteigen: Gehsymbol in jeder Umsteigezeile (zum Steig des Anschlusses, mit dessen Abfahrt),
+  in der Unterwegs-Leiste vor jedem Einsteigen und als Knopf „Weg zum Steig“ in der Benachrichtigung
