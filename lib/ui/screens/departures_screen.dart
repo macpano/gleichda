@@ -294,7 +294,7 @@ class _StopSection extends ConsumerWidget {
             child: Text('Keine Abfahrten in der nächsten Zeit.', style: TextStyle(color: c.muted)),
           )
         else ...[
-          for (final d in shown) _DepartureRow(d, now: now, next: _nextOfSame(all, d)),
+          for (final d in shown) DepartureRow(d, now: now, next: _nextOfSame(all, d)),
           if (all.length > 3)
             SizedBox(
               height: 44,
@@ -318,23 +318,30 @@ class _StopSection extends ConsumerWidget {
   }
 }
 
-class _DepartureRow extends ConsumerStatefulWidget {
-  const _DepartureRow(this.d, {required this.now, this.next});
+/// Zeile einer Abfahrt. Tipp öffnet die Fahrt – oder ruft [onSelect] auf
+/// (die Karte zeigt die Fahrt dann selbst an).
+class DepartureRow extends ConsumerStatefulWidget {
+  const DepartureRow(this.d, {super.key, required this.now, this.next, this.onSelect});
 
   final Departure d;
   final DateTime now;
   final Departure? next;
+  final void Function(Departure d)? onSelect;
 
   @override
-  ConsumerState<_DepartureRow> createState() => _DepartureRowState();
+  ConsumerState<DepartureRow> createState() => DepartureRowState();
 }
 
-class _DepartureRowState extends ConsumerState<_DepartureRow> {
+class DepartureRowState extends ConsumerState<DepartureRow> {
   bool _busy = false;
 
   /// Tipp: die ganze Fahrt ab dieser Haltestelle öffnen.
   Future<void> _open() async {
     if (_busy) return;
+    if (widget.onSelect != null) {
+      widget.onSelect!(widget.d);
+      return;
+    }
     final messenger = ScaffoldMessenger.of(context);
     final nav = Navigator.of(context);
     setState(() => _busy = true);

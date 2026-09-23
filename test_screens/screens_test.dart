@@ -28,6 +28,7 @@ import 'package:gleichda/ui/screens/alarms_screen.dart';
 import 'package:gleichda/ui/screens/alternatives_screen.dart';
 import 'package:gleichda/state/companion.dart';
 import 'package:gleichda/ui/screens/location_search_screen.dart';
+import 'package:gleichda/ui/screens/map_screen.dart';
 import 'package:gleichda/ui/screens/messages_screen.dart';
 import 'package:gleichda/ui/screens/more_screen.dart';
 import 'package:gleichda/ui/screens/trip_screen.dart';
@@ -104,7 +105,12 @@ class FakeProvider implements TransitProvider {
   @override
   Future<List<Location>> searchLocations(String query,
           {({double lat, double lon})? near, int limit = 10, int radiusMeters = 1000}) async =>
-      const [];
+      query.isEmpty && near != null
+          ? const [
+              Location(id: 'de:05124:11376', providerId: 't', name: 'Wuppertal Hbf', lat: 51.2544, lon: 7.1495),
+              Location(id: 'de:05124:11071', providerId: 't', name: 'Wuppertal Alter Markt', lat: 51.2560, lon: 7.1535),
+            ]
+          : const [];
 }
 
 Future<void> loadFonts() async {
@@ -239,6 +245,9 @@ void main() {
     final vehicle = Trip(id: 'abfahrt:test', legs: [ride]);
     return shot(t, 'fahrtverlauf', const TripScreen(), seed: (r) => r.saveLastTrip(vehicle));
   });
+  testWidgets('Karte (Reiter)', (t) => shot(t, 'karte_reiter', const Scaffold(body: MapScreen())));
+  testWidgets('Karte: Haltestelle angetippt', (t) => shot(t, 'karte_haltestelle', const Scaffold(body: MapScreen()),
+      act: (t) async => t.tap(find.text('H').first)));
   testWidgets('Alternativen', (t) => shot(t, 'alternativen', AlternativesScreen(trip: trips.first)));
   testWidgets('Neuer Wecker', (t) => shot(t, 'wecker_neu', const AlarmEditScreen()));
   testWidgets('Suche leer', (t) => shot(t, 'suche_leer', const LocationSearchScreen(title: 'Nach'), seed: seedHome));
