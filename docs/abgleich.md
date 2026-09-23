@@ -360,3 +360,11 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   (`MainActivity.provideFlutterEngine` + `FlutterEngineCache`, `shouldDestroyEngineWithHost = false`) und läuft weiter,
   solange der Vordergrunddienst den Prozess hält. Beendet Android die App ganz, setzt sie beim nächsten Start fort
   (Einstellung `unterwegs`)
+
+## 0.4.13-vorab.4 (24.09.2026)
+- ✅ Kopf: Schriftzug (26) und Leitsatz (12) kleiner als das Logo (42) und mittig daneben
+- ✅ Meldungen nach Verkehrsunternehmen, auch ohne Abo: Auswahlfeld „Unternehmen ▾“ (Unternehmen der Umgebung) filtert
+  die Liste; „Linie oder Unternehmen suchen“ zeigt die Unternehmen der Umgebung, ein Tipp öffnet ihre Meldungen
+  (`OperatorScreen`) – abonnieren ist freiwillig
+- ✅ Abo für ein ganzes Unternehmen (`netz:<Kürzel>`, `lib/domain/subscriptions.dart`): gilt für alle seine Linien, in
+  „Meine Linien“ und in der Hintergrundprüfung; in der Abo-Liste mit eigenem Zeichen

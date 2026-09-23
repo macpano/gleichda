@@ -322,6 +322,15 @@ void main() {
       ConnectionsScreen(from: trips.first.origin, to: trips.first.destination, time: null, arriveBy: false),
       seed: (r) => r.setSetting('settings', const AppSettings(connectionsGrid: true).encode())));
   testWidgets('Meldungen', (t) => shot(t, 'meldungen', const Scaffold(body: MessagesScreen())));
+  testWidgets('Meldungen nach Unternehmen', (t) => shot(t, 'meldungen_unternehmen', const Scaffold(body: MessagesScreen()),
+      overrides: [messagesProvider.overrideWith(_AreaMessages.new)],
+      act: (t) async {
+        await t.tap(find.text('Unternehmen'));
+        for (var i = 0; i < 4; i++) {
+          await t.pump(const Duration(milliseconds: 150));
+        }
+        await t.tap(find.widgetWithText(MenuItemButton, 'VER'));
+      }));
   testWidgets('Mehr', (t) => shot(t, 'mehr', const Scaffold(body: MoreScreen())));
   testWidgets('Unterwegs', (t) {
     final onBoard = withCoords(tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first);
@@ -453,4 +462,15 @@ Trip withCoords(Trip trip) {
     for (final l in trip.legs)
       l.copyWith(from: put(l.from), intermediates: [for (final s in l.intermediates) put(s)], to: put(l.to)),
   ]);
+}
+
+/// Meldungen mit Umgebung (zwei Verkehrsunternehmen) für das Bildschirmfoto.
+class _AreaMessages extends MessagesController {
+  @override
+  Future<MessagesState> build() async {
+    final list = parseAddInfo(jsonDecode(File('test/fixtures/efa_addinfo_wuppertal.json').readAsStringSync())
+        as Map<String, dynamic>);
+    return MessagesState(list, DateTime.now(),
+        areaNetworks: const {'wsw', 'ver'}, operators: const {'wsw': 'WSW', 'ver': 'VER'});
+  }
 }

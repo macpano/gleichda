@@ -14,6 +14,7 @@ import 'data/transit_provider.dart';
 import 'data/trias/trias_provider.dart';
 import 'data/vrr_provider.dart';
 import 'domain/models.dart';
+import 'domain/subscriptions.dart';
 import 'domain/settings.dart';
 import 'state/alarm_planner.dart';
 import 'state/notifications.dart';
@@ -71,11 +72,11 @@ Future<int> checkSubscriptions(Repository repo, TransitProvider provider, {DateT
   if (seen != null) {
     for (final m in messages) {
       if (seen.contains(m.id)) continue;
-      final hit = subs.where((s) => m.lineIds.contains(lineKey(s.lineId)) && _inWindow(s.window, t)).toList();
+      final hit = subs.where((s) => subscriptionCovers(s, m) && _inWindow(s.window, t)).toList();
       if (hit.isEmpty) continue;
       await Notifications.showMessage(
         id: 3000 + (m.id.hashCode & 0x0FFFFFFF) % 100000,
-        title: 'Linie ${hit.map((s) => s.lineName).join(', ')}: ${m.title}',
+        title: '${hit.map((s) => isOperatorSub(s) ? s.lineName : 'Linie ${s.lineName}').join(', ')}: ${m.title}',
         body: m.text ?? m.title,
         payload: 'message:${m.id}',
       );
