@@ -66,6 +66,19 @@ abstract class EventTime with _$EventTime {
   bool get hasRealtime => quality != TimeQuality.planned && estimated != null;
 }
 
+/// Anzeigename mit Ort: „Hbf“ allein könnte überall sein. Haltestellen
+/// „Wuppertal Hbf“, Adressen und Orte „Hofaue 12, Wuppertal“. Steht der Ort
+/// schon im Namen (auch abgekürzt wie „W-Barmen“), bleibt der Name.
+extension LocationLabel on Location {
+  String get label {
+    final p = place?.trim() ?? '';
+    if (p.isEmpty || type == LocationType.coordinate) return name;
+    final n = name.toLowerCase();
+    if (n.contains(p.toLowerCase()) || n.startsWith('${p[0].toLowerCase()}-')) return name;
+    return type == LocationType.stop ? '$p $name' : '$name, $p';
+  }
+}
+
 @freezed
 abstract class Location with _$Location {
   const factory Location({

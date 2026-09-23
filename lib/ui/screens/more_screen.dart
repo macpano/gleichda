@@ -243,7 +243,7 @@ class _FavoritesHistoryScreen extends ConsumerWidget {
             ListGroup(children: [
               for (final h in hist)
                 ListTile(
-                  title: OneLine('${h.from.name} → ${h.to.name}'),
+                  title: OneLine('${h.from.label} → ${h.to.label}'),
                   subtitle: Text(dayText(h.lastUsed, now)),
                   trailing: IconButton(
                     tooltip: 'Löschen',

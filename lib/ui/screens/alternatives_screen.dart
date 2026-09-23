@@ -121,7 +121,7 @@ class _AlternativesScreenState extends ConsumerState<AlternativesScreen> {
           padding: pagePadding(context),
           children: [
             const SubpageHeader(title: 'Alternativen', backLabel: 'Fahrt'),
-            RouteSummary(from: _from.name, to: original.destination.name, when: 'ab jetzt'),
+            RouteSummary(from: _from.label, to: original.destination.label, when: 'ab jetzt'),
             const SizedBox(height: 14),
             _Original(trip: original, issue: issue),
             if (_loading && items == null) ...[

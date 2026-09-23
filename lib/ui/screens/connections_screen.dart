@@ -292,10 +292,10 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
             Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
               Expanded(
                 child: RouteSummary(
-                  from: widget.from.name,
-                  to: widget.to.name,
+                  from: widget.from.label,
+                  to: widget.to.label,
                   when: [
-                    if (widget.via != null) 'über ${widget.via!.name}',
+                    if (widget.via != null) 'über ${widget.via!.label}',
                     widget.time == null
                         ? 'Heute ab ${hm(now)}'
                         : '${widget.arriveBy ? 'Ankunft bis' : 'Ab'} ${dayText(widget.time!, now)} ${hm(widget.time!)}',

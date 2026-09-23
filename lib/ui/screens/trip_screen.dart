@@ -73,7 +73,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                 ),
               ]),
             ),
-            RouteSummary(from: trip.origin.name, to: trip.destination.name),
+            RouteSummary(from: trip.origin.label, to: trip.destination.label),
             Padding(
               padding: const EdgeInsets.only(left: 4),
               child: Row(children: [

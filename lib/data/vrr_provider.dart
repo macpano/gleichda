@@ -254,8 +254,18 @@ Leg? mergeLeg(Leg leg, List<StopTime> stops) {
     }
   }
   if (to < 0) return null;
+  // Der volle Name der EFA („Wuppertal Hbf“) ersetzt einen gespeicherten
+  // Kurznamen („Hbf“) – so heilen auch Fahrten aus älteren Versionen.
+  String nameOf(StopTime old, StopTime fresh) =>
+      fresh.stop.name.length > old.stop.name.length && fresh.stop.name.contains(old.stop.name)
+          ? fresh.stop.name
+          : old.stop.name;
   StopTime take(StopTime old, StopTime fresh) => old.copyWith(
-        stop: old.stop.copyWith(lat: fresh.stop.lat ?? old.stop.lat, lon: fresh.stop.lon ?? old.stop.lon),
+        stop: old.stop.copyWith(
+          name: nameOf(old, fresh),
+          lat: fresh.stop.lat ?? old.stop.lat,
+          lon: fresh.stop.lon ?? old.stop.lon,
+        ),
         arrival: fresh.arrival ?? old.arrival,
         departure: fresh.departure ?? old.departure,
         platform: fresh.platform ?? old.platform,

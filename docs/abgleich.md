@@ -115,3 +115,8 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 ## v0.4.0 (23.09.2026)
 - ✅ Android im Material-Stil über die gemeinsamen Bausteine: Einstellungszeilen mit Symbol, Akzent-Abschnittstitel,
   Filterchips (auch Meldungen), Segmentknopf, Material-Schalter, Kontrollkästchen, Kapselknöpfe, Material-Uhr
+
+## v0.4.1 (23.09.2026)
+- ✅ Orte überall mit Ort angezeigt (`Location.label`: „Wuppertal Hbf“, „Hofaue 12, Wuppertal“); die Echtzeit-Aktualisierung
+  übernimmt volle EFA-Namen und heilt so gespeicherte Fahrten mit Kurznamen
+- ✅ Zuletzt angesehene Fahrt verschwindet 2 min nach der Ankunft, auch bei offener App
