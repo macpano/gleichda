@@ -14,6 +14,7 @@ import '../format.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'location_search_screen.dart';
+import 'trip_screen.dart';
 
 class _StopBoard {
   _StopBoard(this.stop, {this.distance});
@@ -317,7 +318,7 @@ class _StopSection extends ConsumerWidget {
   }
 }
 
-class _DepartureRow extends ConsumerWidget {
+class _DepartureRow extends ConsumerStatefulWidget {
   const _DepartureRow(this.d, {required this.now, this.next});
 
   final Departure d;
@@ -325,7 +326,38 @@ class _DepartureRow extends ConsumerWidget {
   final Departure? next;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DepartureRow> createState() => _DepartureRowState();
+}
+
+class _DepartureRowState extends ConsumerState<_DepartureRow> {
+  bool _busy = false;
+
+  /// Tipp: die ganze Fahrt ab dieser Haltestelle öffnen.
+  Future<void> _open() async {
+    if (_busy) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final nav = Navigator.of(context);
+    setState(() => _busy = true);
+    try {
+      final trip = await ref.read(transitProvider).tripOfDeparture(widget.d);
+      if (trip == null) {
+        messenger.showSnackBar(const SnackBar(content: Text('Fahrtverlauf für diese Abfahrt nicht verfügbar.')));
+        return;
+      }
+      await ref.read(lastTripProvider.notifier).open(trip);
+      nav.push(MaterialPageRoute(builder: (_) => const TripScreen()));
+    } on ProviderException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = widget.d;
+    final now = widget.now;
+    final next = widget.next;
     final c = context.c;
     final cancelled = d.status == StopStatus.cancelled;
     final sev = d.status == StopStatus.replacement || d.line.mode == TransportMode.replacementBus;
@@ -340,12 +372,17 @@ class _DepartureRow extends ConsumerWidget {
     final sub = [
       if (d.platform != null) 'Steig ${d.platform}',
       if (d.plannedPlatform != null && d.platform != d.plannedPlatform) 'statt ${d.plannedPlatform}',
-      if (cancelled && next != null) 'nächste ${hm(next!.time.best)}',
+      if (cancelled && next != null) 'nächste ${hm(next.time.best)}',
       if (sev) 'Ersatzverkehr',
     ].join(' · ');
     return InkWell(
-      onTap: () => _lineSheet(context, ref, d.line),
-      child: SizedBox(
+      onTap: _open,
+      // Lange drücken: Linie abonnieren.
+      onLongPress: () => _lineSheet(context, ref, d.line),
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 150),
+        opacity: _busy ? 0.5 : 1,
+        child: SizedBox(
         height: 56,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -377,12 +414,13 @@ class _DepartureRow extends ConsumerWidget {
             ),
           ]),
         ),
+        ),
       ),
     );
   }
 }
 
-/// Tipp auf eine Abfahrt: Linie abonnieren.
+/// Lange auf eine Abfahrt drücken: Linie abonnieren.
 Future<void> _lineSheet(BuildContext context, WidgetRef ref, Line line) => showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,

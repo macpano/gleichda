@@ -3,13 +3,13 @@
 <plist version="1.0">
 	<dict>
 		<key>NSLocationWhenInUseUsageDescription</key>
-		<string>Gleichda nutzt deinen Standort, um Haltestellen in der Nähe zu zeigen und ab deinem Standort zu suchen. Er verlässt das Gerät nur als Teil der Suchanfrage.</string>
+		<string>Gleich.da nutzt deinen Standort, um Haltestellen in der Nähe zu zeigen und ab deinem Standort zu suchen. Er verlässt das Gerät nur als Teil der Suchanfrage.</string>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
-		<string>Gleichda</string>
+		<string>Gleich.da</string>
 		<key>CFBundleExecutable</key>
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>CFBundleIdentifier</key>

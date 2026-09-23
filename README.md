@@ -1,4 +1,4 @@
-# Gleichda – Projektstart
+# Gleich.da – Projektstart
 
 Diesen Ordner als Projektordner verwenden und darin `claude` starten.
 

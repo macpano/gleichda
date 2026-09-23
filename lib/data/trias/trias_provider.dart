@@ -122,6 +122,17 @@ class TriasProvider implements TransitProvider {
     return matchTrip(trip, found);
   }
 
+  /// TRIAS liefert keinen Linienweg (LegProjection leer, geprüft 23.09.2026).
+  @override
+  Future<List<List<GeoPoint>?>> legPaths(Trip trip) async => List.filled(trip.legs.length, null);
+
+  /// Der Testserver beantwortet TripInfoRequest nicht (HTTP 400).
+  @override
+  Future<Trip?> tripOfDeparture(Departure departure) async => null;
+
+  @override
+  Future<List<Line>> searchLines(String query) async => const [];
+
   /// TRIAS kennt über die Suche nur die Haltestelle selbst, keine Steige.
   @override
   Future<List<Platform>> platforms(Location stop) async {

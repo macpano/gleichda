@@ -1,4 +1,4 @@
-# Gleichda – Projektregeln
+# Gleich.da – Projektregeln
 
 Fahrplan-App für den VRR, später international erweiterbar. iOS und Android aus
 einer Codebasis. Diese Datei gilt für jede Sitzung in diesem Projekt.
@@ -79,7 +79,8 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 
 ## Auslieferung (Obtainium)
 
-- Repository: https://github.com/macpano/gleichda (öffentlich seit 23.09.2026).
+- Repository: https://github.com/macpano/gleich.da (öffentlich seit 23.09.2026; bis v0.2.2 hieß es
+  `gleichda`, GitHub leitet die alte Adresse weiter).
   Obtainium verfolgt die GitHub-Releases, ohne Token.
 - Commits nur mit der anonymen Adresse 325691885+macpano@users.noreply.github.com
   (in der Repo-Konfiguration gesetzt) – keine private E-Mail im öffentlichen Verlauf.
@@ -88,7 +89,7 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 - Signiert mit demselben Schlüssel wie Linienlog (`android/key.properties`, nicht im Repo).
   Ohne diesen Schlüssel lassen sich Updates nicht über die installierte App spielen.
 
-## Stand (v0.2.2, 23.09.2026)
+## Stand (v0.3.0, 23.09.2026)
 
 - Umgesetzt sind die Schritte 1–15 in Grundform; was fehlt, steht in `docs/abgleich.md`.
 - Der geteilte Chat liegt nur lokal als `docs/chat-verlauf.txt` (in .gitignore, persönliche Angaben – nie einchecken).
@@ -108,4 +109,13 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 - Unterwegs ist kein eigener Bildschirm (Konzept: „einen Tipp entfernt in der Fahrt“), sondern
   `CompanionCard` oben in der Fahrt; Karte `lib/ui/trip_map.dart`. TRIAS liefert keinen Linienverlauf
   (LegProjection leer, geprüft 23.09.) – die Karte verbindet die Haltestellen (Koordinaten aus der EFA).
+- Name **Gleich.da** (seit v0.3.0) überall, wo man ihn sieht. Technische Kennungen bleiben
+  `gleichda` (Dart-Paket, `de.gleichda.app`, Datenbank): Eine neue App-Kennung wäre für Android eine
+  andere App – Updates und gespeicherte Daten gingen verloren.
+- Linienwege: EFA `XML_TRIP_REQUEST2` liefert je Abschnitt `coords` (dicht, entlang Straße/Gleis);
+  Zuordnung über Linie + Fahrtnummer wie bei der Echtzeit (`VrrProvider.legPaths`).
+- Abfahrt → ganze Fahrt: `tripOfDeparture` über `XML_TRIPSTOPTIMES_REQUEST`.
+- Liniensuche: `XML_SERVINGLINES_REQUEST mode=line` sucht deutschlandweit; begrenzt auf WSW,
+  „Wuppertal“ in der Beschreibung und DB-Züge im NRW-Bereich (Kennung `9xE..`), dazu alle Linien an
+  Hbf, Vohwinkel, Oberbarmen. `XML_LINELIST_REQUEST` liefert auf dem Testserver nichts.
 - Kartenkacheln vorläufig FOSSGIS (`tile.openstreetmap.de`), offene Entscheidung im Konzept.

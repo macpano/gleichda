@@ -5,14 +5,13 @@ import '../../domain/models.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../trip_status.dart';
-import '../trip_map.dart';
 import '../widgets.dart';
 import 'walk_screen.dart';
 
 /// Unterwegs: der nächste Schritt oben in der Fahrt, dieselben Angaben wie
 /// in der laufenden Benachrichtigung. Einen eigenen Bildschirm gibt es nicht –
-/// Fahrtverlauf, Umstieg und Alternativen stehen direkt darunter
-/// (docs/konzept.md, „Unterwegs-Modus“).
+/// Fahrtverlauf, Umstieg und Alternativen stehen direkt darunter, die Karte
+/// hinter dem Kartensymbol oben (docs/konzept.md, „Unterwegs-Modus“).
 class CompanionCard extends StatelessWidget {
   const CompanionCard({super.key, required this.trip, required this.now, this.issue});
 
@@ -64,7 +63,7 @@ class CompanionCard extends StatelessWidget {
         Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
           Expanded(
             child: OneLine(step.where.stop.name,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600, height: 1.25)),
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, height: 1.25)),
           ),
           if (boarding && step.where.platform != null)
             Text('Steig ${step.where.platform}', style: TextStyle(fontSize: 15, color: c.ink2)),
@@ -72,7 +71,7 @@ class CompanionCard extends StatelessWidget {
         const SizedBox(height: 8),
         Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
           FadeText(step.when == null ? '' : countdown(step.when!.best, now),
-              style: context.t.time(28).copyWith(color: whenColor)),
+              style: context.t.time(26).copyWith(color: whenColor)),
           const SizedBox(width: 10),
           FadeText(step.when == null ? '' : hm(step.when!.best),
               style: context.t.number(16).copyWith(color: c.ink2)),
@@ -94,25 +93,6 @@ class CompanionCard extends StatelessWidget {
               child: const Text('Weg zum Steig', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
             ),
         ]),
-        const SizedBox(height: 14),
-        // Wo Fahrzeug und du gerade sind; tippen öffnet die große Karte.
-        ClipRRect(
-          borderRadius: BorderRadius.circular(Radii.input),
-          child: SizedBox(
-            height: 190,
-            child: Stack(children: [
-              TripMap(trip: trip, now: now, interactive: false),
-              Positioned.fill(
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: InkWell(
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TripMapScreen())),
-                  ),
-                ),
-              ),
-            ]),
-          ),
-        ),
       ]),
     );
   }

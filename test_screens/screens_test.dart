@@ -87,6 +87,18 @@ class FakeProvider implements TransitProvider {
   Future<List<m.Platform>> platforms(Location stop) async => const [];
 
   @override
+  Future<List<List<GeoPoint>?>> legPaths(Trip trip) async => List.filled(trip.legs.length, null);
+
+  @override
+  Future<Trip?> tripOfDeparture(Departure departure) async => null;
+
+  @override
+  Future<List<Line>> searchLines(String query) async => const [
+        Line(id: 'wsw:66604', name: '604', mode: TransportMode.bus, product: 'bus', longName: 'Langerfeld – Rott'),
+        Line(id: 'wsw:64060', name: '60', mode: TransportMode.suspension, product: 'suspension', longName: 'Oberbarmen – Vohwinkel'),
+      ];
+
+  @override
   Future<List<Location>> searchLocations(String query,
           {({double lat, double lon})? near, int limit = 10, int radiusMeters = 1000}) async =>
       const [];

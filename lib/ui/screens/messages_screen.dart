@@ -9,9 +9,10 @@ import '../../domain/product.dart';
 import '../../state/providers.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'line_search_screen.dart';
 import 'subscriptions_screen.dart';
 
-enum _Filter { myLines, myStops, all }
+enum _Filter { all, myLines, myStops }
 
 /// Meldungen: Störungen und Hinweise, gefiltert nach Abos und Haltestellen.
 class MessagesScreen extends ConsumerStatefulWidget {
@@ -75,7 +76,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
           ]),
           const SizedBox(height: 16),
           Segmented<_Filter>(
-            options: const [(_Filter.myLines, 'Meine Linien'), (_Filter.myStops, 'Meine Halte'), (_Filter.all, 'Alle')],
+            options: const [(_Filter.all, 'Alle'), (_Filter.myLines, 'Meine Linien'), (_Filter.myStops, 'Meine Halte')],
             value: _filter,
             onChanged: (f) => setState(() => _filter = f),
           ),
@@ -106,6 +107,20 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                 ),
               ),
             ),
+            InkWell(
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LineSearchScreen())),
+              child: SizedBox(
+                height: 52,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(children: [
+                    Icon(Icons.search, size: 20, color: c.accent),
+                    const SizedBox(width: 10),
+                    Text('Linie suchen und abonnieren', style: TextStyle(fontSize: 16, color: c.accent)),
+                  ]),
+                ),
+              ),
+            ),
           ]),
           const SizedBox(height: 16),
           if (state == null && async.isLoading)
@@ -119,7 +134,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
           else if (list.isEmpty)
             Notice(switch (_filter) {
               _Filter.myLines => subs.isEmpty
-                  ? 'Noch keine Linien abonniert. Tippe auf eine Linie in einer Meldung oder bei den Abfahrten.'
+                  ? 'Noch keine Linien abonniert. Über „Linie suchen und abonnieren“ oder eine Linie in einer Meldung.'
                   : 'Keine Meldungen zu deinen Linien.',
               _Filter.myStops => 'Keine Meldungen zu deinen Haltestellen.',
               _Filter.all => 'Keine aktuellen Meldungen.',
@@ -186,7 +201,7 @@ class MessageCard extends ConsumerWidget {
             Text(validityText(m), style: context.t.number(13).copyWith(color: c.muted)),
           ]),
           const SizedBox(height: 6),
-          Text(m.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, height: 1.3)),
+          Text(m.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, height: 1.3)),
           if (m.text != null) ...[
             const SizedBox(height: 2),
             Text(m.text!, maxLines: 2, overflow: TextOverflow.ellipsis,

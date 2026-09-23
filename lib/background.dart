@@ -28,7 +28,7 @@ void callbackDispatcher() {
     final dio = Dio(BaseOptions(
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 30),
-      headers: {'User-Agent': 'Gleichda/0.2 (Android; Hintergrund)'},
+      headers: {'User-Agent': 'Gleich.da/0.2 (Android; Hintergrund)'},
     ));
     try {
       final repo = Repository(db);

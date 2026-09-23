@@ -112,4 +112,15 @@ abstract class TransitProvider {
 
   /// Steige einer Haltestelle mit Koordinaten. Leer, wenn unbekannt.
   Future<List<Platform>> platforms(Location stop);
+
+  /// Linienweg je Abschnitt der Verbindung (gleiche Reihenfolge wie
+  /// `trip.legs`); null, wo er unbekannt ist oder es ein Fußweg ist.
+  Future<List<List<GeoPoint>?>> legPaths(Trip trip);
+
+  /// Die ganze Fahrt einer Abfahrt ab dieser Haltestelle bis zur
+  /// Endhaltestelle, als Verbindung mit einem Abschnitt. null, wenn unbekannt.
+  Future<Trip?> tripOfDeparture(Departure departure);
+
+  /// Linien zum Suchbegriff (Liniennummer), etwa zum Abonnieren.
+  Future<List<Line>> searchLines(String query);
 }

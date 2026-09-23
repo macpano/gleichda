@@ -117,12 +117,18 @@ class _TripMapState extends ConsumerState<TripMap> {
       );
     }
     final vehicle = estimateVehicle(trip, widget.now);
+    // Linienwege aus der EFA; bis sie da sind (oder wo sie fehlen), verbindet
+    // die Karte die Haltestellen gerade.
+    final paths = ref.watch(legPathsProvider(TripPathKey(trip))).value;
     final lines = <Polyline>[];
     final stops = <Marker>[];
     for (var i = 0; i < trip.legs.length; i++) {
       final l = trip.legs[i];
       final seq = [l.from, ...l.intermediates, l.to];
-      final path = [for (final s in seq) ?_ll(s)];
+      final known = paths != null && i < paths.length ? paths[i] : null;
+      final path = known != null
+          ? [for (final p in known) LatLng(p.lat, p.lon)]
+          : [for (final s in seq) ?_ll(s)];
       if (l.type != LegType.ride) {
         // Fußweg: vom Ende des vorigen zum Anfang des nächsten Abschnitts.
         final a = i > 0 ? _ll(trip.legs[i - 1].to) : _ll(l.from);
@@ -190,7 +196,7 @@ class _TripMapState extends ConsumerState<TripMap> {
               ),
             ),
         ]),
-        const SimpleAttributionWidget(source: Text('OpenStreetMap-Mitwirkende')),
+        const MapCredit(),
       ],
     );
   }
@@ -233,6 +239,30 @@ class TripMapScreen extends ConsumerWidget {
           ]),
         ),
       ]),
+    );
+  }
+}
+
+/// Namensnennung der Karte: klein und zurückhaltend in der Ecke, aber immer
+/// sichtbar (ODbL verlangt „© OpenStreetMap-Mitwirkende“).
+class MapCredit extends StatelessWidget {
+  const MapCredit({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Align(
+      alignment: Alignment.bottomRight,
+      child: Container(
+        margin: const EdgeInsets.all(4),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+        decoration: BoxDecoration(
+          color: c.surface.withValues(alpha: 0.75),
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: Text('© OpenStreetMap-Mitwirkende',
+            textScaler: TextScaler.noScaling, style: TextStyle(fontSize: 9, color: c.muted)),
+      ),
     );
   }
 }

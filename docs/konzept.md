@@ -1,4 +1,4 @@
-# Konzept: Gleichda – Fahrplan-App VRR (Arbeitstitel)
+# Konzept: Gleich.da – Fahrplan-App VRR (Arbeitstitel)
 
 2026-09-21 · Alessio
 
@@ -103,7 +103,7 @@ Der aktuelle Standort ist überall der Normalfall, wenn er freigegeben ist, blei
 
 Neben den Suchfeldern steht ein Zeit-Schalter, der standardmäßig „Jetzt“ zeigt. Ein Tipp öffnet ein Fenster von unten:
 
-- Umschalter **Abfahrt um / Ankunft um**; bei Ankunft rechnet Gleichda rückwärts und bezieht den Fußweg ein.
+- Umschalter **Abfahrt um / Ankunft um**; bei Ankunft rechnet Gleich.da rückwärts und bezieht den Fußweg ein.
 - Tag: Heute, Morgen oder ein Datum.
 - Uhrzeit als Rad mit Stunden und Minuten in 5-Minuten-Schritten.
 - Schnellwahl: Jetzt, in 30 min, in 1 Std, morgen früh.
@@ -333,7 +333,7 @@ Die App wirkt dezent, modern und wie eine native App, nicht wie ein generiertes 
 
 **Logo und Name**
 
-- Name: **Gleichda**.
+- Name: **Gleich.da**.
 - Logo: Zug, Straßenbahn und Bus, nach vorn geneigt und hintereinander gestaffelt; der Bus fährt vorne. Weiß auf Petrol, Scheinwerfer des Busses in Bernstein; im Dunkelmodus hell-petrol auf dunklem Grund. Mittig mit gleichen Randabständen.
 - Kleine Größen (Favicon, Benachrichtigung): nur der Bus.
 - Schrift für den Namen: vorläufig Rubik fett kursiv (Alternativen: Nunito kursiv, Outfit geneigt).
@@ -413,7 +413,7 @@ Vor der ersten Store-Veröffentlichung müssen die Pflichten aus dem Abschnitt D
    **Ergänzt 23.09.2026 (v0.2.0):** TRIAS-Suchparameter am Testserver geprüft – `AlgorithmType` (minChanges, leastWalking), `WalkSpeed`, `InterchangeLimit`, `Via` und `PtModeFilter` für Busse wirken; der Ausschluss von `rail` wird ignoriert, die App filtert Bahnen deshalb selbst. Steigpositionen liefert die EFA über `XML_DM_REQUEST` (je Abfahrt der Steig mit Koordinate), die Meldungsliste `XML_ADDINFO_REQUEST` mit `filterOMC=5124000` (Wuppertal, 14 aktuelle Meldungen). Linien aus TRIAS und EFA werden über die ersten beiden Teile der Kennung zusammengeführt (`wsw:66620`).
 4. Lizenzstatus der VRR-GTFS-Dateien klären oder direkt DELFI-GTFS verwenden.
 5. Testfälle sammeln: Wuppertaler Haltestellen mit häufiger Steig-Verwechslung und aktuelle SEV-Situationen.
-6. Name „Gleichda“ steht fest; Verfügbarkeit in App Store, Google Play, Domain und Markenregister (DPMA, EUIPO) prüfen.
+6. Name „Gleich.da“ steht fest; Verfügbarkeit in App Store, Google Play, Domain und Markenregister (DPMA, EUIPO) prüfen.
 7. Kartenkacheln: FOSSGIS-Server, Anbieter mit Kontingent oder Vektorkacheln offline mitliefern? Hängt daran, ob das Projekt kommerziell wird.
 
 1. Schrift für den Namen endgültig festlegen (Rubik, Nunito oder Outfit).

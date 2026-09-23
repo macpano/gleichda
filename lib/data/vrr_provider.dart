@@ -71,7 +71,116 @@ class VrrProvider implements TransitProvider {
       return trias.refreshTrip(trip);
     }
   }
+
+  final _paths = <String, List<GeoPoint>?>{};
+
+  /// Linienwege aus der EFA-Verbindungsauskunft: je Fahrtabschnitt eine
+  /// Anfrage von dessen Ein- zu dessen Ausstieg, Zuordnung über Linie und
+  /// Fahrtnummer (wie bei der Echtzeit), sonst über Linienname und Abfahrt.
+  @override
+  Future<List<List<GeoPoint>?>> legPaths(Trip trip) => Future.wait([
+        for (final l in trip.legs)
+          if (l.type != LegType.ride || l.from.departure == null) Future.value(null) else _legPath(l),
+      ]);
+
+  Future<List<GeoPoint>?> _legPath(Leg l) async {
+    final dep = l.from.departure!.planned;
+    final cacheKey = '${l.journeyRef}|${l.from.stop.id}|${l.to.stop.id}|$dep';
+    if (_paths.containsKey(cacheKey)) return _paths[cacheKey];
+    try {
+      final paths = await efa.legPaths(stopAreaId(l.from.stop.id), stopAreaId(l.to.stop.id), dep);
+      final key = l.journeyRef == null ? null : EfaTripKey.fromJourneyRef(l.journeyRef!, '', dep);
+      final hit = paths
+              .where((p) => key != null && p.tripCode == key.tripCode && lineKey(p.line) == lineKey(key.line))
+              .firstOrNull ??
+          paths
+              .where((p) =>
+                  p.lineName.replaceAll(' ', '') == (l.line?.name ?? '').replaceAll(' ', '') &&
+                  p.departurePlanned == dep)
+              .firstOrNull;
+      return _paths[cacheKey] = hit?.points;
+    } on ProviderException {
+      return null;
+    }
+  }
+
+  /// Fahrtverlauf per XML_TRIPSTOPTIMES_REQUEST, ab der Haltestelle der
+  /// Abfahrt bis zur Endhaltestelle.
+  @override
+  Future<Trip?> tripOfDeparture(Departure d) async {
+    final ref = d.journeyRef;
+    if (ref == null) return null;
+    final dep = d.time.planned;
+    final key = EfaTripKey.fromJourneyRef(ref, stopAreaId(d.stop.id), dep);
+    if (key == null) return null;
+    final stops = await efa.tripStopTimes(key);
+    if (stops == null || stops.length < 2) return null;
+    final area = stopAreaId(d.stop.id);
+    var i = stops.indexWhere((s) => stopAreaId(s.stop.id) == area && s.departure?.planned == dep);
+    if (i < 0) i = stops.indexWhere((s) => stopAreaId(s.stop.id) == area);
+    if (i < 0 || i >= stops.length - 1) return null;
+    final last = stops.length - 1;
+    return Trip(
+      id: 'abfahrt:$ref:${dep.toIso8601String()}',
+      legs: [
+        Leg(
+          type: LegType.ride,
+          from: stops[i].copyWith(arrival: null),
+          to: stops[last].copyWith(departure: null),
+          intermediates: stops.sublist(i + 1, last),
+          line: d.line,
+          direction: d.direction,
+          journeyRef: ref,
+          operatingDay: d.operatingDay,
+          messageIds: d.messageIds,
+        ),
+      ],
+    );
+  }
+
+  /// Linien in Wuppertal: alle Linien an den großen Knoten (Hbf, Vohwinkel,
+  /// Oberbarmen) plus die EFA-Liniensuche. Die sucht deutschlandweit und
+  /// wird deshalb auf die Region begrenzt: WSW, Linien mit „Wuppertal“ in der
+  /// Beschreibung und Züge aus dem NRW-Bereich der DB (Kennung „9xE..“).
+  @override
+  Future<List<Line>> searchLines(String query) async {
+    String norm(String s) => s.toUpperCase().replaceAll(' ', '');
+    final q = norm(query);
+    if (q.isEmpty) return const [];
+    _local ??= Future.wait(_hubs.map((h) => efa.linesAt(h).catchError((Object _) => <Line>[])))
+        .then((l) => l.expand((x) => x).toList());
+    final local = (await _local!).where((l) => norm(l.name).contains(q));
+    List<Line> remote;
+    try {
+      remote = (await efa.searchLines(query.trim())).where(_inRegion).toList();
+    } on ProviderException {
+      remote = const [];
+    }
+    final out = <String, Line>{};
+    for (final l in [...local, ...remote]) {
+      out.putIfAbsent(lineKey(l.id), () => l);
+    }
+    final list = out.values.toList()
+      ..sort((a, b) {
+        int rank(Line l) => norm(l.name) == q ? 0 : (norm(l.name).startsWith(q) ? 1 : 2);
+        final r = rank(a).compareTo(rank(b));
+        return r != 0 ? r : a.name.compareTo(b.name);
+      });
+    return list;
+  }
+
+  Future<List<Line>>? _local;
+
+  static const _hubs = ['de:05124:11376', 'de:05124:11302', 'de:05124:11602'];
+
+  static bool _inRegion(Line l) {
+    final parts = l.id.split(':');
+    if (parts.first == 'wsw') return true;
+    if ((l.longName ?? '').contains('Wuppertal')) return true;
+    return parts.first == 'ddb' && parts.length > 1 && parts[1].length > 2 && parts[1][2] == 'E';
+  }
 }
+
 
 /// Aktualisiert einen Fahrtabschnitt mit den Halten aus der EFA.
 Future<Leg?> refreshLegViaEfa(EfaClient efa, Leg leg) async {

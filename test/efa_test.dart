@@ -65,4 +65,17 @@ void main() {
   test('EFA kennt die Fahrt nicht: kein Ergebnis statt Absturz', () {
     expect(parseTripStopTimes(const {'serverInfo': {}}), isNull);
   });
+
+  test('Linienwege aus der Verbindungsauskunft (XML_TRIP_REQUEST2)', () {
+    final json = jsonDecode(File('test/fixtures/efa_trip_alter_markt_vohwinkel.json').readAsStringSync())
+        as Map<String, dynamic>;
+    final paths = parseLegPaths(json);
+    final bus = paths.firstWhere((p) => p.lineName == '604');
+    expect(bus.line, 'wsw:66604: :R:w25');
+    expect(bus.tripCode, isNotNull);
+    expect(bus.points.length, greaterThan(10));
+    expect(bus.points.first.lat, closeTo(51.269, 0.01));
+    final re = paths.firstWhere((p) => p.lineName == 'RE4');
+    expect(re.points.length, greaterThan(100), reason: 'Zugweg entlang der Gleise');
+  });
 }

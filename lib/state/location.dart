@@ -31,7 +31,7 @@ class LocationException implements Exception {
         LocationProblem.deniedForever =>
           'Standort dauerhaft abgelehnt. Freigabe in den Android-Einstellungen möglich.',
         LocationProblem.timeout => 'Standort nicht rechtzeitig ermittelt.',
-        LocationProblem.off => 'Standort ist in Gleichda ausgeschaltet (Mehr → Standort).',
+        LocationProblem.off => 'Standort ist in Gleich.da ausgeschaltet (Mehr → Standort).',
       };
 }
 

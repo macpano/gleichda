@@ -165,8 +165,8 @@ abstract final class Space {
 }
 
 abstract final class Radii {
-  /// Wie im Canvas: 14 px für Karten und Gruppen.
-  static const double card = 14;
+  /// Karten und Gruppen: weich gerundet (v0.3: 16 statt 14 px, feiner).
+  static const double card = 16;
   static const double input = 10;
   static const double badge = 8;
   static const double logo = 22;
@@ -185,19 +185,20 @@ class AppText extends ThemeExtension<AppText> {
 
   static const tabular = [FontFeature.tabularFigures()];
 
-  /// Bildschirmtitel wie im Canvas: 32 px, fett, leicht enger.
+  /// Bildschirmtitel: 28 px, halbfett, leicht enger (v0.3: feiner als die
+  /// 32 px fett des Canvas).
   TextStyle get screenTitle => const TextStyle(
-      fontSize: 32, fontWeight: FontWeight.w700, height: 1.1, letterSpacing: -0.64);
+      fontSize: 28, fontWeight: FontWeight.w600, height: 1.1, letterSpacing: -0.5);
   TextStyle get listRow =>
-      TextStyle(fontSize: isIOS ? 17 : 16, fontWeight: FontWeight.w400);
+      TextStyle(fontSize: isIOS ? 16 : 15, fontWeight: FontWeight.w400);
   TextStyle get secondary =>
-      const TextStyle(fontSize: 15, fontWeight: FontWeight.w400);
+      const TextStyle(fontSize: 14, fontWeight: FontWeight.w400);
   TextStyle get label =>
       const TextStyle(fontSize: 13, fontWeight: FontWeight.w400);
   TextStyle get tab =>
       const TextStyle(fontSize: 11, fontWeight: FontWeight.w400);
   TextStyle get section =>
-      const TextStyle(fontSize: 17, fontWeight: FontWeight.w600);
+      const TextStyle(fontSize: 16, fontWeight: FontWeight.w600);
 
   /// Zeiten: Gewicht 600, gleich breite Ziffern.
   TextStyle time(double size) => TextStyle(
@@ -209,8 +210,9 @@ class AppText extends ThemeExtension<AppText> {
 
   /// Liniennummern auf der Plakette.
   TextStyle get lineNumber => const TextStyle(
-      fontSize: 13,
-      fontWeight: FontWeight.w700,
+      fontSize: 12.5,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.1,
       color: Colors.white,
       fontFeatures: tabular,
       height: 1);
@@ -251,6 +253,7 @@ ThemeData buildTheme(Brightness brightness, TargetPlatform platform) {
     canvasColor: c.bg,
     dividerColor: c.hair,
     splashFactory: NoSplash.splashFactory,
+    visualDensity: VisualDensity.compact,
     highlightColor: c.fill.withValues(alpha: 0.6),
     textTheme: ThemeData(brightness: brightness).textTheme.apply(
           bodyColor: c.ink,
@@ -263,18 +266,18 @@ ThemeData buildTheme(Brightness brightness, TargetPlatform platform) {
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
       titleTextStyle:
-          TextStyle(fontSize: 22, fontWeight: FontWeight.w400, color: c.ink),
+          TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: c.ink),
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: c.bar,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
-      height: 72,
+      height: 62,
       indicatorColor: c.indicator,
       iconTheme: WidgetStateProperty.resolveWith((s) => IconThemeData(
-          color: s.contains(WidgetState.selected) ? c.accent : c.muted)),
+          size: 22, color: s.contains(WidgetState.selected) ? c.accent : c.muted)),
       labelTextStyle: WidgetStateProperty.resolveWith((s) => TextStyle(
-          fontSize: 12,
+          fontSize: 11,
           fontWeight:
               s.contains(WidgetState.selected) ? FontWeight.w600 : FontWeight.w500,
           color: s.contains(WidgetState.selected) ? c.ink : c.muted)),
@@ -285,7 +288,7 @@ ThemeData buildTheme(Brightness brightness, TargetPlatform platform) {
       dragHandleSize: const Size(36, 5),
       surfaceTintColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -306,7 +309,7 @@ ThemeData buildTheme(Brightness brightness, TargetPlatform platform) {
       thumbIcon: const WidgetStatePropertyAll(null),
     ),
     listTileTheme: ListTileThemeData(
-      titleTextStyle: TextStyle(fontSize: 16, color: c.ink),
+      titleTextStyle: TextStyle(fontSize: 15, color: c.ink),
       subtitleTextStyle: TextStyle(fontSize: 13, color: c.muted),
       minVerticalPadding: 8,
     ),

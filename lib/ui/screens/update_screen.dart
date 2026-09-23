@@ -128,7 +128,7 @@ class UpdateScreen extends ConsumerWidget {
               child: LinearProgressIndicator(value: (u.progress ?? 0) / 100, color: c.accent, backgroundColor: c.fill),
             ),
           SizedBox(
-            height: 50,
+            height: 46,
             child: FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: c.accent,
@@ -141,7 +141,7 @@ class UpdateScreen extends ConsumerWidget {
                       ? () => ref.read(updateProvider.notifier).install()
                       : () => ref.read(updateProvider.notifier).check(),
               child: Text(u.ready ? 'Installieren' : u.hasUpdate ? 'Laden und installieren' : 'Nach Aktualisierung suchen',
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             ),
           ),
           const SizedBox(height: 16),
@@ -165,8 +165,8 @@ class UpdateScreen extends ConsumerWidget {
           ],
           const SizedBox(height: 16),
           Text(
-            'Die App fragt die neueste Veröffentlichung auf GitHub ab (github.com/macpano/gleichda) und lädt sie '
-            'im Hintergrund. Installiert wird erst auf Tipp; Android fragt beim ersten Mal, ob Gleichda Apps '
+            'Die App fragt die neueste Veröffentlichung auf GitHub ab (github.com/macpano/gleich.da) und lädt sie '
+            'im Hintergrund. Installiert wird erst auf Tipp; Android fragt beim ersten Mal, ob Gleich.da Apps '
             'installieren darf, und bestätigt jede Installation selbst. Die Daten in der App bleiben erhalten.',
             style: context.t.secondary.copyWith(color: c.muted, height: 1.4),
           ),
