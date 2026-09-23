@@ -1,5 +1,9 @@
 # Gleich.da – Projektstart
 
+**Installieren:** die APK aus dem [neuesten Release](https://github.com/macpano/gleich.da/releases/latest)
+herunterladen und öffnen. Danach aktualisiert sich Gleich.da selbst: Neue Versionen lädt die App
+im Hintergrund und bietet sie zum Installieren an.
+
 Diesen Ordner als Projektordner verwenden und darin `claude` starten.
 
 - `CLAUDE.md` – liest Claude Code bei jedem Start: Technik, Regeln, Rechtliches

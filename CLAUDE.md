@@ -84,11 +84,12 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 - Transitous/MOTIS nur, solange das Projekt Open Source und nicht kommerziell
   ist; User-Agent mit Kontaktadresse setzen.
 
-## Auslieferung (Obtainium)
+## Auslieferung (Selbst-Aktualisierung über GitHub-Releases)
 
 - Repository: https://github.com/macpano/gleich.da (öffentlich seit 23.09.2026; bis v0.2.2 hieß es
   `gleichda`, GitHub leitet die alte Adresse weiter).
-  Obtainium verfolgt die GitHub-Releases, ohne Token.
+  Die App prüft bei jedem Öffnen das neueste Release, lädt die APK im Hintergrund und bietet
+  „Installieren“ an – Obtainium ist dafür nicht nötig (seit 23.09.2026 nicht mehr erwähnt).
 - Commits nur mit der anonymen Adresse 325691885+macpano@users.noreply.github.com
   (in der Repo-Konfiguration gesetzt) – keine private E-Mail im öffentlichen Verlauf.
 - Neue Version: `bash tool/release.sh <Version> "<Neuerungen>"` – erhöht die
@@ -110,7 +111,7 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
   (wirkt nur auf Start und Ziel); Umsteigewege filtert die App selbst.
 - Release-Builds entfernen Ressourcen, die nur per Name geladen werden – `res/raw/keep.xml` hält
   `ic_stat_gleichda` (fehlte in v0.2.0, App hing am Startbild).
-- Selbst-Aktualisierung ohne Obtainium (`lib/state/updates.dart`): GitHub-Release prüfen, APK nach
+- Selbst-Aktualisierung (`lib/state/updates.dart`): GitHub-Release prüfen, APK nach
   `files/updates` laden (Größe + „PK“ geprüft), Meldung `UpdateToast`, Installation über den
   MethodChannel `de.gleichda/update` in `MainActivity.kt` (FileProvider `${applicationId}.updates`).
 - Unterwegs ist kein eigener Bildschirm (Konzept: „einen Tipp entfernt in der Fahrt“), sondern
