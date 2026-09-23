@@ -307,3 +307,7 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Startseite: Suchen-Knopf wurde bei langer Zeitangabe („Morgen Ankunft 11:38“) zu einem Punkt zusammengedrückt. Die
   Zeile wird jetzt ausgemessen: Suchen behält seine Breite, „Optionen“ zeigt dann nur das Symbol, Zeit kürzer
   („Morgen an 11:38“)
+
+## 0.4.12-vorab.7 (24.09.2026)
+- ✅ Startseite: Die Messung der Suchzeile nutzte nicht die Schrift der Umgebung und zeigte „Optionen“ schon bei „Jetzt“
+  nur als Symbol. `tool/release.sh` lässt jetzt auch die Bildschirmfoto-Tests laufen (fehlte – so rutschte das durch)

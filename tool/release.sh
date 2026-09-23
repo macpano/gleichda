@@ -31,6 +31,9 @@ sed -i "s/^version: .*/version: $VERSION+$BUILD/" pubspec.yaml
 
 flutter analyze
 flutter test test
+# Bildschirmfotos: jede Ansicht muss ohne Fehler aufbauen (die Bilder werden dabei neu geschrieben).
+flutter test test_screens --update-goldens
+taskkill.exe //F //IM flutter_tester.exe >/dev/null 2>&1 || true
 flutter build apk --release
 APK="build/app/outputs/flutter-apk/Gleich.da-$VERSION.apk"
 cp build/app/outputs/flutter-apk/app-release.apk "$APK"
