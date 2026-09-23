@@ -335,3 +335,8 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 
 ## 0.4.12-vorab.11 (24.09.2026)
 - ✅ Rückmeldeformular freigeschaltet: FormSubmit-Kennung eingetragen (statt Adresse), Test über die Kennung angenommen
+
+## 0.4.13-vorab.1 (24.09.2026)
+- ✅ Rückmeldung meldete „Senden hat nicht geklappt“, obwohl die Nachricht ankam: FormSubmit schickt JSON als
+  `text/html`, die App erwartete JSON. Jetzt als Text gelesen und selbst ausgewertet (`feedbackAccepted`)
+- ✅ Name und Zeichen dezent abgehoben: Logo 34, Wortmarke 30, darunter leise „Bus und Bahn in Echtzeit“

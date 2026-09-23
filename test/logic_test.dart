@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gleichda/background.dart';
 import 'package:gleichda/data/db/database.dart';
 import 'package:gleichda/data/efa/efa_client.dart';
+import 'package:gleichda/data/feedback.dart' show feedbackAccepted;
 import 'package:gleichda/data/html_text.dart';
 import 'package:gleichda/data/repository.dart';
 import 'package:gleichda/data/transit_provider.dart';
@@ -51,6 +52,12 @@ void main() {
     expect(e(50).delayMinutes, 0); // 00:40:50 – angezeigt 00:40, also pünktlich
     expect(e(70).delayMinutes, 1);
     expect(e(-30).delayMinutes, -1); // 00:39:30
+  });
+
+  test('Rückmeldung: Antwort von FormSubmit (als text/html geliefert)', () {
+    expect(feedbackAccepted('{"success":"true","message":"The form was submitted successfully."}'), isTrue);
+    expect(feedbackAccepted('{"success":"false","message":"This form needs Activation."}'), isFalse);
+    expect(feedbackAccepted('<html>Fehler</html>'), isFalse);
   });
 
   group('Ersatzverkehr', () {

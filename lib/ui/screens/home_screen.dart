@@ -96,9 +96,26 @@ class _PlaceShortcuts extends ConsumerWidget {
 class _Brand extends StatelessWidget {
   const _Brand();
 
+  /// Name und Zeichen dezent abgehoben: etwas größer, darunter leise die
+  /// Aufgabe der App – ohne Fläche, Schatten oder Verlauf.
   @override
-  Widget build(BuildContext context) =>
-      const SizedBox(height: 40, child: Row(children: [LogoMark(size: 28), SizedBox(width: 10), Wordmark(size: 26)]));
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 6),
+      child: Row(children: [
+        const LogoMark(size: 34),
+        const SizedBox(width: 12),
+        Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Wordmark(size: 30),
+          const SizedBox(height: 3),
+          Text('Bus und Bahn in Echtzeit',
+              textScaler: TextScaler.noScaling,
+              style: TextStyle(fontSize: 12.5, letterSpacing: 0.2, color: c.muted, height: 1)),
+        ]),
+      ]),
+    );
+  }
 }
 
 // --- Suchfelder ---

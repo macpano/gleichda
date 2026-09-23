@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 import 'transit_provider.dart' show ProviderException;
@@ -30,7 +32,7 @@ class FeedbackSender {
   Future<void> send({required FeedbackKind kind, required String text, String? reply, String? device}) async {
     if (!ready) throw const ProviderException('Das Formular ist noch nicht eingerichtet.');
     try {
-      final res = await _dio.post<Map<String, dynamic>>(
+      final res = await _dio.post<String>(
         'https://formsubmit.co/ajax/$feedbackEndpoint',
         data: {
           '_subject': 'Gleich.da – ${kind.subject}',
@@ -47,14 +49,26 @@ class FeedbackSender {
           'Accept': 'application/json',
           'Origin': 'https://github.com',
           'Referer': 'https://github.com/macpano/gleich.da',
-        }, contentType: Headers.jsonContentType),
+        }, contentType: Headers.jsonContentType, responseType: ResponseType.plain),
       );
-      final ok = res.data?['success'];
-      if (ok != true && ok != 'true') throw const ProviderException('Die Nachricht wurde nicht angenommen.');
+      // FormSubmit antwortet mit JSON, kennzeichnet es aber als text/html –
+      // deshalb als Text lesen (vorher: „Senden hat nicht geklappt“, obwohl
+      // die Nachricht angekommen war).
+      if (!feedbackAccepted(res.data)) throw const ProviderException('Die Nachricht wurde nicht angenommen.');
     } on DioException catch (e) {
       final offline = e.type == DioExceptionType.connectionError || e.type == DioExceptionType.connectionTimeout;
       throw ProviderException(offline ? 'Keine Internetverbindung.' : 'Senden hat nicht geklappt.',
           cause: e, offline: offline);
     }
+  }
+}
+
+/// Hat FormSubmit die Nachricht angenommen? `{"success":"true", …}`.
+bool feedbackAccepted(String? body) {
+  try {
+    final ok = (jsonDecode(body ?? '') as Map)['success'];
+    return ok == true || ok == 'true';
+  } catch (_) {
+    return false;
   }
 }
