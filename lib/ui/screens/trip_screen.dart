@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app.dart' show pushOnce;
 import '../../domain/companion.dart';
 import '../../domain/connections.dart';
 import '../../domain/models.dart';
@@ -90,7 +91,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                 IconButton(
                   tooltip: 'Karte',
-                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TripMapScreen())),
+                  onPressed: () => pushOnce(Navigator.of(context), 'karte', (_) => const TripMapScreen()),
                   icon: Icon(Icons.map_outlined, color: c.ink),
                 ),
                 IconButton(
@@ -249,8 +250,8 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           if (target != null)
             InkResponse(
               radius: 20,
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => WalkScreen(target: target, platform: platform, departure: departure, origin: origin))),
+              onTap: () => pushOnce(Navigator.of(context), 'weg:${target.id}',
+                  (_) => WalkScreen(target: target, platform: platform, departure: departure, origin: origin)),
               child: Tooltip(
                 message: platform == null ? 'Weg zur Haltestelle' : 'Weg zu Steig $platform',
                 child: Padding(
@@ -476,8 +477,8 @@ class _TripScreenState extends ConsumerState<TripScreen> {
             if (walkLink != null && !passed) ...[
               if (s.platform != null) Text(' · ', style: TextStyle(fontSize: 13, color: c.muted)),
               GestureDetector(
-                onTap: () => Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => WalkScreen(target: walkLink, platform: s.platform))),
+                onTap: () => pushOnce(Navigator.of(context), 'weg:${walkLink.id}',
+                    (_) => WalkScreen(target: walkLink, platform: s.platform)),
                 child: Text('Weg zum Steig', style: TextStyle(fontSize: 13, color: c.accent)),
               ),
             ],

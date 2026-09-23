@@ -179,6 +179,7 @@ void main() {
       Future<void> Function(WidgetTester)? act,
       List<Override> overrides = const [],
       bool offline = false}) async {
+    tabBarHeight.value = 0; // Reiterleiste eines vorigen Tests vergessen
     tester.view.physicalSize = const Size(390 * 3, 844 * 3);
     tester.view.devicePixelRatio = 3;
     tester.view.padding = const FakeViewPadding(top: 24 * 3, bottom: 16 * 3);
@@ -197,6 +198,7 @@ void main() {
     await tester.pumpWidget(UncontrolledProviderScope(
       container: container,
       child: MaterialApp(
+        navigatorObservers: [PageStack()],
         debugShowCheckedModeBanner: false,
         theme: buildTheme(brightness, TargetPlatform.android),
         home: home,
@@ -258,6 +260,20 @@ void main() {
     return shot(t, 'unterwegs_startseite', const HomeShell(),
         seed: (r) => r.saveLastTrip(onBoard),
         overrides: [companionProvider.overrideWith(() => _Following(onBoard.id))]);
+  });
+  testWidgets('Unterseite: Unterwegs auf der Startseite', (t) {
+    final onBoard = withCoords(tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first);
+    return shot(t, 'unterwegs_unterseite', const HomeShell(),
+        seed: (r) => r.saveLastTrip(onBoard),
+        overrides: [companionProvider.overrideWith(() => _Following(onBoard.id))],
+        act: (t) async {
+          // Von der Startseite in die Fahrt: Die Leiste gleitet nach ganz unten.
+          Navigator.of(t.element(find.byType(NavigationBar)))
+              .push(MaterialPageRoute<void>(builder: (_) => const TripScreen()));
+          for (var i = 0; i < 6; i++) {
+            await t.pump(const Duration(milliseconds: 100));
+          }
+        });
   });
   testWidgets('Fahrt unterwegs', (t) => shot(t, 'fahrt_unterwegs', const TripScreen(), seed: (r) async {
         final onBoard = tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first;
