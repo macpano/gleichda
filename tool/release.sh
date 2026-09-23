@@ -23,7 +23,6 @@ fi
 BUILD=$(sed -n 's/^version: .*+\([0-9]*\)$/\1/p' pubspec.yaml)
 BUILD=$((BUILD + 1))
 sed -i "s/^version: .*/version: $VERSION+$BUILD/" pubspec.yaml
-sed -i "s/^const appVersion = .*/const appVersion = '$VERSION';/" lib/ui/screens/more_screen.dart
 
 flutter analyze
 flutter test test
@@ -31,7 +30,7 @@ flutter build apk --release
 APK="build/app/outputs/flutter-apk/gleichda-$VERSION.apk"
 cp build/app/outputs/flutter-apk/app-release.apk "$APK"
 
-git add pubspec.yaml lib/ui/screens/more_screen.dart
+git add pubspec.yaml
 git commit -m "Version $VERSION"
 git tag "v$VERSION"
 git push origin main "v$VERSION"

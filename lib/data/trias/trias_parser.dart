@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:xml/xml.dart';
 
 import '../../domain/models.dart';
+import '../../domain/product.dart';
 import '../transit_provider.dart';
 
 const _provider = 'vrr-trias';
@@ -96,69 +97,33 @@ String displayName(String name, String? place) {
   return name;
 }
 
-TransportMode _mode(XmlElement? mode) {
-  if (mode == null) return TransportMode.other;
-  final pt = mode.el('PtMode')?.innerText.trim();
-  final name = mode.txt('Name')?.toLowerCase() ?? '';
-  final bus = mode.el('BusSubmode')?.innerText.trim();
-  final rail = mode.el('RailSubmode')?.innerText.trim();
-  if (name.contains('schwebebahn')) return TransportMode.suspension;
-  switch (pt) {
-    case 'bus':
-    case 'coach':
-      if (bus == 'railReplacementBus') return TransportMode.replacementBus;
-      if (bus == 'demandAndResponseBus') return TransportMode.onDemand;
-      return TransportMode.bus;
-    case 'tram':
-      return TransportMode.tram;
-    case 'metro':
-    case 'underground':
-    case 'urbanRail':
-      return TransportMode.subway;
-    case 'rail':
-      if (rail == 'suburbanRailway') return TransportMode.suburbanRail;
-      if (rail == 'replacementRailService') return TransportMode.replacementBus;
-      if (rail == 'rackAndPinionRailway') return TransportMode.suspension;
-      if (name.contains('stadtbahn') || name.contains('u-bahn')) {
-        return TransportMode.subway;
-      }
-      if (name.contains('straßenbahn')) return TransportMode.tram;
-      return TransportMode.rail;
-    case 'water':
-    case 'ferry':
-      return TransportMode.ferry;
-    default:
-      return TransportMode.other;
+ProductInfo _productOf(XmlElement? mode, {String? published, String? lineRef}) {
+  String? submode;
+  for (final e in mode?.childElements ?? const <XmlElement>[]) {
+    if (e.localName.endsWith('Submode')) submode = e.innerText.trim();
   }
+  return classifyLine(
+    ptMode: mode?.el('PtMode')?.innerText.trim(),
+    submode: submode,
+    modeName: mode?.txt('Name'),
+    published: published,
+    lineRef: lineRef,
+  );
 }
 
-/// Liniennummer: veröffentlichter Name, sonst aus der Linienkennung
-/// („wsw:64060::R“ → „60“), sonst die Verkehrsmittel-Bezeichnung.
-String _lineName(String? published, String? lineRef, String? modeName) {
-  final p = published?.trim() ?? '';
-  // In Verbindungen steht bei der Schwebebahn „Schwebebahn“ statt der Nummer.
-  if (p.isNotEmpty && (RegExp(r'\d').hasMatch(p) || p != modeName)) {
-    // „S 8“ → „S8“: Plaketten sind schmal.
-    return p.replaceAllMapped(RegExp(r'^([A-Z]{1,3}) (\d)'), (m) => '${m[1]}${m[2]}');
-  }
-  final parts = lineRef?.split(':') ?? const [];
-  if (parts.length > 1) {
-    final code = parts[1];
-    final m = RegExp(r'^\d{2}(\d{3})$').firstMatch(code);
-    if (m != null) return int.parse(m[1]!).toString();
-  }
-  return modeName ?? '?';
-}
+TransportMode _mode(XmlElement? mode) => _productOf(mode).product.mode;
 
 Line _line(XmlElement service) {
   final mode = service.el('Mode');
+  final lineRef = service.el('LineRef')?.innerText.trim();
+  final info = _productOf(mode, published: service.txt('PublishedLineName'), lineRef: lineRef);
   return Line(
-    id: service.el('LineRef')?.innerText.trim() ?? '',
-    name: _lineName(service.txt('PublishedLineName'),
-        service.el('LineRef')?.innerText, mode?.txt('Name')),
-    mode: _mode(mode),
+    id: lineRef ?? '',
+    name: info.name,
+    mode: info.product.mode,
     operator: service.el('OperatorRef')?.innerText.trim(),
     longName: mode?.txt('Name'),
+    product: info.product.name,
   );
 }
 

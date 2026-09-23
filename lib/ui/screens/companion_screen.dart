@@ -94,7 +94,7 @@ class CompanionScreen extends ConsumerWidget {
                       style: TextStyle(fontSize: 15, color: c.muted)),
               ]),
               const SizedBox(height: 16),
-              _ProgressBar(progress: step.progress, color: color, glyph: VehicleGlyph(leg?.line?.mode, color: color, width: 32)),
+              _ProgressBar(progress: step.progress, color: color, glyph: VehicleGlyph(leg?.line?.mode, color: color, width: _ProgressBar.glyphWidth)),
             ]),
           ),
           const SizedBox(height: 16),
@@ -149,9 +149,16 @@ class CompanionScreen extends ConsumerWidget {
   }
 }
 
-/// Balken bis zum Ausstieg; die Marke ist das Fahrzeug.
+/// Balken bis zum Ausstieg; die Marke ist das Fahrzeug. Aufbau wie das Bild
+/// in der Benachrichtigung (`renderProgressBar`): das Fahrzeug steht auf dem
+/// Balken, seine Front an der Spitze des gefüllten Teils, am Ende die Zielmarke.
 class _ProgressBar extends StatelessWidget {
   const _ProgressBar({required this.progress, required this.color, required this.glyph});
+
+  static const glyphWidth = 46.0;
+  static const _glyphHeight = glyphWidth * 36 / 62;
+  static const _bar = 8.0;
+  static const _target = 16.0;
 
   final double progress;
   final Color color;
@@ -160,22 +167,50 @@ class _ProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.c;
+    const barTop = _glyphHeight + 1;
     return SizedBox(
-      height: 34,
+      height: barTop + _target / 2 + _bar / 2 + 2,
       child: LayoutBuilder(builder: (context, box) {
-        const end = 12.0;
-        final w = box.maxWidth - end;
-        final x = w * progress.clamp(0.0, 1.0);
+        // Bündig mit dem Text; am Anfang steht das Fahrzeug ganz auf dem Balken.
+        const left = _bar / 2;
+        final right = box.maxWidth - _target / 2;
+        final x = left + (right - left) * progress.clamp(0.0, 1.0);
+        final duration =
+            MediaQuery.of(context).disableAnimations ? Duration.zero : const Duration(milliseconds: 400);
         return Stack(clipBehavior: Clip.none, children: [
-          Positioned(left: 0, right: end, top: 24, height: 6,
-              child: Container(decoration: BoxDecoration(color: c.fill, borderRadius: BorderRadius.circular(3)))),
-          Positioned(left: 0, width: x, top: 24, height: 6,
-              child: Container(decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3)))),
-          Positioned(right: 0, top: 21, width: 12, height: 12,
-              child: Container(decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: color, width: 3), color: c.surface))),
+          Positioned(
+            left: left - _bar / 2,
+            right: _target / 2,
+            top: barTop,
+            height: _bar,
+            child: Container(decoration: BoxDecoration(color: c.fill, borderRadius: BorderRadius.circular(_bar))),
+          ),
           AnimatedPositioned(
-            duration: MediaQuery.of(context).disableAnimations ? Duration.zero : const Duration(milliseconds: 400),
-            left: (x - 24).clamp(0.0, w - 32),
+            duration: duration,
+            left: left - _bar / 2,
+            width: x - left + _bar,
+            top: barTop,
+            height: _bar,
+            child: Container(decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(_bar))),
+          ),
+          Positioned(
+            left: right - _target / 2,
+            top: barTop + _bar / 2 - _target / 2,
+            width: _target,
+            height: _target,
+            child: Container(
+              decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+              alignment: Alignment.center,
+              child: Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: c.surface),
+              ),
+            ),
+          ),
+          AnimatedPositioned(
+            duration: duration,
+            left: (x - glyphWidth * 0.7).clamp(0.0, right - glyphWidth),
             top: 0,
             child: glyph,
           ),

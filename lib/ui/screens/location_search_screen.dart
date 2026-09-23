@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/transit_provider.dart';
 import '../../data/trias/trias_parser.dart' show distanceBetween;
 import '../../domain/models.dart';
+import '../../domain/settings.dart';
 import '../../state/location.dart';
 import '../../state/providers.dart';
 import '../format.dart';
@@ -67,7 +68,9 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
       final p = await ref.read(locationServiceProvider).current();
       if (!mounted) return;
       setState(() => _here = p);
-      final near = await ref.read(transitProvider).searchLocations('', near: p, limit: 6);
+      final near = await ref
+          .read(transitProvider)
+          .searchLocations('', near: p, limit: 6, radiusMeters: (ref.read(settingsProvider).value ?? const AppSettings()).walkRadiusMeters);
       if (!mounted) return;
       await ref.read(repositoryProvider).cacheStops(near);
       setState(() => _nearby = near);

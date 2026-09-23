@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models.dart';
+import '../../domain/product.dart';
 import '../../state/providers.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -56,7 +57,7 @@ class SubscriptionsScreen extends ConsumerWidget {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Row(children: [
-                          LineBadge(Line(id: s.lineId, name: s.lineName, mode: s.lineName == '60' ? TransportMode.suspension : TransportMode.bus)),
+                          LineBadge(Line(id: s.lineId, name: s.lineName, mode: guessProduct(s.lineName).mode)),
                           const SizedBox(width: 12),
                           Expanded(child: OneLine(windowLabel(s.window), style: TextStyle(fontSize: 15, color: c.muted))),
                           Icon(Icons.chevron_right, size: 18, color: c.chevron),

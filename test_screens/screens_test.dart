@@ -30,6 +30,7 @@ import 'package:gleichda/ui/screens/location_search_screen.dart';
 import 'package:gleichda/ui/screens/messages_screen.dart';
 import 'package:gleichda/ui/screens/more_screen.dart';
 import 'package:gleichda/ui/screens/trip_screen.dart';
+import 'package:gleichda/ui/screens/walk_screen.dart';
 import 'package:gleichda/domain/settings.dart';
 import 'package:gleichda/ui/theme.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -55,10 +56,11 @@ List<Trip> tripsNow(String name, {Duration lead = const Duration(minutes: 6)}) {
 }
 
 class FakeProvider implements TransitProvider {
-  FakeProvider(this.trips, this.board);
+  FakeProvider(this.trips, this.board, {this.offline = false});
 
   final List<Trip> trips;
   final DepartureBoard board;
+  final bool offline;
 
   @override
   String get id => 'fake';
@@ -74,14 +76,17 @@ class FakeProvider implements TransitProvider {
   Future<List<Trip>> planTrip(TripQuery query) async => trips;
 
   @override
-  Future<Trip?> refreshTrip(Trip trip) async => trip;
+  Future<Trip?> refreshTrip(Trip trip) async {
+    if (offline) throw const ProviderException('Keine Verbindung zur Auskunft', offline: true);
+    return trip;
+  }
 
   @override
   Future<List<m.Platform>> platforms(Location stop) async => const [];
 
   @override
   Future<List<Location>> searchLocations(String query,
-          {({double lat, double lon})? near, int limit = 10}) async =>
+          {({double lat, double lon})? near, int limit = 10, int radiusMeters = 1000}) async =>
       const [];
 }
 
@@ -122,7 +127,10 @@ void main() {
   });
 
   Future<void> shot(WidgetTester tester, String name, Widget home,
-      {Brightness brightness = Brightness.light, Future<void> Function(Repository)? seed}) async {
+      {Brightness brightness = Brightness.light,
+      Future<void> Function(Repository)? seed,
+      Future<void> Function(WidgetTester)? act,
+      bool offline = false}) async {
     tester.view.physicalSize = const Size(390 * 3, 844 * 3);
     tester.view.devicePixelRatio = 3;
     tester.view.padding = const FakeViewPadding(top: 24 * 3, bottom: 16 * 3);
@@ -135,7 +143,7 @@ void main() {
     });
     final container = ProviderContainer(overrides: [
       databaseProvider.overrideWithValue(db),
-      transitProvider.overrideWithValue(FakeProvider(trips, board)),
+      transitProvider.overrideWithValue(FakeProvider(trips, board, offline: offline)),
     ]);
     await tester.pumpWidget(UncontrolledProviderScope(
       container: container,
@@ -152,6 +160,13 @@ void main() {
     // SVG-Logo wird asynchron dekodiert.
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
     await tester.pump(const Duration(milliseconds: 300));
+    if (act != null) {
+      await act(tester);
+      for (var i = 0; i < 4; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 60)));
+        await tester.pump(const Duration(milliseconds: 250));
+      }
+    }
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('out/$name.png'));
     await tester.pumpWidget(const SizedBox());
     container.dispose();
@@ -191,6 +206,34 @@ void main() {
   testWidgets('Alternativen', (t) => shot(t, 'alternativen', AlternativesScreen(trip: trips.first)));
   testWidgets('Neuer Wecker', (t) => shot(t, 'wecker_neu', const AlarmEditScreen()));
   testWidgets('Suche leer', (t) => shot(t, 'suche_leer', const LocationSearchScreen(title: 'Nach'), seed: seedHome));
+  testWidgets('Zeitwahl', (t) => shot(t, 'zeitwahl', const HomeShell(), seed: seedHome, act: (t) async {
+        await t.tap(find.text('Jetzt').first);
+      }));
+  testWidgets('Suchoptionen', (t) => shot(t, 'suchoptionen', const HomeShell(), seed: seedHome, act: (t) async {
+        await t.tap(find.text('Optionen').first);
+      }));
+  testWidgets('Offline', (t) => shot(t, 'offline', const HomeShell(), seed: seedHome, offline: true));
+  testWidgets('Wecker', (t) => shot(t, 'wecker', const AlarmsScreen(), seed: (r) async {
+        await r.saveAlarm(Alarm(
+          id: 'a1',
+          name: 'Zur Arbeit',
+          from: trips.first.origin,
+          to: trips.first.destination,
+          timeRef: AlarmTimeRef.arriveBy,
+          minuteOfDay: 7 * 60 + 50,
+        ));
+        await r.saveAlarm(Alarm(
+          id: 'a2',
+          name: 'Training',
+          from: trips.first.destination,
+          to: trips.first.origin,
+          timeRef: AlarmTimeRef.departAt,
+          minuteOfDay: 18 * 60 + 30,
+          weekdays: const [2, 4],
+          enabled: false,
+        ));
+      }));
+  testWidgets('Weg zum Steig', (t) => shot(t, 'weg', WalkScreen(target: trips.first.origin, platform: '2')));
   testWidgets('Farben dunkel',
       (t) => shot(t, 'farben_dunkel', const DesignDemoScreen(), brightness: Brightness.dark));
 }

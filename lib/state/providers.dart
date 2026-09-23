@@ -72,9 +72,13 @@ class LastTripState {
     this.refreshing = false,
     this.failed = false,
     this.lost = false,
+    this.offline = false,
   });
 
   final Trip trip;
+
+  /// Letzte Aktualisierung scheiterte am fehlenden Netz.
+  final bool offline;
 
   /// Zeitpunkt des angezeigten Stands.
   final DateTime updatedAt;
@@ -88,13 +92,14 @@ class LastTripState {
 
   bool get hasRealtime => tripHasRealtime(trip);
 
-  LastTripState copyWith({Trip? trip, DateTime? updatedAt, bool? refreshing, bool? failed, bool? lost}) =>
+  LastTripState copyWith({Trip? trip, DateTime? updatedAt, bool? refreshing, bool? failed, bool? lost, bool? offline}) =>
       LastTripState(
         trip: trip ?? this.trip,
         updatedAt: updatedAt ?? this.updatedAt,
         refreshing: refreshing ?? this.refreshing,
         failed: failed ?? this.failed,
         lost: lost ?? this.lost,
+        offline: offline ?? this.offline,
       );
 }
 
@@ -153,9 +158,11 @@ class LastTripController extends AsyncNotifier<LastTripState?> {
       final now = DateTime.now();
       state = AsyncData(LastTripState(trip: trip, updatedAt: now));
       await ref.read(repositoryProvider).saveLastTrip(trip, updatedAt: now);
-    } on ProviderException {
+    } on ProviderException catch (e) {
       final latest = state.value;
-      if (latest != null) state = AsyncData(latest.copyWith(refreshing: false, failed: true));
+      if (latest != null) {
+        state = AsyncData(latest.copyWith(refreshing: false, failed: true, offline: e.offline));
+      }
     } finally {
       _busy = false;
     }

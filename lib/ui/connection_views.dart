@@ -94,8 +94,7 @@ class ConnectionRow extends StatelessWidget {
     final diff = compareTo == null ? null : trip.arrival.best.difference(compareTo!).inMinutes;
     final meta = [
       interchangesText(trip.interchanges),
-      if (trip.legs.first.type == LegType.walk && (trip.legs.first.durationMinutes ?? 0) > 0)
-        '${trip.legs.first.durationMinutes} min Fußweg',
+      if (walkMinutes(trip) > 0) '${walkMinutes(trip)} min zu Fuß',
       ...item.labels,
     ].join(' · ');
     return InkWell(
@@ -131,7 +130,13 @@ class ConnectionRow extends StatelessWidget {
   }
 }
 
-/// Balken je Abschnitt, Länge proportional zur Dauer. Fußwege grau.
+/// Fußwege einer Verbindung zusammen, in Minuten (Start, Umstiege, Ziel).
+int walkMinutes(Trip trip) => trip.legs
+    .where((l) => l.type != LegType.ride)
+    .fold(0, (sum, l) => sum + (l.durationMinutes ?? 0));
+
+/// Balken je Abschnitt, Länge proportional zur Dauer. Fußwege grau, mit
+/// Gehsymbol und Minuten, soweit Platz ist.
 class TripTimeline extends StatelessWidget {
   const TripTimeline({super.key, required this.trip});
 
@@ -162,7 +167,19 @@ class TripTimeline extends StatelessWidget {
           child: ride
               ? Text(l.line?.name ?? '',
                   maxLines: 1, overflow: TextOverflow.clip, style: context.t.lineNumber.copyWith(fontSize: 12))
-              : null,
+              : LayoutBuilder(builder: (context, box) {
+                  final label = Text('$minutes′',
+                      maxLines: 1,
+                      overflow: TextOverflow.clip,
+                      style: context.t.number(12).copyWith(color: c.walkText, fontWeight: FontWeight.w600));
+                  if (box.maxWidth >= 38) {
+                    return Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.directions_walk, size: 14, color: c.walkText),
+                      label,
+                    ]);
+                  }
+                  return box.maxWidth >= 20 ? label : const SizedBox.shrink();
+                }),
         ),
       ));
     }

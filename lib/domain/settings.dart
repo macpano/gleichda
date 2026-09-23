@@ -39,26 +39,33 @@ extension SearchProfileLabel on SearchProfile {
       };
 }
 
-/// Verkehrsmittel-Gruppen für Filter.
-enum ModeGroup { bus, rail, suspension, tram }
+/// Verkehrsmittel-Gruppen für Filter, wie in den Suchoptionen des Entwurfs.
+enum ModeGroup { bus, suspension, suburbanRail, regional, longDistance, tram }
 
 extension ModeGroupX on ModeGroup {
   String get label => switch (this) {
         ModeGroup.bus => 'Bus',
-        ModeGroup.rail => 'Bahn',
         ModeGroup.suspension => 'Schwebebahn',
-        ModeGroup.tram => 'Straßen-/U-Bahn',
+        ModeGroup.suburbanRail => 'S-Bahn',
+        ModeGroup.regional => 'Regionalzug',
+        ModeGroup.longDistance => 'Fernverkehr',
+        ModeGroup.tram => 'Straßen- und U-Bahn',
       };
 
   bool matches(TransportMode m) => switch (this) {
         ModeGroup.bus => m == TransportMode.bus ||
             m == TransportMode.replacementBus ||
             m == TransportMode.onDemand,
-        ModeGroup.rail => m == TransportMode.rail || m == TransportMode.suburbanRail,
         ModeGroup.suspension => m == TransportMode.suspension,
+        ModeGroup.suburbanRail => m == TransportMode.suburbanRail,
+        ModeGroup.regional => m == TransportMode.rail,
+        ModeGroup.longDistance => m == TransportMode.longDistanceRail,
         ModeGroup.tram => m == TransportMode.tram || m == TransportMode.subway,
       };
 }
+
+/// Wählbare Grenzen für den längsten Fußweg, in Minuten.
+const walkLimitChoices = [5, 10, 15, 20, 30];
 
 /// Persönliches Profil und Einstellungen. Nur auf dem Gerät gespeichert.
 class AppSettings {
@@ -77,7 +84,14 @@ class AppSettings {
   final Pace walkPace;
   final bool accessible;
   final Set<ModeGroup> excludedModes;
+
+  /// Längster Fußweg zu Beginn und am Ende einer Verbindung, in Minuten.
+  /// Bestimmt auch den Umkreis für „In der Nähe“.
   final int maxWalkMinutes;
+
+  /// Umkreis, der in [maxWalkMinutes] zu Fuß erreichbar ist: 80 m je Minute
+  /// (4,8 km/h) bei normalem Tempo, nie unter 300 m.
+  int get walkRadiusMeters => (maxWalkMinutes * 80 * walkPace.walkPercent / 100).round().clamp(300, 5000);
 
   /// Standort für Suche und Abfahrten verwenden (nur bei Nutzung).
   final bool useLocation;
@@ -115,6 +129,7 @@ class AppSettings {
       if (accessible) 'barrierefrei',
       if (walkPace != Pace.normal) 'gehen ${walkPace.label.toLowerCase()}',
       if (transferPace != Pace.normal) 'umsteigen ${transferPace.label.toLowerCase()}',
+      if (maxWalkMinutes != 15) 'höchstens $maxWalkMinutes min zu Fuß',
       if (excludedModes.isNotEmpty) 'ohne ${excludedModes.map((m) => m.label).join(', ')}',
     ];
     return parts.isEmpty ? 'Standard' : parts.join(', ');
@@ -143,9 +158,11 @@ class AppSettings {
         transferPace: pick(Pace.values, m['transferPace'], Pace.normal),
         walkPace: pick(Pace.values, m['walkPace'], Pace.normal),
         accessible: m['accessible'] == true,
-        excludedModes: ((m['excludedModes'] as List?) ?? const [])
-            .map((e) => pick(ModeGroup.values, e, ModeGroup.bus))
-            .toSet(),
+        // Unbekannte Namen (ältere Fassungen) überspringen statt Bus auszuschließen.
+        excludedModes: {
+          for (final e in (m['excludedModes'] as List?) ?? const [])
+            ...ModeGroup.values.where((g) => g.name == e),
+        },
         maxWalkMinutes: (m['maxWalkMinutes'] as num?)?.toInt() ?? 15,
         useLocation: m['useLocation'] != false,
         connectionsGrid: m['connectionsGrid'] == true,

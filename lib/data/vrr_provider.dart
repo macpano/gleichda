@@ -18,8 +18,8 @@ class VrrProvider implements TransitProvider {
 
   @override
   Future<List<Location>> searchLocations(String query,
-          {({double lat, double lon})? near, int limit = 10}) =>
-      trias.searchLocations(query, near: near, limit: limit);
+          {({double lat, double lon})? near, int limit = 10, int radiusMeters = 1000}) =>
+      trias.searchLocations(query, near: near, limit: limit, radiusMeters: radiusMeters);
 
   @override
   Future<DepartureBoard> departures(Location stop,

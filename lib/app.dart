@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'state/providers.dart';
+import 'state/updates.dart';
 import 'ui/screens/departures_screen.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/screens/messages_screen.dart';
@@ -51,8 +52,13 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   void initState() {
     super.initState();
+    // Versionsabgleich beim Start anstoßen.
+    Future.microtask(() => ref.read(updateProvider));
     _life = AppLifecycleListener(
-      onResume: () => ref.read(lastTripProvider.notifier).resume(),
+      onResume: () {
+        ref.read(lastTripProvider.notifier).resume();
+        ref.read(updateProvider.notifier).resume();
+      },
       onHide: () => ref.read(lastTripProvider.notifier).pause(),
     );
   }

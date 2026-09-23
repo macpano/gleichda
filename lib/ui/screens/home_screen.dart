@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,6 +17,7 @@ import 'location_search_screen.dart';
 import 'options_sheet.dart';
 import 'time_sheet.dart';
 import 'trip_screen.dart';
+import 'update_screen.dart';
 
 /// Startbildschirm = Suche: Suchfelder, zuletzt angesehene Fahrt,
 /// Favoriten, zuletzt gesucht.
@@ -28,6 +31,7 @@ class HomeScreen extends ConsumerWidget {
       children: const [
         _Brand(),
         SizedBox(height: 20),
+        UpdateBanner(),
         _SearchCard(),
         SizedBox(height: 24),
         _LastTripSection(),
@@ -262,17 +266,38 @@ class _LastTripSection extends ConsumerWidget {
     }
     if (s == null) return const SizedBox.shrink();
     final now = ref.watch(clockProvider).value ?? DateTime.now();
+    final c = context.c;
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (s.offline) ...[
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            decoration: BoxDecoration(color: c.fill, borderRadius: BorderRadius.circular(12)),
+            child: Row(children: [
+              Icon(Icons.wifi_off_rounded, size: 18, color: c.ink2),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Keine Internetverbindung', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  Text('Du siehst den Stand von ${hm(s.updatedAt)}.',
+                      style: context.t.number(13).copyWith(color: c.ink2)),
+                ]),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 18),
+        ],
         SectionTitle('Zuletzt angesehen',
-            trailing: FreshnessStamp(
-              updatedAt: s.updatedAt,
-              now: now,
-              refreshing: s.refreshing,
-              failed: s.failed,
-              realtime: s.hasRealtime,
-            )),
+            trailing: s.offline
+                ? Text('Stand ${hm(s.updatedAt)}', style: context.t.number(13).copyWith(color: c.muted))
+                : FreshnessStamp(
+                    updatedAt: s.updatedAt,
+                    now: now,
+                    refreshing: s.refreshing,
+                    failed: s.failed,
+                    realtime: s.hasRealtime,
+                  )),
         Dismissible(
           key: ValueKey('last-${s.trip.id}'),
           direction: DismissDirection.endToStart,
@@ -316,10 +341,17 @@ class LastTripCard extends ConsumerWidget {
                   style: TextStyle(fontSize: 15, color: c.ink2, height: 1.35)),
               const SizedBox(height: 8),
               Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
-                TimeWithDelay(dep, size: 30, delaySize: 15, status: first.from.status),
+                // Ohne Netz sind die Zeiten nicht live: grau statt farbig.
+                if (state.offline)
+                  Text(dep == null ? '' : hm(dep.best),
+                      style: context.t.time(30).copyWith(fontWeight: FontWeight.w700, color: c.ink2))
+                else
+                  TimeWithDelay(dep, size: 30, delaySize: 15, status: first.from.status),
                 const Spacer(),
-                FadeText(dep == null ? '' : countdown(dep.best, now),
-                    style: context.t.time(17).copyWith(color: c.ink)),
+                FadeText(_rightText(dep, now),
+                    style: state.offline
+                        ? context.t.number(15).copyWith(color: c.muted)
+                        : context.t.time(17).copyWith(color: c.ink)),
               ]),
               const SizedBox(height: 8),
               Row(children: [
@@ -352,6 +384,13 @@ class LastTripCard extends ConsumerWidget {
     );
   }
 
+  String _rightText(EventTime? dep, DateTime now) {
+    if (dep == null) return '';
+    if (!state.offline) return countdown(dep.best, now);
+    final d = dep.delayMinutes ?? 0;
+    return d > 0 ? 'zuletzt +$d min' : 'zuletzt ${countdown(dep.best, now)}';
+  }
+
   List<Widget> _badges(BuildContext context, Trip trip) {
     final out = <Widget>[];
     final rides = trip.rides.take(3).toList();
@@ -376,14 +415,54 @@ class LastTripCard extends ConsumerWidget {
 
 // --- Favoriten ---
 
-class _FavoritesSection extends ConsumerWidget {
+/// Nächste Verbindung eines Favoriten, für die Zeit rechts in der Zeile.
+final _favoriteNext = FutureProvider.autoDispose.family<Trip?, (Location, Location)>((ref, r) async {
+  final settings = ref.read(settingsProvider).value ?? const AppSettings();
+  try {
+    final loc = ref.read(locationServiceProvider);
+    final trips = await ref.read(transitProvider).planTrip(buildQuery(
+          from: await loc.resolve(r.$1),
+          to: await loc.resolve(r.$2),
+          time: DateTime.now(),
+          settings: settings,
+        ));
+    final now = DateTime.now();
+    return trips.where((t) => t.departure.best.isAfter(now)).firstOrNull;
+  } catch (_) {
+    return null;
+  }
+});
+
+class _FavoritesSection extends ConsumerStatefulWidget {
   const _FavoritesSection();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final favs = (ref.watch(favoritesProvider).value ?? const [])
-        .where((f) => f.kind == 'route')
-        .toList();
+  ConsumerState<_FavoritesSection> createState() => _FavoritesSectionState();
+}
+
+class _FavoritesSectionState extends ConsumerState<_FavoritesSection> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Zeiten der Favoriten jede Minute neu.
+    _timer = Timer.periodic(const Duration(seconds: 60), (_) {
+      for (final f in ref.read(favoritesProvider).value ?? const <FavoriteItem>[]) {
+        if (f.from != null && f.to != null) ref.invalidate(_favoriteNext((f.from!, f.to!)));
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final favs = (ref.watch(favoritesProvider).value ?? const []).where((f) => f.kind == 'route').toList();
     if (favs.isEmpty) return const SizedBox.shrink();
     final c = context.c;
     return Padding(
@@ -403,18 +482,47 @@ class _FavoritesSection extends ConsumerWidget {
                 child: Container(
                   constraints: const BoxConstraints(minHeight: 58),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  alignment: Alignment.centerLeft,
-                  child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    OneLine(f.to!.name, style: context.t.listRow),
-                    const SizedBox(height: 1),
-                    OneLine('${f.from!.name} → ${f.to!.name}',
-                        style: TextStyle(fontSize: 13, color: c.muted)),
+                  child: Row(children: [
+                    Expanded(
+                      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        OneLine(f.to!.name, style: context.t.listRow),
+                        const SizedBox(height: 1),
+                        OneLine('${f.from!.name} → ${f.to!.name}', style: TextStyle(fontSize: 13, color: c.muted)),
+                      ]),
+                    ),
+                    const SizedBox(width: 12),
+                    _FavoriteTime(from: f.from!, to: f.to!),
                   ]),
                 ),
               ),
             ),
         ]),
       ]),
+    );
+  }
+}
+
+class _FavoriteTime extends ConsumerWidget {
+  const _FavoriteTime({required this.from, required this.to});
+
+  final Location from;
+  final Location to;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.c;
+    final next = ref.watch(_favoriteNext((from, to)));
+    final trip = next.value;
+    final dep = trip == null ? null : (trip.rides.isEmpty ? trip.departure : trip.rides.first.from.departure);
+    return SizedBox(
+      width: 64,
+      child: dep == null
+          ? (next.isLoading
+              ? const Align(alignment: Alignment.centerRight, child: SkeletonBlock(height: 16, width: 44))
+              : const SizedBox.shrink())
+          : FadeText(hm(dep.best),
+              align: TextAlign.right,
+              style: context.t.time(16).copyWith(color: timeColor(context, dep, neutral: c.muted))),
     );
   }
 }

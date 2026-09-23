@@ -597,7 +597,8 @@ mixin _$Line {
 /// Kennung beim Provider (TRIAS LineRef, EFA line id).
  String get id;/// Liniennummer wie angezeigt, z. B. „640“, „S8“, „60“.
  String get name; TransportMode get mode; String? get operator;/// Ausführliche Bezeichnung, z. B. „ICE 950 InterCityExpress“.
- String? get longName;
+ String? get longName;/// Linienart als Name von `Product` (bus, expressBus, cityExpress …).
+ String? get product;
 /// Create a copy of Line
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -611,20 +612,20 @@ $LineCopyWith<Line> get copyWith => _$LineCopyWithImpl<Line>(this as Line, _$ide
 @override
 bool operator ==(Object other) {
   final _this = this as Line;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Line&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.mode, _this.mode) || other.mode == _this.mode)&&(identical(other.operator, _this.operator) || other.operator == _this.operator)&&(identical(other.longName, _this.longName) || other.longName == _this.longName));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Line&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.mode, _this.mode) || other.mode == _this.mode)&&(identical(other.operator, _this.operator) || other.operator == _this.operator)&&(identical(other.longName, _this.longName) || other.longName == _this.longName)&&(identical(other.product, _this.product) || other.product == _this.product));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Line;
-  return Object.hash(runtimeType,_this.id,_this.name,_this.mode,_this.operator,_this.longName);
+  return Object.hash(runtimeType,_this.id,_this.name,_this.mode,_this.operator,_this.longName,_this.product);
 }
 
 @override
 String toString() {
   final _this = this as Line;
-  return 'Line(id: ${_this.id}, name: ${_this.name}, mode: ${_this.mode}, operator: ${_this.operator}, longName: ${_this.longName})';
+  return 'Line(id: ${_this.id}, name: ${_this.name}, mode: ${_this.mode}, operator: ${_this.operator}, longName: ${_this.longName}, product: ${_this.product})';
 }
 
 
@@ -635,7 +636,7 @@ abstract mixin class $LineCopyWith<$Res>  {
   factory $LineCopyWith(Line value, $Res Function(Line) _then) = _$LineCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, TransportMode mode, String? operator, String? longName
+ String id, String name, TransportMode mode, String? operator, String? longName, String? product
 });
 
 
@@ -652,13 +653,14 @@ class _$LineCopyWithImpl<$Res>
 
 /// Create a copy of Line
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? mode = null,Object? operator = freezed,Object? longName = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? mode = null,Object? operator = freezed,Object? longName = freezed,Object? product = freezed,}) {
   return _then(Line(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,mode: null == mode ? _self.mode : mode // ignore: cast_nullable_to_non_nullable
 as TransportMode,operator: freezed == operator ? _self.operator : operator // ignore: cast_nullable_to_non_nullable
 as String?,longName: freezed == longName ? _self.longName : longName // ignore: cast_nullable_to_non_nullable
+as String?,product: freezed == product ? _self.product : product // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -744,10 +746,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  TransportMode mode,  String? operator,  String? longName)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  TransportMode mode,  String? operator,  String? longName,  String? product)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Line() when $default != null:
-return $default(_that.id,_that.name,_that.mode,_that.operator,_that.longName);case _:
+return $default(_that.id,_that.name,_that.mode,_that.operator,_that.longName,_that.product);case _:
   return orElse();
 
 }
@@ -765,10 +767,10 @@ return $default(_that.id,_that.name,_that.mode,_that.operator,_that.longName);ca
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  TransportMode mode,  String? operator,  String? longName)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  TransportMode mode,  String? operator,  String? longName,  String? product)  $default,) {final _that = this;
 switch (_that) {
 case _Line():
-return $default(_that.id,_that.name,_that.mode,_that.operator,_that.longName);case _:
+return $default(_that.id,_that.name,_that.mode,_that.operator,_that.longName,_that.product);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -785,10 +787,10 @@ return $default(_that.id,_that.name,_that.mode,_that.operator,_that.longName);ca
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  TransportMode mode,  String? operator,  String? longName)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  TransportMode mode,  String? operator,  String? longName,  String? product)?  $default,) {final _that = this;
 switch (_that) {
 case _Line() when $default != null:
-return $default(_that.id,_that.name,_that.mode,_that.operator,_that.longName);case _:
+return $default(_that.id,_that.name,_that.mode,_that.operator,_that.longName,_that.product);case _:
   return null;
 
 }
@@ -800,7 +802,7 @@ return $default(_that.id,_that.name,_that.mode,_that.operator,_that.longName);ca
 @JsonSerializable()
 
 class _Line implements Line {
-  const _Line({required this.id, required this.name, required this.mode, this.operator, this.longName});
+  const _Line({required this.id, required this.name, required this.mode, this.operator, this.longName, this.product});
   factory _Line.fromJson(Map<String, dynamic> json) => _$LineFromJson(json);
 
 /// Kennung beim Provider (TRIAS LineRef, EFA line id).
@@ -811,6 +813,8 @@ class _Line implements Line {
 @override final  String? operator;
 /// Ausführliche Bezeichnung, z. B. „ICE 950 InterCityExpress“.
 @override final  String? longName;
+/// Linienart als Name von `Product` (bus, expressBus, cityExpress …).
+@override final  String? product;
 
 /// Create a copy of Line
 /// with the given fields replaced by the non-null parameter values.
@@ -825,18 +829,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Line&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.mode, mode) || other.mode == mode)&&(identical(other.operator, operator) || other.operator == operator)&&(identical(other.longName, longName) || other.longName == longName));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Line&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.mode, mode) || other.mode == mode)&&(identical(other.operator, operator) || other.operator == operator)&&(identical(other.longName, longName) || other.longName == longName)&&(identical(other.product, product) || other.product == product));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,name,mode,operator,longName);
+    return Object.hash(runtimeType,id,name,mode,operator,longName,product);
 }
 
 @override
 String toString() {
-    return 'Line(id: $id, name: $name, mode: $mode, operator: $operator, longName: $longName)';
+    return 'Line(id: $id, name: $name, mode: $mode, operator: $operator, longName: $longName, product: $product)';
 }
 
 
@@ -847,7 +851,7 @@ abstract mixin class _$LineCopyWith<$Res> implements $LineCopyWith<$Res> {
   factory _$LineCopyWith(_Line value, $Res Function(_Line) _then) = __$LineCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, TransportMode mode, String? operator, String? longName
+ String id, String name, TransportMode mode, String? operator, String? longName, String? product
 });
 
 
@@ -864,13 +868,14 @@ class __$LineCopyWithImpl<$Res>
 
 /// Create a copy of Line
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? mode = null,Object? operator = freezed,Object? longName = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? mode = null,Object? operator = freezed,Object? longName = freezed,Object? product = freezed,}) {
   return _then(_Line(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,mode: null == mode ? _self.mode : mode // ignore: cast_nullable_to_non_nullable
 as TransportMode,operator: freezed == operator ? _self.operator : operator // ignore: cast_nullable_to_non_nullable
 as String?,longName: freezed == longName ? _self.longName : longName // ignore: cast_nullable_to_non_nullable
+as String?,product: freezed == product ? _self.product : product // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

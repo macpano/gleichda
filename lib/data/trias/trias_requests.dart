@@ -158,16 +158,19 @@ class TriasRequests {
           bool accessible = false,
           int walkSpeed = 100,
           int? interchangeLimit,
+          int? maxWalkMinutes,
           String? algorithm}) =>
       _envelope((b) {
         b.element('TripRequest', nest: () {
           b.element('Origin', nest: () {
             _locationRef(b, from);
             if (!arriveBy) b.element('DepArrTime', nest: _utc(time));
+            _walkLimit(b, maxWalkMinutes);
           });
           b.element('Destination', nest: () {
             _locationRef(b, to);
             if (arriveBy) b.element('DepArrTime', nest: _utc(time));
+            _walkLimit(b, maxWalkMinutes);
           });
           if (via is TriasStop) {
             b.element('Via', nest: () {
@@ -200,6 +203,16 @@ class TriasRequests {
           });
         });
       });
+
+  /// Längster Fußweg am Start bzw. Ziel (geprüft 23.09.2026: ohne Grenze
+  /// schlug der Server bis zu 25 min vor, mit 3 min höchstens 4 min).
+  void _walkLimit(XmlBuilder b, int? minutes) {
+    if (minutes == null) return;
+    b.element('IndividualTransportOptions', nest: () {
+      b.element('Mode', nest: 'walk');
+      b.element('MaxDuration', nest: 'PT${minutes}M');
+    });
+  }
 
   /// Fahrtverlauf einer Fahrt. Hinweis: Der VRR-Testserver lehnt diese
   /// Anfrage mit HTTP 400 ab (geprüft 23.09.2026), siehe docs/konzept.md.

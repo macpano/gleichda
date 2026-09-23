@@ -1,4 +1,4 @@
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart' show Color, Uint8List;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
@@ -42,8 +42,10 @@ class Notifications {
         onDidReceiveNotificationResponse: (r) => onResponse?.call(r.payload, r.actionId),
       );
       _ready = true;
-    } on MissingPluginException {
-      // Tests und Plattformen ohne Benachrichtigungen.
+    } catch (_) {
+      // Tests, Plattformen ohne Benachrichtigungen oder fehlendes Symbol:
+      // Die App läuft ohne Benachrichtigungen weiter, statt zu hängen.
+      _ready = false;
     }
   }
 

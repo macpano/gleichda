@@ -73,6 +73,7 @@ const _$TransportModeEnumMap = {
   TransportMode.suspension: 'suspension',
   TransportMode.suburbanRail: 'suburbanRail',
   TransportMode.rail: 'rail',
+  TransportMode.longDistanceRail: 'longDistanceRail',
   TransportMode.ferry: 'ferry',
   TransportMode.replacementBus: 'replacementBus',
   TransportMode.onDemand: 'onDemand',
@@ -85,6 +86,7 @@ _Line _$LineFromJson(Map<String, dynamic> json) => _Line(
   mode: $enumDecode(_$TransportModeEnumMap, json['mode']),
   operator: json['operator'] as String?,
   longName: json['longName'] as String?,
+  product: json['product'] as String?,
 );
 
 Map<String, dynamic> _$LineToJson(_Line instance) => <String, dynamic>{
@@ -93,6 +95,7 @@ Map<String, dynamic> _$LineToJson(_Line instance) => <String, dynamic>{
   'mode': _$TransportModeEnumMap[instance.mode]!,
   'operator': ?instance.operator,
   'longName': ?instance.longName,
+  'product': ?instance.product,
 };
 
 _StopTime _$StopTimeFromJson(Map<String, dynamic> json) => _StopTime(
