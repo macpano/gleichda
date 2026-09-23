@@ -1,7 +1,7 @@
 import 'models.dart';
 
 /// Ergebnis der Anschlussprüfung je Umstieg.
-enum TransferState { safe, tight, missed }
+enum TransferState { safe, tight, missed, staySeated }
 
 class TransferCheck {
   const TransferCheck(this.state, this.slackMinutes, this.at);
@@ -24,11 +24,18 @@ List<TransferCheck> checkTransfers(Trip trip, {int transferMinutes = 3}) {
     if (legs[i].type != LegType.ride) continue;
     var j = i + 1;
     var walk = 0;
+    var stay = false;
     while (j < legs.length && legs[j].type != LegType.ride) {
       walk += legs[j].durationMinutes ?? 0;
+      stay = stay || legs[j].staySeated;
       j++;
     }
     if (j >= legs.length) break;
+    // Im selben Fahrzeug sitzen bleiben: kein Anschluss, den man verpassen kann.
+    if (stay) {
+      out.add(TransferCheck(TransferState.staySeated, 0, legs[i].to.stop));
+      continue;
+    }
     final arr = legs[i].to.arrival?.best;
     final dep = legs[j].from.departure?.best;
     if (arr == null || dep == null) continue;

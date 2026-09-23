@@ -147,6 +147,7 @@ _Leg _$LegFromJson(Map<String, dynamic> json) => _Leg(
   journeyRef: json['journeyRef'] as String?,
   operatingDay: json['operatingDay'] as String?,
   durationMinutes: (json['durationMinutes'] as num?)?.toInt(),
+  staySeated: json['staySeated'] as bool? ?? false,
   messageIds:
       (json['messageIds'] as List<dynamic>?)
           ?.map((e) => e as String)
@@ -164,6 +165,7 @@ Map<String, dynamic> _$LegToJson(_Leg instance) => <String, dynamic>{
   'journeyRef': ?instance.journeyRef,
   'operatingDay': ?instance.operatingDay,
   'durationMinutes': ?instance.durationMinutes,
+  'staySeated': instance.staySeated,
   'messageIds': instance.messageIds,
 };
 

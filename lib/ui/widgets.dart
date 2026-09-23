@@ -553,11 +553,11 @@ class ChoiceChipX extends StatelessWidget {
         child: InkWell(
           borderRadius: radius,
           onTap: onTap,
+          // So breit wie der Text; in einem Expanded mittig in voller Breite.
           child: Container(
             height: ios ? 34 : 32,
             padding: EdgeInsets.symmetric(horizontal: lead != null ? 10 : 12),
-            alignment: Alignment.center,
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
+            child: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [
               if (lead != null) ...[Icon(lead, size: 16, color: fg), const SizedBox(width: 6)],
               Flexible(
                 child: Text(label,

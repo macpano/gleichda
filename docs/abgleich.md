@@ -128,3 +128,10 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 ## v0.4.3 (23.09.2026)
 - ✅ Abfahrten: drei Knöpfe ohne Scrollen – Ort (öffnet immer die Suche, „Mein Standort“ = in der Nähe), Verkehrsmittel,
   Uhrzeit (v0.4.4); vorher ließ sich nach Wahl einer Haltestelle keine andere mehr suchen
+
+## v0.4.5 (23.09.2026)
+- ✅ Weiterfahrt im selben Fahrzeug erkannt (TRIAS `InterchangeMode remainInVehicle`, EFA „nicht umsteigen“): kein Umstieg,
+  keine Anschlusswarnung, im Verlauf „Weiterfahrt im selben Fahrzeug · sitzen bleiben“, Unterwegs als eine Fahrt
+- ✅ Alternativen: „Spätere Verbindungen“
+- ✅ Suchprofile und Meldungsfilter ohne seitliches Scrollen (Umbruch), „Mein Standort“ nie als Ziel,
+  Von/Nach bündig untereinander

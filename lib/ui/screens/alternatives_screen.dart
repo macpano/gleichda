@@ -29,6 +29,7 @@ class _AlternativesScreenState extends ConsumerState<AlternativesScreen> {
   List<Trip>? _trips;
   String? _error;
   bool _loading = true;
+  bool _loadingMore = false;
   late final Location _from;
 
   @override
@@ -50,22 +51,45 @@ class _AlternativesScreenState extends ConsumerState<AlternativesScreen> {
     return trip.origin;
   }
 
+  Future<List<Trip>> _search(DateTime time) {
+    final settings = ref.read(settingsProvider).value ?? const AppSettings();
+    final p = ref.read(transitProvider);
+    TripQuery q(TripOptimization o) => buildQuery(
+          from: _from,
+          to: widget.trip.destination,
+          time: time,
+          settings: settings,
+          optimization: o,
+        );
+    return searchMerged(p, [q(TripOptimization.fastest), q(TripOptimization.minChanges)]);
+  }
+
+  /// Spätere Alternativen: ab der letzten gefundenen Abfahrt weitersuchen.
+  Future<void> _later() async {
+    final trips = _trips;
+    if (trips == null || trips.isEmpty || _loadingMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final last = trips.map((t) => t.departure.planned).reduce((a, b) => a.isAfter(b) ? a : b);
+      final more = await _search(last.add(const Duration(minutes: 1)));
+      if (!mounted) return;
+      final seen = {...trips.map(tripSignature), tripSignature(widget.trip)};
+      setState(() => _trips = [...trips, ...more.where((t) => seen.add(tripSignature(t)))]
+        ..sort((a, b) => a.departure.best.compareTo(b.departure.best)));
+    } on ProviderException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final settings = ref.read(settingsProvider).value ?? const AppSettings();
-      final p = ref.read(transitProvider);
-      TripQuery q(TripOptimization o) => buildQuery(
-            from: _from,
-            to: widget.trip.destination,
-            time: DateTime.now(),
-            settings: settings,
-            optimization: o,
-          );
-      final trips = await searchMerged(p, [q(TripOptimization.fastest), q(TripOptimization.minChanges)]);
+      final trips = await _search(DateTime.now());
       if (!mounted) return;
       setState(() {
         _trips = trips.where((t) => tripSignature(t) != tripSignature(widget.trip)).toList();
@@ -137,6 +161,8 @@ class _AlternativesScreenState extends ConsumerState<AlternativesScreen> {
               if (sameLine.isNotEmpty) group('Nächste Fahrt derselben Linie', sameLine),
               if (faster.isNotEmpty) group('Schneller oder gleich schnell', faster),
               if (later.isNotEmpty) group('Etwas später', later),
+              const SizedBox(height: 8),
+              MoreButton(label: 'Spätere Verbindungen', busy: _loadingMore, onTap: _later),
             ],
             const SizedBox(height: 12),
             Text('Zeitangaben rechts: Ankunft im Vergleich zu deiner Verbindung (${hm(arr)}).',

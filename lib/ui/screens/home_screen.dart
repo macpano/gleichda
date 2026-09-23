@@ -57,7 +57,7 @@ class _SearchCard extends ConsumerWidget {
 
   Future<void> _pick(BuildContext context, WidgetRef ref, bool isFrom) async {
     final l = await Navigator.of(context).push<Location>(MaterialPageRoute(
-        builder: (_) => LocationSearchScreen(title: isFrom ? 'Von' : 'Nach', showNearby: isFrom)));
+        builder: (_) => LocationSearchScreen(title: isFrom ? 'Von' : 'Nach', showNearby: isFrom, allowHere: isFrom)));
     if (l == null) return;
     final n = ref.read(routeProvider.notifier);
     isFrom ? n.setFrom(l) : n.setTo(l);
@@ -85,19 +85,18 @@ class _SearchCard extends ConsumerWidget {
           onTap: () => _pick(context, ref, isFrom),
           child: SizedBox(
             height: 56,
+            width: double.infinity,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label, style: TextStyle(fontSize: 12, color: c.muted)),
                 const SizedBox(height: 2),
-                Row(children: [
-                  if (isHere(value)) ...[Icon(Icons.my_location, size: 15, color: c.accent), const SizedBox(width: 6)],
-                  Expanded(
-                    child: OneLine(value?.label ?? hint,
-                        style: TextStyle(fontSize: 16, color: value == null ? c.muted : c.ink)),
-                  ),
-                ]),
+                // „Mein Standort“ in Akzentfarbe statt mit Symbol davor – so
+                // stehen Von und Nach genau untereinander.
+                OneLine(value?.label ?? hint,
+                    style: TextStyle(
+                        fontSize: 16, color: value == null ? c.muted : (isHere(value) ? c.accent : c.ink))),
               ],
             ),
           ),
