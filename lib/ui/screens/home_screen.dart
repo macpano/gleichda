@@ -198,7 +198,7 @@ class _SearchCard extends ConsumerWidget {
             final scaler = MediaQuery.textScalerOf(context);
             double natural(String label, bool icon) {
               final tp = TextPainter(
-                text: TextSpan(text: label, style: context.t.number(15)),
+                text: TextSpan(text: label, style: DefaultTextStyle.of(context).style.merge(context.t.number(15))),
                 textDirection: TextDirection.ltr,
                 textScaler: scaler,
                 maxLines: 1,
