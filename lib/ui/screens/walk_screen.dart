@@ -240,7 +240,7 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
                               ),
                             ),
                         ]),
-                        const SimpleAttributionWidget(source: Text('© OpenStreetMap-Mitwirkende')),
+                        const SimpleAttributionWidget(source: Text('OpenStreetMap-Mitwirkende')),
                       ],
                     ),
         ),

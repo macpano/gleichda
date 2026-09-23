@@ -17,7 +17,6 @@ import 'location_search_screen.dart';
 import 'options_sheet.dart';
 import 'time_sheet.dart';
 import 'trip_screen.dart';
-import 'update_screen.dart';
 
 /// Startbildschirm = Suche: Suchfelder, zuletzt angesehene Fahrt,
 /// Favoriten, zuletzt gesucht.
@@ -31,7 +30,6 @@ class HomeScreen extends ConsumerWidget {
       children: const [
         _Brand(),
         SizedBox(height: 20),
-        UpdateBanner(),
         _SearchCard(),
         SizedBox(height: 24),
         _LastTripSection(),

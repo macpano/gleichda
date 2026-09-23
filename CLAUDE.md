@@ -88,7 +88,7 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 - Signiert mit demselben Schlüssel wie Linienlog (`android/key.properties`, nicht im Repo).
   Ohne diesen Schlüssel lassen sich Updates nicht über die installierte App spielen.
 
-## Stand (v0.2.1, 23.09.2026)
+## Stand (v0.2.2, 23.09.2026)
 
 - Umgesetzt sind die Schritte 1–15 in Grundform; was fehlt, steht in `docs/abgleich.md`.
 - Der geteilte Chat liegt nur lokal als `docs/chat-verlauf.txt` (in .gitignore, persönliche Angaben – nie einchecken).
@@ -102,4 +102,10 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
   (wirkt nur auf Start und Ziel); Umsteigewege filtert die App selbst.
 - Release-Builds entfernen Ressourcen, die nur per Name geladen werden – `res/raw/keep.xml` hält
   `ic_stat_gleichda` (fehlte in v0.2.0, App hing am Startbild).
+- Selbst-Aktualisierung ohne Obtainium (`lib/state/updates.dart`): GitHub-Release prüfen, APK nach
+  `files/updates` laden (Größe + „PK“ geprüft), Meldung `UpdateToast`, Installation über den
+  MethodChannel `de.gleichda/update` in `MainActivity.kt` (FileProvider `${applicationId}.updates`).
+- Unterwegs ist kein eigener Bildschirm (Konzept: „einen Tipp entfernt in der Fahrt“), sondern
+  `CompanionCard` oben in der Fahrt; Karte `lib/ui/trip_map.dart`. TRIAS liefert keinen Linienverlauf
+  (LegProjection leer, geprüft 23.09.) – die Karte verbindet die Haltestellen (Koordinaten aus der EFA).
 - Kartenkacheln vorläufig FOSSGIS (`tile.openstreetmap.de`), offene Entscheidung im Konzept.

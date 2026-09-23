@@ -8,6 +8,7 @@ import '../../state/companion.dart';
 import '../../state/providers.dart';
 import '../format.dart';
 import '../theme.dart';
+import '../trip_map.dart';
 import '../trip_status.dart';
 import '../widgets.dart';
 import 'alternatives_screen.dart';
@@ -57,11 +58,18 @@ class _TripScreenState extends ConsumerState<TripScreen> {
             SubpageHeader(
               title: 'Fahrt',
               backLabel: 'Zurück',
-              trailing: IconButton(
-                tooltip: fav ? 'Favorit entfernen' : 'Als Favorit speichern',
-                onPressed: () => ref.read(repositoryProvider).toggleFavoriteRoute(trip.origin, trip.destination),
-                icon: Icon(fav ? Icons.star : Icons.star_border, color: fav ? c.accent : c.ink),
-              ),
+              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                IconButton(
+                  tooltip: 'Karte',
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TripMapScreen())),
+                  icon: Icon(Icons.map_outlined, color: c.ink),
+                ),
+                IconButton(
+                  tooltip: fav ? 'Favorit entfernen' : 'Als Favorit speichern',
+                  onPressed: () => ref.read(repositoryProvider).toggleFavoriteRoute(trip.origin, trip.destination),
+                  icon: Icon(fav ? Icons.star : Icons.star_border, color: fav ? c.accent : c.ink),
+                ),
+              ]),
             ),
             RouteSummary(from: trip.origin.name, to: trip.destination.name),
             Padding(
@@ -259,9 +267,9 @@ class _TripScreenState extends ConsumerState<TripScreen> {
         if (isPassed(stops[k], now)) lastPassed = k;
       }
       Widget position(StopTime next) => _Row(
-            height: 32,
+            height: 36,
             rail: _Rail(color: color),
-            marker: VehicleGlyph(l.line?.mode, color: color, width: 22),
+            marker: PositionDot(color: color),
             child: OneLine('nächster Halt ${next.stop.name}', style: TextStyle(fontSize: 13, color: c.muted)),
           );
       final shown = open
@@ -455,21 +463,12 @@ class _Row extends StatelessWidget {
             width: 24,
             child: Stack(clipBehavior: Clip.none, children: [
               Positioned.fill(child: CustomPaint(painter: _RailPainter(rail))),
-              if (marker != null)
-                Positioned(
-                  left: 0,
-                  top: height / 2 - 8,
-                  child: Container(
-                    color: context.c.surface,
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: marker,
-                  ),
-                ),
+              if (marker != null) Positioned(left: 0, right: 0, top: 0, height: 36, child: Center(child: marker)),
             ]),
           ),
           Expanded(
             child: Padding(
-              padding: EdgeInsets.only(left: 8, top: marker != null ? 8 : 9),
+              padding: const EdgeInsets.only(left: 8, top: 9),
               child: Align(alignment: Alignment.topLeft, child: child),
             ),
           ),

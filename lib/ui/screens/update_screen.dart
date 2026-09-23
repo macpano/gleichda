@@ -6,51 +6,80 @@ import '../format.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
-/// Hinweis oben auf der Startseite, wenn eine neuere Version bereitsteht.
-class UpdateBanner extends ConsumerWidget {
-  const UpdateBanner({super.key});
+/// Kleine Meldung über der unteren Leiste, sobald eine neue Version fertig
+/// geladen ist – auf jedem Reiter. „Später“ blendet sie bis zum nächsten
+/// Öffnen der App aus.
+class UpdateToast extends ConsumerStatefulWidget {
+  const UpdateToast({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<UpdateToast> createState() => _UpdateToastState();
+}
+
+class _UpdateToastState extends ConsumerState<UpdateToast> {
+  String? _dismissed;
+
+  @override
+  Widget build(BuildContext context) {
     final u = ref.watch(updateProvider);
-    final show = u.hasUpdate || u.phase == UpdatePhase.downloading || u.phase == UpdatePhase.installing;
-    if (!show) return const SizedBox.shrink();
+    final version = u.latest?.version;
+    final show = (u.ready || u.phase == UpdatePhase.installing) && _dismissed != version;
     final c = context.c;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Material(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(Radii.card),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(Radii.card),
-          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const UpdateScreen())),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-            child: Row(children: [
-              Icon(Icons.system_update_outlined, color: c.accent),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  OneLine('Version ${u.latest?.version ?? ''} verfügbar', style: context.t.listRow),
-                  OneLine(
-                    switch (u.phase) {
-                      UpdatePhase.downloading => 'Wird geladen … ${u.progress ?? 0} %',
-                      UpdatePhase.installing => 'Installation läuft',
-                      _ => 'Installiert: ${u.current}',
-                    },
-                    style: context.t.number(13).copyWith(color: c.muted),
+    return AnimatedSwitcher(
+      duration: MediaQuery.of(context).disableAnimations ? Duration.zero : const Duration(milliseconds: 250),
+      transitionBuilder: (child, a) => FadeTransition(
+        opacity: a,
+        child: SlideTransition(
+          position: Tween(begin: const Offset(0, 0.3), end: Offset.zero).animate(a),
+          child: child,
+        ),
+      ),
+      child: !show
+          ? const SizedBox.shrink()
+          : Material(
+              key: ValueKey(version),
+              color: c.surface,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(Radii.card),
+                side: BorderSide(color: c.hair),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+                child: Row(children: [
+                  Icon(Icons.system_update_outlined, color: c.accent, size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      OneLine('Update verfügbar', style: context.t.listRow.copyWith(fontWeight: FontWeight.w600)),
+                      OneLine(
+                        u.error ??
+                            (u.phase == UpdatePhase.installing
+                                ? 'Installation läuft …'
+                                : 'Version $version · bereits geladen'),
+                        style: TextStyle(fontSize: 13, color: u.error != null ? c.orange : c.muted),
+                      ),
+                    ]),
+                  ),
+                  TextButton(
+                    style: TextButton.styleFrom(foregroundColor: c.muted),
+                    onPressed: () => setState(() => _dismissed = version),
+                    child: const Text('Später'),
+                  ),
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: c.accent,
+                      foregroundColor: c.onAccent,
+                      minimumSize: const Size(0, 38),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.input)),
+                    ),
+                    onPressed: () => ref.read(updateProvider.notifier).install(),
+                    child: const Text('Installieren', style: TextStyle(fontWeight: FontWeight.w600)),
                   ),
                 ]),
               ),
-              if (u.phase == UpdatePhase.available)
-                TextButton(
-                  onPressed: () => ref.read(updateProvider.notifier).install(),
-                  child: const Text('Aktualisieren'),
-                ),
-            ]),
-          ),
-        ),
-      ),
+            ),
     );
   }
 }
@@ -69,6 +98,7 @@ class UpdateScreen extends ConsumerWidget {
       UpdatePhase.checking => 'Wird geprüft …',
       UpdatePhase.upToDate => 'Aktuell',
       UpdatePhase.available => 'Version ${u.latest!.version} verfügbar',
+      UpdatePhase.ready => 'Version ${u.latest!.version} geladen, bereit zur Installation',
       UpdatePhase.downloading => 'Wird geladen … ${u.progress ?? 0} %',
       UpdatePhase.installing => 'Installation läuft',
       UpdatePhase.failed => u.error ?? 'Fehlgeschlagen',
@@ -110,15 +140,15 @@ class UpdateScreen extends ConsumerWidget {
                   : u.hasUpdate
                       ? () => ref.read(updateProvider.notifier).install()
                       : () => ref.read(updateProvider.notifier).check(),
-              child: Text(u.hasUpdate ? 'Jetzt aktualisieren' : 'Nach Aktualisierung suchen',
+              child: Text(u.ready ? 'Installieren' : u.hasUpdate ? 'Laden und installieren' : 'Nach Aktualisierung suchen',
                   style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
             ),
           ),
           const SizedBox(height: 16),
           ListGroup(children: [
             SwitchListTile(
-              title: const Text('Automatisch prüfen'),
-              subtitle: const Text('Beim Start und alle 6 Stunden'),
+              title: const Text('Automatisch laden'),
+              subtitle: const Text('Beim Öffnen und alle 6 Stunden prüfen, neue Version im Hintergrund laden'),
               value: auto,
               onChanged: (v) => ref.read(updateProvider.notifier).setAuto(v),
             ),
@@ -135,8 +165,9 @@ class UpdateScreen extends ConsumerWidget {
           ],
           const SizedBox(height: 16),
           Text(
-            'Die App fragt die neueste Veröffentlichung auf GitHub ab (github.com/macpano/gleichda). '
-            'Eingespielt wird nur auf Tipp; Android fragt beim ersten Mal, ob Gleichda Apps installieren darf.',
+            'Die App fragt die neueste Veröffentlichung auf GitHub ab (github.com/macpano/gleichda) und lädt sie '
+            'im Hintergrund. Installiert wird erst auf Tipp; Android fragt beim ersten Mal, ob Gleichda Apps '
+            'installieren darf, und bestätigt jede Installation selbst. Die Daten in der App bleiben erhalten.',
             style: context.t.secondary.copyWith(color: c.muted, height: 1.4),
           ),
         ],

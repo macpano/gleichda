@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'state/providers.dart';
 import 'state/updates.dart';
+import 'ui/screens/update_screen.dart';
 import 'ui/screens/departures_screen.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/screens/messages_screen.dart';
@@ -91,17 +92,20 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         systemNavigationBarColor: c.bar,
       ),
       child: Scaffold(
-        body: IndexedStack(
-          index: _tab,
-          children: [
-            const HomeScreen(),
-            // Erst beim ersten Öffnen aufbauen: keine Standortabfrage und keine
-            // Meldungsabfrage, bevor der Tab gebraucht wird.
-            _visited.contains(1) ? const DeparturesScreen() : const SizedBox.shrink(),
-            _visited.contains(2) ? const MessagesScreen() : const SizedBox.shrink(),
-            const MoreScreen(),
-          ],
-        ),
+        body: Stack(children: [
+          IndexedStack(
+            index: _tab,
+            children: [
+              const HomeScreen(),
+              // Erst beim ersten Öffnen aufbauen: keine Standortabfrage und keine
+              // Meldungsabfrage, bevor der Tab gebraucht wird.
+              _visited.contains(1) ? const DeparturesScreen() : const SizedBox.shrink(),
+              _visited.contains(2) ? const MessagesScreen() : const SizedBox.shrink(),
+              const MoreScreen(),
+            ],
+          ),
+          const Positioned(left: 12, right: 12, bottom: 12, child: UpdateToast()),
+        ]),
         bottomNavigationBar: context.isIOS
             ? _IosTabBar(index: _tab, onTap: _select, tabs: _tabs)
             : NavigationBar(

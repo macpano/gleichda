@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Standort nur bei Nutzung (Suche ab Standort, Abfahrten in der Nähe, Weg zum Steig) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -59,8 +60,8 @@
         </receiver>
         <!-- Selbst-Aktualisierung aus den GitHub-Releases -->
         <provider
-            android:name="sk.fourq.otaupdate.OtaUpdateFileProvider"
-            android:authorities="${applicationId}.ota_update_provider"
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updates"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

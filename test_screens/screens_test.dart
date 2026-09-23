@@ -34,6 +34,7 @@ import 'package:gleichda/ui/screens/trip_screen.dart';
 import 'package:gleichda/ui/screens/walk_screen.dart';
 import 'package:gleichda/domain/settings.dart';
 import 'package:gleichda/ui/theme.dart';
+import 'package:gleichda/ui/trip_map.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 String fixture(String n) => File('test/fixtures/$n').readAsStringSync();
@@ -112,6 +113,10 @@ void main() {
   late Location hbf;
 
   setUpAll(() async {
+    // Kartenkacheln legen einen Zwischenspeicher an; im Test ein Temp-Ordner.
+    final tmp = Directory.systemTemp.createTempSync('gleichda_test').path;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/path_provider'), (_) async => tmp);
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
     await initializeDateFormatting('de');
     await loadFonts();
@@ -199,7 +204,7 @@ void main() {
   testWidgets('Meldungen', (t) => shot(t, 'meldungen', const Scaffold(body: MessagesScreen())));
   testWidgets('Mehr', (t) => shot(t, 'mehr', const Scaffold(body: MoreScreen())));
   testWidgets('Unterwegs', (t) {
-    final onBoard = tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first;
+    final onBoard = withCoords(tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first);
     return shot(t, 'unterwegs', const TripScreen(),
         seed: (r) => r.saveLastTrip(onBoard),
         overrides: [companionProvider.overrideWith(() => _Following(onBoard.id))]);
@@ -208,6 +213,10 @@ void main() {
         final onBoard = tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first;
         await r.saveLastTrip(onBoard);
       }));
+  testWidgets('Karte', (t) {
+    final onBoard = withCoords(tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first);
+    return shot(t, 'karte', const TripMapScreen(), seed: (r) => r.saveLastTrip(onBoard));
+  });
   testWidgets('Alternativen', (t) => shot(t, 'alternativen', AlternativesScreen(trip: trips.first)));
   testWidgets('Neuer Wecker', (t) => shot(t, 'wecker_neu', const AlarmEditScreen()));
   testWidgets('Suche leer', (t) => shot(t, 'suche_leer', const LocationSearchScreen(title: 'Nach'), seed: seedHome));
@@ -251,4 +260,24 @@ class _Following extends CompanionController {
 
   @override
   CompanionState build() => CompanionState(active: true, tripId: tripId);
+}
+
+/// Die TRIAS-Aufzeichnungen tragen keine Koordinaten (die kommen im Betrieb
+/// aus der EFA). Für die Kartenbilder werden die Halte gleichmäßig zwischen
+/// Alter Markt und Vohwinkel verteilt – nur für den Test.
+Trip withCoords(Trip trip) {
+  const a = (lat: 51.2717, lon: 7.1968), b = (lat: 51.2317, lon: 7.0739);
+  final all = [for (final l in trip.legs) ...[l.from, ...l.intermediates, l.to]];
+  var i = 0;
+  StopTime put(StopTime s) {
+    final f = i++ / (all.length - 1);
+    final wiggle = (i % 3 - 1) * 0.0015;
+    return s.copyWith(
+        stop: s.stop.copyWith(lat: a.lat + (b.lat - a.lat) * f + wiggle, lon: a.lon + (b.lon - a.lon) * f));
+  }
+
+  return trip.copyWith(legs: [
+    for (final l in trip.legs)
+      l.copyWith(from: put(l.from), intermediates: [for (final s in l.intermediates) put(s)], to: put(l.to)),
+  ]);
 }
