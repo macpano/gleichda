@@ -76,3 +76,12 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 - Karte: „© OpenStreetMap-Mitwirkende“ (ODbL) sichtbar einblenden.
 - Transitous/MOTIS nur, solange das Projekt Open Source und nicht kommerziell
   ist; User-Agent mit Kontaktadresse setzen.
+
+## Auslieferung (Obtainium)
+
+- Repository: https://github.com/macpano/gleichda (privat). Obtainium verfolgt die
+  GitHub-Releases; im privaten Repo braucht Obtainium ein GitHub-Token mit Leserecht.
+- Neue Version: `bash tool/release.sh <Version> "<Neuerungen>"` – erhöht die
+  Build-Nummer, prüft, baut die signierte APK, taggt `v<Version>` und legt das Release an.
+- Signiert mit demselben Schlüssel wie Linienlog (`android/key.properties`, nicht im Repo).
+  Ohne diesen Schlüssel lassen sich Updates nicht über die installierte App spielen.
