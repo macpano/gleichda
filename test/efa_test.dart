@@ -79,11 +79,10 @@ void main() {
     expect(re.points.length, greaterThan(100), reason: 'Zugweg entlang der Gleise');
   });
 
-  test('Gebiet für Meldungen aus der Haltestellenkennung', () {
-    expect(regionFromStopId('de:05124:11376'), '5124000'); // Wuppertal
-    expect(regionFromStopId('de:05111:18235:0:1'), '5111000'); // Düsseldorf
-    expect(regionFromStopId('de:11000:900100001'), '11000000'); // Berlin
-    expect(regionFromStopId('coord:51.2:7.1'), isNull);
+  test('Gemeindeschlüssel aus der EFA-Ortskennung', () {
+    expect(omcFromPlaceId('placeID:5914000:29'), '5914000'); // Hagen
+    expect(omcFromPlaceId('placeID:5954020:2'), '5954020'); // Herdecke
+    expect(omcFromPlaceId('de:05124:11376'), isNull);
   });
 
   test('Haltestellennamen behalten den Ort', () {

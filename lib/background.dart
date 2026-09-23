@@ -9,6 +9,7 @@ import 'package:workmanager/workmanager.dart';
 import 'data/db/database.dart';
 import 'data/efa/efa_client.dart';
 import 'data/repository.dart';
+import 'state/providers.dart' show savedMessageRegions;
 import 'data/transit_provider.dart';
 import 'data/trias/trias_provider.dart';
 import 'data/vrr_provider.dart';
@@ -62,7 +63,7 @@ Future<int> checkSubscriptions(Repository repo, TransitProvider provider, {DateT
   final subs = await repo.subscriptions();
   if (subs.isEmpty) return 0;
   // Gebiet wie zuletzt in „Meldungen“ (Standort des Nutzers), sonst Wuppertal.
-  final messages = await provider.messages(region: await repo.setting('messagesRegion'));
+  final messages = await provider.messages(regions: await savedMessageRegions(repo));
   final seenRaw = await repo.setting('seenMessages');
   final seen = seenRaw == null ? null : (jsonDecode(seenRaw) as List).cast<String>().toSet();
   final t = now ?? DateTime.now();

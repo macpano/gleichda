@@ -71,10 +71,10 @@ class FakeProvider implements TransitProvider {
   Future<DepartureBoard> departures(Location stop, {DateTime? time, int limit = 20}) async => board;
 
   @override
-  Future<String?> regionOf(GeoPoint near) async => null;
+  Future<List<String>> regionsOf(GeoPoint near) async => const [];
 
   @override
-  Future<List<Message>> messages({List<String> lineIds = const [], String? region}) async =>
+  Future<List<Message>> messages({List<String> lineIds = const [], List<String> regions = const []}) async =>
       parseAddInfo(jsonDecode(fixture('efa_addinfo_wuppertal.json')) as Map<String, dynamic>);
 
   @override
@@ -202,6 +202,8 @@ void main() {
     await r.recordSearch(trips.first.origin, trips.first.destination);
     await r.recordSearch(hbf, trips.first.origin);
     await r.toggleFavoriteRoute(hbf, trips.first.destination);
+    await r.savePlace(SavedPlace(id: 'home', name: 'Zuhause', kind: PlaceKind.home, location: trips.first.destination));
+    await r.savePlace(SavedPlace(id: 'work', name: 'Arbeit', kind: PlaceKind.work, location: hbf));
   }
 
   testWidgets('Start hell', (t) => shot(t, 'start_hell', const HomeShell(), seed: seedHome));

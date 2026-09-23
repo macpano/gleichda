@@ -133,6 +133,22 @@ class EfaClient {
     return parseLegPaths(json);
   }
 
+  /// Gemeindeschlüssel (OMC) der Haltestellen nahe einer Koordinate
+  /// (XML_COORD_REQUEST): „placeID:5954020:2“ → „5954020“ (Herdecke).
+  Future<Set<String>> placesNear(double lat, double lon, {int radiusMeters = 1500}) async {
+    final json = await _get('XML_COORD_REQUEST', {
+      'coord': '${lon.toStringAsFixed(5)}:${lat.toStringAsFixed(5)}:WGS84[dd.ddddd]',
+      'inclFilter': '1',
+      'type_1': 'STOP',
+      'radius_1': '$radiusMeters',
+      'max': '3',
+    });
+    return {
+      for (final l in (json['locations'] as List?) ?? const [])
+        if (l is Map) ?omcFromPlaceId(((l['parent'] as Map?)?['id']) as String?),
+    };
+  }
+
   /// Linien zum Suchbegriff (Liniennummer), deutschlandweit.
   Future<List<Line>> searchLines(String query) async {
     final json = await _get('XML_SERVINGLINES_REQUEST', {'mode': 'line', 'lineName': query});
@@ -267,12 +283,18 @@ List<Message> parseAddInfo(Map<String, dynamic> json) {
     final stops = ((affected['stops'] as List?) ?? const []).whereType<Map>().toList();
     final validity = ((raw['timestamps'] as Map?)?['validity'] as List?)?.whereType<Map>().toList() ?? const [];
     final source = ((raw['properties'] as Map?)?['source'] as Map?)?['name'] as String?;
+    // Je Linie einmal (die EFA nennt Hin- und Rückrichtung einzeln).
+    final seenLines = <String>{};
+    final uniqueLines = [
+      for (final l in lines)
+        if (seenLines.add(lineKey(l['id'] as String? ?? '${l['number']}'))) l,
+    ];
     out.add(Message(
       id: raw['id'] as String,
       title: title.trim(),
       text: htmlToText(link?['content'] as String?),
-      lineIds: [for (final l in lines) lineKey(l['id'] as String? ?? '')],
-      lineNames: [for (final l in lines) (l['number'] ?? l['name'] ?? '') as String],
+      lineIds: [for (final l in uniqueLines) lineKey(l['id'] as String? ?? '')],
+      lineNames: [for (final l in uniqueLines) (l['number'] ?? l['name'] ?? '') as String],
       stopIds: [for (final s in stops) if (s['id'] is String) s['id'] as String],
       validFrom: validity.isEmpty ? null : DateTime.tryParse(validity.first['from'] as String? ?? ''),
       validTo: validity.isEmpty ? null : DateTime.tryParse(validity.last['to'] as String? ?? ''),
@@ -387,4 +409,10 @@ List<Line> parseServingLines(Map<String, dynamic> json) {
     );
   }
   return out.values.toList();
+}
+
+/// „placeID:5914000:29“ → „5914000“.
+String? omcFromPlaceId(String? id) {
+  final m = RegExp(r'^placeID:(\d{6,8}):').firstMatch(id ?? '');
+  return m?.group(1);
 }

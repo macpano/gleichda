@@ -32,9 +32,6 @@ List<ConnectionItem> rateConnections(List<Trip> trips,
   if (trips.isEmpty) return const [];
   final checks = {for (final t in trips) t: checkTransfers(t, transferMinutes: transferMinutes)};
   final reachable = trips.where((t) => !checks[t]!.any((c) => c.state == TransferState.missed)).toList();
-  final fastest = reachable.isEmpty
-      ? null
-      : reachable.reduce((a, b) => a.duration <= b.duration ? a : b);
   final minChanges = reachable.isEmpty ? 0 : reachable.map((t) => t.interchanges).reduce(math.min);
   final fewest = reachable.where((t) => t.interchanges == minChanges).toList();
   final out = <ConnectionItem>[];
@@ -48,9 +45,10 @@ List<ConnectionItem> rateConnections(List<Trip> trips,
       labels: !labels || !ok
           ? const []
           : [
-              if (identical(t, fastest) && trips.length > 1) 'schnellste',
-              if (t.interchanges == 0) 'ohne Umstieg'
-              else if (fewest.length < reachable.length && fewest.contains(t) && identical(t, fewest.first))
+              if (t.interchanges > 0 &&
+                  fewest.length < reachable.length &&
+                  fewest.contains(t) &&
+                  identical(t, fewest.first))
                 'wenigste Umstiege',
             ],
     ));
@@ -66,6 +64,7 @@ List<ConnectionItem> rateConnections(List<Trip> trips,
 /// bei Gleichstand nach Abfahrt.
 List<ConnectionItem> sortConnections(List<ConnectionItem> items, ConnectionSort sort) {
   num key(Trip t) => switch (sort) {
+        ConnectionSort.arrival => t.arrival.best.millisecondsSinceEpoch ~/ 60000,
         ConnectionSort.departure => 0,
         ConnectionSort.fastest => t.duration.inMinutes,
         ConnectionSort.fewChanges => t.interchanges,
@@ -95,6 +94,8 @@ class ConnectionRow extends StatelessWidget {
     final c = context.c;
     final trip = item.trip;
     final first = trip.rides.isEmpty ? null : trip.rides.first.from.departure;
+    // Von–bis wie die Dauer: vom Losgehen bis zum Ankommen, Fußwege inklusive.
+    final start = trip.departure;
     final issue = tripIssue(trip);
     final rt = trip.rides.any((r) => r.from.departure?.hasRealtime ?? false);
     final late = first?.delayMinutes ?? 0;
@@ -126,7 +127,7 @@ class ConnectionRow extends StatelessWidget {
             // („+3 min“), die Abfahrt trägt nur die Farbe. So bleibt keine
             // Lücke für eine Verspätung, die meist gar nicht da ist.
             Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
-              FadeText(hm((first ?? trip.departure).best),
+              FadeText(hm(start.best),
                   style: context.t.time(18).copyWith(color: timeColor(context, first, neutral: c.ink))),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -158,7 +159,7 @@ class ConnectionRow extends StatelessWidget {
 
 /// Fußwege einer Verbindung zusammen, in Minuten (Start, Umstiege, Ziel).
 int walkMinutes(Trip trip) => trip.legs
-    .where((l) => l.type != LegType.ride)
+    .where((l) => l.type != LegType.ride && !l.staySeated)
     .fold(0, (sum, l) => sum + (l.durationMinutes ?? 0));
 
 /// Balken je Abschnitt, Länge proportional zur Dauer. Jede Linie bekommt
@@ -191,6 +192,8 @@ class TripTimeline extends StatelessWidget {
       if (minutes <= 0) minutes = l.durationMinutes ?? 1;
       final ride = l.type == LegType.ride;
       if (!ride && minutes < 1) continue;
+      // Im selben Fahrzeug weiter: kein Fußweg, die Wartezeit zählt zur Fahrt davor.
+      if (l.staySeated) continue;
       final min = ride
           ? textWidth(l.line?.name ?? '', badgeStyle) + 12
           : textWidth('$minutes′', walkStyle) + 22;

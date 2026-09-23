@@ -39,13 +39,19 @@ List<TransferCheck> checkTransfers(Trip trip, {int transferMinutes = 3}) {
     final arr = legs[i].to.arrival?.best;
     final dep = legs[j].from.departure?.best;
     if (arr == null || dep == null) continue;
-    final need = walk > 0 ? walk : transferMinutes;
-    final slack = dep.difference(arr).inMinutes - need;
+    // Nicht erreichbar erst, wenn die Zeit nicht einmal für den Umsteigeweg
+    // reicht (am selben Halt: mindestens 1 min). Die persönliche
+    // Umsteigezeit entscheidet nur zwischen „sicher“ und „knapp“ – eine
+    // Verbindung mit 2 min Umstieg, die die Auskunft selbst anbietet, ist
+    // machbar.
+    final buffer = dep.difference(arr).inMinutes;
+    final need = walk > 0 ? walk : 1;
+    final slack = buffer - (walk > 0 ? walk : 0);
     final cancelled = legs[j].from.status == StopStatus.cancelled;
     out.add(TransferCheck(
-      cancelled || slack < 0
+      cancelled || buffer < need
           ? TransferState.missed
-          : slack < 2
+          : slack < transferMinutes
               ? TransferState.tight
               : TransferState.safe,
       slack,

@@ -26,9 +26,13 @@ const tileUrl = 'https://tile.openstreetmap.de/{z}/{x}/{y}.png';
 
 /// „Letzte Meter“: Karte mit Standort, Ziel-Steig und Richtung.
 class WalkScreen extends ConsumerStatefulWidget {
-  const WalkScreen({super.key, required this.target, this.platform, this.departure});
+  const WalkScreen({super.key, required this.target, this.platform, this.departure, this.origin});
 
   final Location target;
+
+  /// Beim Umsteigen: der Ankunftshalt. Ist man noch weit weg, zeigt die
+  /// Ansicht den Umsteigeweg von dort statt einer Führung vom Standort.
+  final Location? origin;
 
   /// Steigbezeichnung aus der Fahrt, z. B. „2“.
   final String? platform;
@@ -66,9 +70,42 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
     _map.move(LatLng(p.latitude, p.longitude), math.max(_map.camera.zoom, 17.5));
   }
 
+  /// Mehr als 2 km entfernt: keine Führung vom Standort (sonst „333 min zu
+  /// Fuß“ beim Blick auf einen späteren Umstieg), sondern eine Vorschau.
+  static const _farMeters = 2000.0;
+
+  bool get _far {
+    final t = _target, p = _pos;
+    return t != null && p != null && _dist(p.latitude, p.longitude, t.lat, t.lon) > _farMeters;
+  }
+
+  /// Umsteigeweg vom Ankunftshalt zum Steig, solange man weit weg ist.
+  WalkRoute? _preview;
+  bool _previewTried = false;
+
+  Future<void> _loadPreview() async {
+    final o = widget.origin, t = _target;
+    if (_previewTried || o?.lat == null || t == null) return;
+    _previewTried = true;
+    try {
+      final r = await ref.read(walkRouterProvider).route((lat: o!.lat!, lon: o.lon!), (lat: t.lat, lon: t.lon));
+      if (mounted && r != null) {
+        setState(() => _preview = r);
+        _fitted = false;
+        _fit();
+      }
+    } on ProviderException {
+      // Ohne Router: nur die Steige auf der Karte.
+    }
+  }
+
   Future<void> _maybeRoute() async {
     final t = _target, p = _pos;
     if (t == null || p == null || _routing) return;
+    if (_far) {
+      await _loadPreview();
+      return;
+    }
     final here = (lat: p.latitude, lon: p.longitude);
     final r = _route;
     final off = r == null ? double.infinity : r.locate(here, from: _routeIndex).off;
@@ -162,7 +199,14 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
 
   void _fit() {
     if (_fitted || _target == null) return;
-    final pts = [LatLng(_target!.lat, _target!.lon), if (_pos != null) LatLng(_pos!.latitude, _pos!.longitude)];
+    final o = widget.origin;
+    final pts = _far
+        ? [
+            LatLng(_target!.lat, _target!.lon),
+            if (_preview != null) for (final q in _preview!.points) LatLng(q.lat, q.lon),
+            if (_preview == null && o?.lat != null) LatLng(o!.lat!, o.lon!),
+          ]
+        : [LatLng(_target!.lat, _target!.lon), if (_pos != null) LatLng(_pos!.latitude, _pos!.longitude)];
     try {
       if (pts.length == 1) {
         _map.move(pts.first, 17);
@@ -205,12 +249,21 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
     double? dist;
     String? direction;
     double? bearing;
+    // Weit weg: Vorschau des Umsteigewegs statt Führung.
+    final far = _far;
     // Mit Gehweg: Restweg entlang des Wegs und das nächste Abbiegen.
-    final route = _route;
-    final at = route != null && p != null ? route.locate((lat: p.latitude, lon: p.longitude), from: _routeIndex) : null;
+    final route = far ? _preview : _route;
+    final at = !far && route != null && p != null
+        ? route.locate((lat: p.latitude, lon: p.longitude), from: _routeIndex)
+        : null;
     if (at != null && at.off < 40) _routeIndex = at.index;
     final turn = at == null ? null : route!.nextStep(at.index);
-    if (t != null && p != null) {
+    final o = widget.origin;
+    if (far && t != null && p != null) {
+      final away = _dist(p.latitude, p.longitude, t.lat, t.lon);
+      dist = route?.meters ?? (o?.lat != null ? _dist(o!.lat!, o.lon!, t.lat, t.lon) : away);
+      direction = o != null ? 'Umsteigeweg ab ${o.label}' : 'Noch ${distanceText(away)} entfernt';
+    } else if (t != null && p != null) {
       dist = at != null ? route!.remainingFrom(at.index) + at.off : _dist(p.latitude, p.longitude, t.lat, t.lon);
       bearing = _bearing(p.latitude, p.longitude, t.lat, t.lon);
       direction = turn != null
@@ -223,11 +276,12 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
     }
     // Gehzeit: Weg (sonst Luftlinie × 1,3) bei 1,3 m/s, angepasst an die
     // Gehgeschwindigkeit.
-    final walkMinutes = dist == null
+    final walkMinutes = dist == null || (far && o == null)
         ? null
-        : ((at != null ? dist : dist * 1.3) / (1.3 * settings.walkPace.walkPercent / 100) / 60).ceil();
+        : ((at != null || (far && route != null) ? dist : dist * 1.3) / (1.3 * settings.walkPace.walkPercent / 100) / 60)
+            .ceil();
     final dep = widget.departure?.best;
-    final leave = (dep != null && walkMinutes != null)
+    final leave = (!far && dep != null && walkMinutes != null)
         ? dep.subtract(Duration(minutes: walkMinutes)).difference(now).inMinutes
         : null;
     final platformName = t?.name ?? widget.platform;
@@ -239,7 +293,12 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
         : direction![0].toUpperCase() + direction.substring(1);
     final hint = [
       if (t?.direction != null) '${platformName != null ? 'Steig $platformName' : 'Der Halt'} fährt Richtung ${t!.direction}.',
-      if (leave != null)
+      if (far)
+        [
+          if (walkMinutes != null) 'Etwa $walkMinutes min vom Ankunfts- zum Abfahrtssteig.',
+          'Die Führung startet, wenn du in der Nähe bist.',
+        ].join(' ')
+      else if (leave != null)
         leave <= 0 ? 'Jetzt loslaufen, $walkMinutes min zu Fuß.' : 'Loslaufen in $leave min, $walkMinutes min zu Fuß.'
       else if (walkMinutes != null)
         route != null ? 'Etwa $walkMinutes min zu Fuß.' : 'Etwa $walkMinutes min zu Fuß, gepunktet die Luftlinie.',
@@ -359,7 +418,9 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(color: c.fill, borderRadius: BorderRadius.circular(Radii.card)),
-                child: turn != null
+                child: far
+                    ? Icon(Icons.transfer_within_a_station, size: 28, color: c.ink)
+                    : turn != null
                     ? Icon(_maneuverIcon(turn.step), size: 30, color: c.ink)
                     : arrow == null
                     ? Icon(Icons.near_me_outlined, color: c.muted)

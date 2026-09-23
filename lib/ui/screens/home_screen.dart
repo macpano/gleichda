@@ -15,6 +15,7 @@ import '../widgets.dart';
 import 'connections_screen.dart';
 import 'location_search_screen.dart';
 import 'options_sheet.dart';
+import 'places_screen.dart';
 import 'time_sheet.dart';
 import 'trip_screen.dart';
 
@@ -31,12 +32,61 @@ class HomeScreen extends ConsumerWidget {
         _Brand(),
         SizedBox(height: 20),
         _SearchCard(),
-        SizedBox(height: 24),
+        SizedBox(height: 10),
+        _PlaceShortcuts(),
+        SizedBox(height: 20),
         _LastTripSection(),
         _FavoritesSection(),
         _HistorySection(),
       ],
     );
+  }
+}
+
+/// Schnellziele wie bei Google Maps: Zuhause, Arbeit und weitere eigene
+/// Orte. Ein Tipp sucht sofort von „Mein Standort“ dorthin.
+class _PlaceShortcuts extends ConsumerWidget {
+  const _PlaceShortcuts();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final places = ref.watch(placesProvider).value ?? const <SavedPlace>[];
+    void openPlaces() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PlacesScreen()));
+    if (places.isEmpty) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: ChoiceChipX(
+          icon: Icons.add,
+          label: 'Zuhause und Arbeit festlegen',
+          selected: false,
+          onTap: openPlaces,
+        ),
+      );
+    }
+    // Zuhause, Arbeit, dann weitere – höchstens drei, eine Zeile.
+    final sorted = [...places]..sort((a, b) => a.kind.index.compareTo(b.kind.index));
+    final shown = sorted.take(3).toList();
+    return Row(children: [
+      for (var i = 0; i < shown.length; i++) ...[
+        if (i > 0) const SizedBox(width: 8),
+        Flexible(
+          child: ChoiceChipX(
+            icon: placeIcon(shown[i].kind),
+            label: shown[i].name,
+            selected: false,
+            onTap: () {
+              final n = ref.read(routeProvider.notifier);
+              n.setFrom(myLocation);
+              n.setTo(shown[i].location);
+              final t = ref.read(searchTimeProvider);
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => ConnectionsScreen(
+                      from: myLocation, to: shown[i].location, time: t.time, arriveBy: t.arriveBy)));
+            },
+          ),
+        ),
+      ],
+    ]);
   }
 }
 

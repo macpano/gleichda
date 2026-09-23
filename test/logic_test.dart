@@ -56,9 +56,9 @@ void main() {
         ]);
 
     test('sicher, knapp, nicht erreichbar', () {
-      expect(checkTransfers(trip()).single.state, TransferState.safe); // 5 − 3 = 2
-      expect(checkTransfers(trip(delay: 1)).single.state, TransferState.tight); // 4 − 3 = 1
-      expect(checkTransfers(trip(delay: 3)).single.state, TransferState.missed); // 2 − 3 < 0
+      expect(checkTransfers(trip()).single.state, TransferState.safe); // 5 min ≥ 3 min Umsteigezeit
+      expect(checkTransfers(trip(delay: 3)).single.state, TransferState.tight); // 2 min: knapp, aber machbar
+      expect(checkTransfers(trip(delay: 5)).single.state, TransferState.missed); // 0 min am selben Halt
     });
 
     test('mit Umsteigeweg zählt die Gehzeit statt der persönlichen Umsteigezeit', () {
@@ -67,8 +67,11 @@ void main() {
     });
 
     test('persönliche Umsteigezeit: langsam macht aus sicher knapp', () {
-      expect(checkTransfers(trip(), transferMinutes: Pace.slow.transferMinutes).single.state, TransferState.tight);
-      expect(checkTransfers(trip(), transferMinutes: Pace.fast.transferMinutes).single.state, TransferState.safe);
+      // 4 min Puffer: für „langsam“ (5 min) knapp, für „schnell“ (1 min) sicher.
+      expect(checkTransfers(trip(delay: 1), transferMinutes: Pace.slow.transferMinutes).single.state,
+          TransferState.tight);
+      expect(checkTransfers(trip(delay: 1), transferMinutes: Pace.fast.transferMinutes).single.state,
+          TransferState.safe);
     });
 
     test('nicht erreichbare Verbindungen ans Ende, Etiketten', () {
@@ -78,8 +81,8 @@ void main() {
       final rated = rateConnections([bad, ok, direct], transferMinutes: 3);
       expect(rated.last.trip.id, 'bad');
       expect(rated.last.reachable, isFalse);
-      expect(rated.firstWhere((i) => i.trip.id == 'direct').labels, contains('ohne Umstieg'));
-      expect(rated.firstWhere((i) => i.trip.id == 't').labels, contains('schnellste'));
+      // „ohne Umstieg“ steht schon in der Zeile (interchangesText), kein doppeltes Etikett.
+      expect(rated.firstWhere((i) => i.trip.id == 'direct').labels, isEmpty);
     });
   });
 
@@ -288,7 +291,7 @@ class _Messages implements TransitProvider {
   String get id => 'fake';
 
   @override
-  Future<List<Message>> messages({List<String> lineIds = const [], String? region}) async => list;
+  Future<List<Message>> messages({List<String> lineIds = const [], List<String> regions = const []}) async => list;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
