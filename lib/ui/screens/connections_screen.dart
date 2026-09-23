@@ -308,9 +308,9 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
               ),
             ]),
             const SizedBox(height: 12),
-            SizedBox(
-              height: 34,
-              child: ListView(scrollDirection: Axis.horizontal, children: [
+            // Alle Suchprofile sichtbar, bei Bedarf in zwei Zeilen – kein
+            // seitliches Scrollen.
+            Wrap(runSpacing: 8, children: [
                 if (!settings.isDefault)
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
@@ -341,7 +341,6 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
                     ),
                   ),
               ]),
-            ),
             const SizedBox(height: 14),
             if (_error != null && items != null)
               Padding(
@@ -359,10 +358,10 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
               ConnectionGrid(items: items, onTap: (i) => _open(i.trip))
             else
               ListGroup(indent: 0, children: [
-                _MoreButton(label: 'Früher', busy: _loadingMore, onTap: () => _more(later: false)),
+                MoreButton(label: 'Früher', busy: _loadingMore, onTap: () => _more(later: false)),
                 for (final i in items)
                   ConnectionRow(item: i, stale: _fromCache, onTap: () => _open(i.trip)),
-                _MoreButton(label: 'Später', busy: _loadingMore, onTap: () => _more(later: true)),
+                MoreButton(label: 'Später', busy: _loadingMore, onTap: () => _more(later: true)),
               ]),
             if (unreachable > 0)
               Padding(
@@ -376,8 +375,8 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
               ),
             if (grid && items != null && items.isNotEmpty)
               Row(children: [
-                Expanded(child: _MoreButton(label: 'Früher', busy: _loadingMore, onTap: () => _more(later: false))),
-                Expanded(child: _MoreButton(label: 'Später', busy: _loadingMore, onTap: () => _more(later: true))),
+                Expanded(child: MoreButton(label: 'Früher', busy: _loadingMore, onTap: () => _more(later: false))),
+                Expanded(child: MoreButton(label: 'Später', busy: _loadingMore, onTap: () => _more(later: true))),
               ]),
           ],
         ),
@@ -386,8 +385,9 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
   }
 }
 
-class _MoreButton extends StatelessWidget {
-  const _MoreButton({required this.label, required this.busy, required this.onTap});
+/// „Früher“/„Später“ unter bzw. über Verbindungslisten.
+class MoreButton extends StatelessWidget {
+  const MoreButton({super.key, required this.label, required this.busy, required this.onTap});
 
   final String label;
   final bool busy;

@@ -443,7 +443,9 @@ List<Trip> parseTrips(String xml) {
       } else if (cont != null) {
         legs.add(_walkLeg(cont, LegType.walk));
       } else if (inter != null) {
-        legs.add(_walkLeg(inter, LegType.transfer));
+        final stay = inter.txt('InterchangeMode') == 'remainInVehicle' ||
+            inter.el('InterchangeMode')?.innerText.trim() == 'remainInVehicle';
+        legs.add(_walkLeg(inter, LegType.transfer).copyWith(staySeated: stay));
       }
     }
     if (legs.isEmpty) continue;

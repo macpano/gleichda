@@ -203,6 +203,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
         TransferState.safe => ('Anschluss sicher', c.green),
         TransferState.tight => ('Anschluss knapp', c.orange),
         TransferState.missed => ('Anschluss nicht erreichbar', c.red),
+        TransferState.staySeated => ('', c.muted),
         null => ('', c.muted),
       };
       return _Row(
@@ -238,6 +239,22 @@ class _TripScreenState extends ConsumerState<TripScreen> {
           rows.add(walkRow('$m min Fußweg', target: next?.stop, platform: next?.platform));
         } else if (isLast) {
           rows.add(walkRow('$m min Fußweg zum Ziel'));
+        } else if (l.staySeated) {
+          // Im selben Fahrzeug weiter: Linie durchgezogen, kein Umstieg.
+          final prev = trip.legs.take(i).lastWhere((x) => x.type == LegType.ride, orElse: () => l);
+          rows.add(_Row(
+            height: 40,
+            rail: _Rail(color: lineColor(context, prev.line)),
+            child: Row(children: [
+              Icon(Icons.airline_seat_recline_normal, size: 16, color: c.ink2),
+              const SizedBox(width: 6),
+              Expanded(
+                child: OneLine('Weiterfahrt im selben Fahrzeug · sitzen bleiben',
+                    style: TextStyle(fontSize: 14, color: c.ink2)),
+              ),
+            ]),
+          ));
+          transfer++;
         } else {
           rows.add(walkRow(l.type == LegType.walk ? '$m min Fußweg' : '$m min Umstieg',
               check: transfer < checks.length ? checks[transfer] : null));

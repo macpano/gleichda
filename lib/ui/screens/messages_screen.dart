@@ -77,9 +77,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
           const SizedBox(height: 16),
           // Filter als Chips wie bei den Verbindungen – so passen auch lange
           // Namen wie „Meine Haltestellen“ ohne Kürzung.
-          SizedBox(
-            height: 34,
-            child: ListView(scrollDirection: Axis.horizontal, children: [
+          Wrap(runSpacing: 8, children: [
               for (final (f, label) in const [
                 (_Filter.all, 'Alle'),
                 (_Filter.myLines, 'Meine Linien'),
@@ -89,8 +87,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChipX(label: label, selected: _filter == f, onTap: () => setState(() => _filter = f)),
                 ),
-            ]),
-          ),
+          ]),
           const SizedBox(height: 16),
           ListGroup(children: [
             ValueRow(

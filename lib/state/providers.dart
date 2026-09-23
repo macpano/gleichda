@@ -247,7 +247,9 @@ class RouteController extends Notifier<RouteSelection> {
   void setFrom(Location l) => state = RouteSelection(from: l, to: state.to, via: state.via);
   void setTo(Location l) => state = RouteSelection(from: state.from, to: l, via: state.via);
   void setVia(Location? l) => state = RouteSelection(from: state.from, to: state.to, via: l);
-  void swap() => state = RouteSelection(from: state.to, to: state.from, via: state.via);
+  /// Start und Ziel tauschen. „Mein Standort“ ist als Ziel sinnlos – dann
+  /// bleibt das Ziel leer und will neu gewählt werden.
+  void swap() => state = RouteSelection(from: state.to, to: isHere(state.from) ? null : state.from, via: state.via);
 }
 
 final routeProvider = NotifierProvider<RouteController, RouteSelection>(RouteController.new);

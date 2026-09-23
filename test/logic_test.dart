@@ -242,6 +242,19 @@ void main() {
     expect(arrivedLongAgo(t, DateTime(2026, 9, 23, 14, 23)), isTrue);
   });
 
+  test('Weiterfahrt im selben Fahrzeug (remainInVehicle)', () {
+    final xml = fixture('trias_trip_stay_seated.xml');
+    final trip = parseTrips(xml).first;
+    expect(trip.legs.where((l) => l.staySeated), hasLength(1));
+    expect(trip.interchanges, 0);
+    expect(checkTransfers(trip).single.state, TransferState.staySeated);
+    expect(isReachable(trip), isTrue);
+    // Unterwegs: eine Fahrt bis zum Ziel, die Wende ist ein Zwischenhalt.
+    final joined = joinedRides(trip);
+    expect(joined, hasLength(1));
+    expect(joined.single.to.stop.name, trip.destination.name);
+  });
+
   group('Verbindungsliste', () {
     Trip t(String id, int h, int m) => Trip(id: id, legs: [ride('A', at(h, m), 'B', at(h, m + 20))]);
 

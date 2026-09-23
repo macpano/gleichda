@@ -1244,7 +1244,9 @@ mixin _$Leg {
  LegType get type; StopTime get from; StopTime get to; Line? get line; String? get direction; List<StopTime> get intermediates;/// Fahrt-Referenz des Providers (TRIAS JourneyRef).
  String? get journeyRef;/// Betriebstag der Fahrt.
  String? get operatingDay;/// Dauer bei Fuß- und Umsteigewegen.
- int? get durationMinutes; List<String> get messageIds;
+ int? get durationMinutes;/// Umstieg ohne Umsteigen: Das Fahrzeug fährt unter neuer Linie bzw.
+/// Fahrtnummer weiter (TRIAS InterchangeMode „remainInVehicle“).
+ bool get staySeated; List<String> get messageIds;
 /// Create a copy of Leg
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1258,20 +1260,20 @@ $LegCopyWith<Leg> get copyWith => _$LegCopyWithImpl<Leg>(this as Leg, _$identity
 @override
 bool operator ==(Object other) {
   final _this = this as Leg;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Leg&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.from, _this.from) || other.from == _this.from)&&(identical(other.to, _this.to) || other.to == _this.to)&&(identical(other.line, _this.line) || other.line == _this.line)&&(identical(other.direction, _this.direction) || other.direction == _this.direction)&&const DeepCollectionEquality().equals(other.intermediates, _this.intermediates)&&(identical(other.journeyRef, _this.journeyRef) || other.journeyRef == _this.journeyRef)&&(identical(other.operatingDay, _this.operatingDay) || other.operatingDay == _this.operatingDay)&&(identical(other.durationMinutes, _this.durationMinutes) || other.durationMinutes == _this.durationMinutes)&&const DeepCollectionEquality().equals(other.messageIds, _this.messageIds));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Leg&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.from, _this.from) || other.from == _this.from)&&(identical(other.to, _this.to) || other.to == _this.to)&&(identical(other.line, _this.line) || other.line == _this.line)&&(identical(other.direction, _this.direction) || other.direction == _this.direction)&&const DeepCollectionEquality().equals(other.intermediates, _this.intermediates)&&(identical(other.journeyRef, _this.journeyRef) || other.journeyRef == _this.journeyRef)&&(identical(other.operatingDay, _this.operatingDay) || other.operatingDay == _this.operatingDay)&&(identical(other.durationMinutes, _this.durationMinutes) || other.durationMinutes == _this.durationMinutes)&&(identical(other.staySeated, _this.staySeated) || other.staySeated == _this.staySeated)&&const DeepCollectionEquality().equals(other.messageIds, _this.messageIds));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Leg;
-  return Object.hash(runtimeType,_this.type,_this.from,_this.to,_this.line,_this.direction,const DeepCollectionEquality().hash(_this.intermediates),_this.journeyRef,_this.operatingDay,_this.durationMinutes,const DeepCollectionEquality().hash(_this.messageIds));
+  return Object.hash(runtimeType,_this.type,_this.from,_this.to,_this.line,_this.direction,const DeepCollectionEquality().hash(_this.intermediates),_this.journeyRef,_this.operatingDay,_this.durationMinutes,_this.staySeated,const DeepCollectionEquality().hash(_this.messageIds));
 }
 
 @override
 String toString() {
   final _this = this as Leg;
-  return 'Leg(type: ${_this.type}, from: ${_this.from}, to: ${_this.to}, line: ${_this.line}, direction: ${_this.direction}, intermediates: ${_this.intermediates}, journeyRef: ${_this.journeyRef}, operatingDay: ${_this.operatingDay}, durationMinutes: ${_this.durationMinutes}, messageIds: ${_this.messageIds})';
+  return 'Leg(type: ${_this.type}, from: ${_this.from}, to: ${_this.to}, line: ${_this.line}, direction: ${_this.direction}, intermediates: ${_this.intermediates}, journeyRef: ${_this.journeyRef}, operatingDay: ${_this.operatingDay}, durationMinutes: ${_this.durationMinutes}, staySeated: ${_this.staySeated}, messageIds: ${_this.messageIds})';
 }
 
 
@@ -1282,7 +1284,7 @@ abstract mixin class $LegCopyWith<$Res>  {
   factory $LegCopyWith(Leg value, $Res Function(Leg) _then) = _$LegCopyWithImpl;
 @useResult
 $Res call({
- LegType type, StopTime from, StopTime to, Line? line, String? direction, List<StopTime> intermediates, String? journeyRef, String? operatingDay, int? durationMinutes, List<String> messageIds
+ LegType type, StopTime from, StopTime to, Line? line, String? direction, List<StopTime> intermediates, String? journeyRef, String? operatingDay, int? durationMinutes, bool staySeated, List<String> messageIds
 });
 
 
@@ -1299,7 +1301,7 @@ class _$LegCopyWithImpl<$Res>
 
 /// Create a copy of Leg
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? type = null,Object? from = null,Object? to = null,Object? line = freezed,Object? direction = freezed,Object? intermediates = null,Object? journeyRef = freezed,Object? operatingDay = freezed,Object? durationMinutes = freezed,Object? messageIds = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? type = null,Object? from = null,Object? to = null,Object? line = freezed,Object? direction = freezed,Object? intermediates = null,Object? journeyRef = freezed,Object? operatingDay = freezed,Object? durationMinutes = freezed,Object? staySeated = null,Object? messageIds = null,}) {
   return _then(Leg(
 type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as LegType,from: null == from ? _self.from : from // ignore: cast_nullable_to_non_nullable
@@ -1310,7 +1312,8 @@ as String?,intermediates: null == intermediates ? _self.intermediates : intermed
 as List<StopTime>,journeyRef: freezed == journeyRef ? _self.journeyRef : journeyRef // ignore: cast_nullable_to_non_nullable
 as String?,operatingDay: freezed == operatingDay ? _self.operatingDay : operatingDay // ignore: cast_nullable_to_non_nullable
 as String?,durationMinutes: freezed == durationMinutes ? _self.durationMinutes : durationMinutes // ignore: cast_nullable_to_non_nullable
-as int?,messageIds: null == messageIds ? _self.messageIds : messageIds // ignore: cast_nullable_to_non_nullable
+as int?,staySeated: null == staySeated ? _self.staySeated : staySeated // ignore: cast_nullable_to_non_nullable
+as bool,messageIds: null == messageIds ? _self.messageIds : messageIds // ignore: cast_nullable_to_non_nullable
 as List<String>,
   ));
 }
@@ -1426,10 +1429,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LegType type,  StopTime from,  StopTime to,  Line? line,  String? direction,  List<StopTime> intermediates,  String? journeyRef,  String? operatingDay,  int? durationMinutes,  List<String> messageIds)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( LegType type,  StopTime from,  StopTime to,  Line? line,  String? direction,  List<StopTime> intermediates,  String? journeyRef,  String? operatingDay,  int? durationMinutes,  bool staySeated,  List<String> messageIds)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Leg() when $default != null:
-return $default(_that.type,_that.from,_that.to,_that.line,_that.direction,_that.intermediates,_that.journeyRef,_that.operatingDay,_that.durationMinutes,_that.messageIds);case _:
+return $default(_that.type,_that.from,_that.to,_that.line,_that.direction,_that.intermediates,_that.journeyRef,_that.operatingDay,_that.durationMinutes,_that.staySeated,_that.messageIds);case _:
   return orElse();
 
 }
@@ -1447,10 +1450,10 @@ return $default(_that.type,_that.from,_that.to,_that.line,_that.direction,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LegType type,  StopTime from,  StopTime to,  Line? line,  String? direction,  List<StopTime> intermediates,  String? journeyRef,  String? operatingDay,  int? durationMinutes,  List<String> messageIds)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( LegType type,  StopTime from,  StopTime to,  Line? line,  String? direction,  List<StopTime> intermediates,  String? journeyRef,  String? operatingDay,  int? durationMinutes,  bool staySeated,  List<String> messageIds)  $default,) {final _that = this;
 switch (_that) {
 case _Leg():
-return $default(_that.type,_that.from,_that.to,_that.line,_that.direction,_that.intermediates,_that.journeyRef,_that.operatingDay,_that.durationMinutes,_that.messageIds);case _:
+return $default(_that.type,_that.from,_that.to,_that.line,_that.direction,_that.intermediates,_that.journeyRef,_that.operatingDay,_that.durationMinutes,_that.staySeated,_that.messageIds);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1467,10 +1470,10 @@ return $default(_that.type,_that.from,_that.to,_that.line,_that.direction,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LegType type,  StopTime from,  StopTime to,  Line? line,  String? direction,  List<StopTime> intermediates,  String? journeyRef,  String? operatingDay,  int? durationMinutes,  List<String> messageIds)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( LegType type,  StopTime from,  StopTime to,  Line? line,  String? direction,  List<StopTime> intermediates,  String? journeyRef,  String? operatingDay,  int? durationMinutes,  bool staySeated,  List<String> messageIds)?  $default,) {final _that = this;
 switch (_that) {
 case _Leg() when $default != null:
-return $default(_that.type,_that.from,_that.to,_that.line,_that.direction,_that.intermediates,_that.journeyRef,_that.operatingDay,_that.durationMinutes,_that.messageIds);case _:
+return $default(_that.type,_that.from,_that.to,_that.line,_that.direction,_that.intermediates,_that.journeyRef,_that.operatingDay,_that.durationMinutes,_that.staySeated,_that.messageIds);case _:
   return null;
 
 }
@@ -1482,7 +1485,7 @@ return $default(_that.type,_that.from,_that.to,_that.line,_that.direction,_that.
 @JsonSerializable()
 
 class _Leg implements Leg {
-  const _Leg({required this.type, required this.from, required this.to, this.line, this.direction,  List<StopTime> intermediates = const <StopTime>[], this.journeyRef, this.operatingDay, this.durationMinutes,  List<String> messageIds = const <String>[]}): _intermediates = intermediates,_messageIds = messageIds;
+  const _Leg({required this.type, required this.from, required this.to, this.line, this.direction,  List<StopTime> intermediates = const <StopTime>[], this.journeyRef, this.operatingDay, this.durationMinutes, this.staySeated = false,  List<String> messageIds = const <String>[]}): _intermediates = intermediates,_messageIds = messageIds;
   factory _Leg.fromJson(Map<String, dynamic> json) => _$LegFromJson(json);
 
 @override final  LegType type;
@@ -1503,6 +1506,9 @@ class _Leg implements Leg {
 @override final  String? operatingDay;
 /// Dauer bei Fuß- und Umsteigewegen.
 @override final  int? durationMinutes;
+/// Umstieg ohne Umsteigen: Das Fahrzeug fährt unter neuer Linie bzw.
+/// Fahrtnummer weiter (TRIAS InterchangeMode „remainInVehicle“).
+@override@JsonKey() final  bool staySeated;
  final  List<String> _messageIds;
 @override@JsonKey() List<String> get messageIds {
   if (_messageIds is EqualUnmodifiableListView) return _messageIds;
@@ -1524,18 +1530,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Leg&&(identical(other.type, type) || other.type == type)&&(identical(other.from, from) || other.from == from)&&(identical(other.to, to) || other.to == to)&&(identical(other.line, line) || other.line == line)&&(identical(other.direction, direction) || other.direction == direction)&&const DeepCollectionEquality().equals(other.intermediates, _intermediates)&&(identical(other.journeyRef, journeyRef) || other.journeyRef == journeyRef)&&(identical(other.operatingDay, operatingDay) || other.operatingDay == operatingDay)&&(identical(other.durationMinutes, durationMinutes) || other.durationMinutes == durationMinutes)&&const DeepCollectionEquality().equals(other.messageIds, _messageIds));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Leg&&(identical(other.type, type) || other.type == type)&&(identical(other.from, from) || other.from == from)&&(identical(other.to, to) || other.to == to)&&(identical(other.line, line) || other.line == line)&&(identical(other.direction, direction) || other.direction == direction)&&const DeepCollectionEquality().equals(other.intermediates, _intermediates)&&(identical(other.journeyRef, journeyRef) || other.journeyRef == journeyRef)&&(identical(other.operatingDay, operatingDay) || other.operatingDay == operatingDay)&&(identical(other.durationMinutes, durationMinutes) || other.durationMinutes == durationMinutes)&&(identical(other.staySeated, staySeated) || other.staySeated == staySeated)&&const DeepCollectionEquality().equals(other.messageIds, _messageIds));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,type,from,to,line,direction,const DeepCollectionEquality().hash(_intermediates),journeyRef,operatingDay,durationMinutes,const DeepCollectionEquality().hash(_messageIds));
+    return Object.hash(runtimeType,type,from,to,line,direction,const DeepCollectionEquality().hash(_intermediates),journeyRef,operatingDay,durationMinutes,staySeated,const DeepCollectionEquality().hash(_messageIds));
 }
 
 @override
 String toString() {
-    return 'Leg(type: $type, from: $from, to: $to, line: $line, direction: $direction, intermediates: $intermediates, journeyRef: $journeyRef, operatingDay: $operatingDay, durationMinutes: $durationMinutes, messageIds: $messageIds)';
+    return 'Leg(type: $type, from: $from, to: $to, line: $line, direction: $direction, intermediates: $intermediates, journeyRef: $journeyRef, operatingDay: $operatingDay, durationMinutes: $durationMinutes, staySeated: $staySeated, messageIds: $messageIds)';
 }
 
 
@@ -1546,7 +1552,7 @@ abstract mixin class _$LegCopyWith<$Res> implements $LegCopyWith<$Res> {
   factory _$LegCopyWith(_Leg value, $Res Function(_Leg) _then) = __$LegCopyWithImpl;
 @override @useResult
 $Res call({
- LegType type, StopTime from, StopTime to, Line? line, String? direction, List<StopTime> intermediates, String? journeyRef, String? operatingDay, int? durationMinutes, List<String> messageIds
+ LegType type, StopTime from, StopTime to, Line? line, String? direction, List<StopTime> intermediates, String? journeyRef, String? operatingDay, int? durationMinutes, bool staySeated, List<String> messageIds
 });
 
 
@@ -1563,7 +1569,7 @@ class __$LegCopyWithImpl<$Res>
 
 /// Create a copy of Leg
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? type = null,Object? from = null,Object? to = null,Object? line = freezed,Object? direction = freezed,Object? intermediates = null,Object? journeyRef = freezed,Object? operatingDay = freezed,Object? durationMinutes = freezed,Object? messageIds = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? type = null,Object? from = null,Object? to = null,Object? line = freezed,Object? direction = freezed,Object? intermediates = null,Object? journeyRef = freezed,Object? operatingDay = freezed,Object? durationMinutes = freezed,Object? staySeated = null,Object? messageIds = null,}) {
   return _then(_Leg(
 type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as LegType,from: null == from ? _self.from : from // ignore: cast_nullable_to_non_nullable
@@ -1574,7 +1580,8 @@ as String?,intermediates: null == intermediates ? _self._intermediates : interme
 as List<StopTime>,journeyRef: freezed == journeyRef ? _self.journeyRef : journeyRef // ignore: cast_nullable_to_non_nullable
 as String?,operatingDay: freezed == operatingDay ? _self.operatingDay : operatingDay // ignore: cast_nullable_to_non_nullable
 as String?,durationMinutes: freezed == durationMinutes ? _self.durationMinutes : durationMinutes // ignore: cast_nullable_to_non_nullable
-as int?,messageIds: null == messageIds ? _self._messageIds : messageIds // ignore: cast_nullable_to_non_nullable
+as int?,staySeated: null == staySeated ? _self.staySeated : staySeated // ignore: cast_nullable_to_non_nullable
+as bool,messageIds: null == messageIds ? _self._messageIds : messageIds // ignore: cast_nullable_to_non_nullable
 as List<String>,
   ));
 }

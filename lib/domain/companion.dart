@@ -92,8 +92,35 @@ LegFix? locateOnLeg(Leg leg, GeoPoint pos, {double maxMeters = 250}) {
   return (passed: passed, progress: total == 0 ? 0 : (done / total).clamp(0.0, 1.0), meters: best);
 }
 
+/// Fahrtabschnitte, bei denen man im selben Fahrzeug sitzen bleibt, als
+/// eine Fahrt: Einstieg des ersten, Ausstieg des letzten, der Wendehalt als
+/// Zwischenhalt, Richtung des letzten Abschnitts.
+List<Leg> joinedRides(Trip trip) {
+  final out = <Leg>[];
+  var staySeated = false;
+  for (final l in trip.legs) {
+    if (l.type != LegType.ride) {
+      staySeated = staySeated || l.staySeated;
+      continue;
+    }
+    if (staySeated && out.isNotEmpty) {
+      final a = out.removeLast();
+      final turn = a.to.copyWith(departure: l.from.departure);
+      out.add(a.copyWith(
+        to: l.to,
+        intermediates: [...a.intermediates, turn, ...l.intermediates],
+        direction: l.direction ?? a.direction,
+      ));
+    } else {
+      out.add(l);
+    }
+    staySeated = false;
+  }
+  return out;
+}
+
 CompanionStep nextStep(Trip trip, DateTime now, {GeoPoint? gps}) {
-  final rides = trip.rides;
+  final rides = joinedRides(trip);
   for (var i = 0; i < rides.length; i++) {
     final r = rides[i];
     final dep = _t(r.from);

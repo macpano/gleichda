@@ -158,6 +158,10 @@ abstract class Leg with _$Leg {
 
     /// Dauer bei Fuß- und Umsteigewegen.
     int? durationMinutes,
+
+    /// Umstieg ohne Umsteigen: Das Fahrzeug fährt unter neuer Linie bzw.
+    /// Fahrtnummer weiter (TRIAS InterchangeMode „remainInVehicle“).
+    @Default(false) bool staySeated,
     @Default(<String>[]) List<String> messageIds,
   }) = _Leg;
 
@@ -182,7 +186,9 @@ abstract class Trip with _$Trip {
   EventTime get departure => legs.first.from.departure ?? legs.first.from.arrival!;
   EventTime get arrival => legs.last.to.arrival ?? legs.last.to.departure!;
 
-  int get interchanges => rides.isEmpty ? 0 : rides.length - 1;
+  /// Umstiege ohne „im Fahrzeug bleiben“.
+  int get interchanges =>
+      rides.isEmpty ? 0 : rides.length - 1 - legs.where((l) => l.staySeated).length;
 
   Duration get duration => arrival.best.difference(departure.best);
 
