@@ -157,3 +157,4 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   Abschnitt „Demnächst“ für künftige Sperrungen, Linien je Meldung einmal
 - ✅ Weg zum Steig aus der Ferne (> 2 km): Vorschau des Umsteigewegs statt Führung vom Standort
 - ✅ Schnellziele Zuhause/Arbeit unter der Suche
+- ✅ Verbindungen: Zeitzeile („Heute ab …“) antippbar, öffnet das Zeitfenster und sucht neu
