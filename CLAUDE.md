@@ -120,7 +120,7 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
   `files/updates` laden (Größe + „PK“ geprüft), Meldung `UpdateToast`, Installation über den
   MethodChannel `de.gleichda/update` in `MainActivity.kt` (FileProvider `${applicationId}.updates`).
 - Unterwegs ist kein eigener Bildschirm (Konzept: „einen Tipp entfernt in der Fahrt“), sondern
-  `CompanionBar` als feste Leiste unten in der Fahrt (mit „Beenden“); Karte `lib/ui/trip_map.dart`. TRIAS liefert keinen Linienverlauf
+  `CompanionBar` als feste Leiste ganz unten in **jeder** Ansicht (`appFrame` in `lib/app.dart`, mit „Beenden“); Karte `lib/ui/trip_map.dart`. TRIAS liefert keinen Linienverlauf
   (LegProjection leer, geprüft 23.09.) – die Karte verbindet die Haltestellen (Koordinaten aus der EFA).
 - Name **Gleich.da** (seit v0.3.0) überall, wo man ihn sieht. Technische Kennungen bleiben
   `gleichda` (Dart-Paket, `de.gleichda.app`, Datenbank): Eine neue App-Kennung wäre für Android eine

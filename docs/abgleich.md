@@ -170,3 +170,7 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 ## 0.4.11-vorab.1 (23.09.2026)
 - ✅ Reiter „Karte“ (Suche · Karte · Abfahrten · Meldungen · Mehr): Haltestellen im Ausschnitt ab Zoom 14,5,
   Tipp zeigt Abfahrten, Tipp auf eine Abfahrt zeigt die Fahrt mit Linienweg und Halten, „Fahrtverlauf“ öffnet sie
+
+## 0.4.11-vorab.2 (23.09.2026)
+- ✅ Unterwegs-Leiste app-weit unten (MaterialApp-`builder` → `appFrame`), in jeder Ansicht an derselben Stelle;
+  Tipp: vor dem Einsteigen Weg zum Steig, sonst die Fahrt
