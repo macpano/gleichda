@@ -384,3 +384,10 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   `countdownWithTime`/`countdownHasTime` hängen sie nur noch an, wenn sie fehlt
 - ✅ Animationen flotter: Seite 250 ms (vorher 320), Einblenden 170 ms (220), Zustand 120 ms (150)
 - ✅ `tool/release.sh` räumt nach jedem regulären Release auf: Vorabversionen weg, nur die zwei neuesten regulären bleiben
+
+## 0.4.16-vorab.1 (24.09.2026)
+- ✅ Meldungen: Filter in einer Reihe – „Alle · Abos · Haltestellen · 🏢▾“; das Unternehmen erscheint im Chip erst,
+  wenn eines gewählt ist (Name beim langen Drücken und für Vorlesehilfen)
+- ✅ Unternehmen suchen im ganzen Verbund: `parseOperators` liest aus allen Meldungen (`XML_ADDINFO_REQUEST`, ein Abruf,
+  10 min gemerkt) je Netzkürzel den Betreibernamen; die Suche zeigt ohne Eingabe die Umgebung, mit Eingabe alle.
+  Die Unternehmensseite zeigt Meldungen im ganzen Verbund statt nur in der Umgebung

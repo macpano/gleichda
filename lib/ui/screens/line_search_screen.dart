@@ -151,10 +151,19 @@ class _LineSearchScreenState extends ConsumerState<LineSearchScreen> {
 extension on _LineSearchScreenState {
   List<Widget> _operators(BuildContext context) {
     final c = context.c;
-    final all = ref.watch(messagesProvider).value?.operators ?? const <String, String>{};
+    // Ohne Eingabe die Unternehmen der Umgebung, mit Eingabe alle des
+    // Verbunds (aus den Meldungen) – die Umgebung zuerst.
+    final near = ref.watch(messagesProvider).value?.operators ?? const <String, String>{};
     final q = _ctrl.text.trim().toLowerCase();
+    final all = q.isEmpty
+        ? near
+        : {...(ref.watch(operatorDirectoryProvider).value ?? const <String, String>{}), ...near};
     final list = all.entries.where((e) => q.isEmpty || e.value.toLowerCase().contains(q) || e.key.contains(q)).toList()
-      ..sort((a, b) => a.value.compareTo(b.value));
+      ..sort((a, b) {
+        final na = near.containsKey(a.key), nb = near.containsKey(b.key);
+        if (na != nb) return na ? -1 : 1;
+        return a.value.compareTo(b.value);
+      });
     if (list.isEmpty) return const [];
     final subs = ref.watch(subscriptionsProvider).value ?? const <Subscription>[];
     return [

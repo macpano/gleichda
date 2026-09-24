@@ -118,6 +118,13 @@ class FakeProvider implements TransitProvider {
   Future<List<Line>> linesAround(GeoPoint near) async => const [];
 
   @override
+  Future<Map<String, String>> operatorDirectory() async => const {'wsw': 'WSW', 'sws': 'Stadtwerke Solingen'};
+
+  @override
+  Future<List<Message>> messagesForOperator(String network) async =>
+      board.messages.where((m) => m.lineIds.any((k) => k.split(':').first == network)).toList();
+
+  @override
   Future<List<Message>> messagesForLine(String lineKey) async =>
       board.messages.where((m) => m.lineIds.contains(lineKey)).toList();
 
@@ -322,10 +329,12 @@ void main() {
       ConnectionsScreen(from: trips.first.origin, to: trips.first.destination, time: null, arriveBy: false),
       seed: (r) => r.setSetting('settings', const AppSettings(connectionsGrid: true).encode())));
   testWidgets('Meldungen', (t) => shot(t, 'meldungen', const Scaffold(body: MessagesScreen())));
+  testWidgets('Meldungen mit Umgebung', (t) => shot(t, 'meldungen_umgebung', const Scaffold(body: MessagesScreen()),
+      overrides: [messagesProvider.overrideWith(_AreaMessages.new)]));
   testWidgets('Meldungen nach Unternehmen', (t) => shot(t, 'meldungen_unternehmen', const Scaffold(body: MessagesScreen()),
       overrides: [messagesProvider.overrideWith(_AreaMessages.new)],
       act: (t) async {
-        await t.tap(find.text('Unternehmen'));
+        await t.tap(find.byIcon(Icons.apartment));
         for (var i = 0; i < 4; i++) {
           await t.pump(const Duration(milliseconds: 150));
         }

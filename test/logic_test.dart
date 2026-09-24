@@ -48,6 +48,18 @@ Leg ride(String from, EventTime dep, String to, EventTime arr, {List<StopTime> v
     );
 
 void main() {
+  test('Verkehrsunternehmen des Verbunds aus allen Meldungen', () {
+    Map<String, dynamic> j(String f) => jsonDecode(File('test/fixtures/$f').readAsStringSync()) as Map<String, dynamic>;
+    final a = parseOperators(j('efa_addinfo.json'));
+    expect(a['sws'], 'Stadtwerke Solingen');
+    expect(a['ves'], 'Vestische');
+    expect(a['ddb'], 'Deutsche Bahn');
+    // Auch Betriebe weit weg von hier (Remscheid, Rheinlandbus) sind suchbar.
+    final w = parseOperators(j('efa_addinfo_wuppertal.json'));
+    expect(w.keys, containsAll(['wsw', 'swr', 'bvr', 'sws']));
+    expect(w['swr'], 'Stadtwerke Remscheid');
+  });
+
   test('Verspätung in angezeigten Minuten', () {
     final p = DateTime(2026, 9, 24, 0, 40);
     EventTime e(int s) => EventTime(planned: p, estimated: p.add(Duration(seconds: s)), quality: TimeQuality.realtime);

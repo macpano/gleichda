@@ -202,9 +202,13 @@ class EfaClient {
   /// Alle aktuellen Meldungen im VRR (gut 1000, rund 4 MB) – nur für eine
   /// einzelne Linie, weil die EFA nicht nach Linie filtern kann (geprüft
   /// 23.09.2026: filterLine, filterPNLineDir u. a. wirkungslos).
-  Future<List<Message>> allMessages() async {
+  Future<List<Message>> allMessages() async => (await allInfo()).messages;
+
+  /// Alle Meldungen des Verbunds und dazu die Verkehrsunternehmen, die darin
+  /// vorkommen (Netzkürzel → Name) – ein Abruf für beides (≈ 4 MB).
+  Future<({List<Message> messages, Map<String, String> operators})> allInfo() async {
     final json = await _get('XML_ADDINFO_REQUEST', {'filterPublicationStatus': 'current'});
-    return parseAddInfo(json);
+    return (messages: parseAddInfo(json), operators: parseOperators(json));
   }
 
   /// Linien zum Suchbegriff (Liniennummer), deutschlandweit.
@@ -360,6 +364,32 @@ List<Message> parseAddInfo(Map<String, dynamic> json) {
     ));
   }
   return out;
+}
+
+/// Verkehrsunternehmen aus den Meldungen: je Netzkürzel der Linienkennung
+/// („sws:18692“ → „sws“) der häufigste Betreibername („Stadtwerke Solingen“).
+/// Die DB heißt „Deutsche Bahn“, egal welche Gesellschaft fährt.
+Map<String, String> parseOperators(Map<String, dynamic> json) {
+  final current = (json['infos'] as Map?)?['current'];
+  if (current is! List) return const {};
+  final counts = <String, Map<String, int>>{};
+  for (final raw in current.whereType<Map>()) {
+    final lines = ((raw['affected'] as Map?)?['lines'] as List?) ?? const [];
+    for (final l in lines.whereType<Map>()) {
+      final id = l['id'] as String?;
+      final name = ((l['operator'] as Map?)?['name'] as String?)?.trim();
+      if (id == null || name == null || name.isEmpty) continue;
+      final net = id.split(':').first;
+      final c = counts.putIfAbsent(net, () => {});
+      c[name] = (c[name] ?? 0) + 1;
+    }
+  }
+  return {
+    for (final e in counts.entries)
+      e.key: e.key == 'ddb'
+          ? 'Deutsche Bahn'
+          : (e.value.entries.toList()..sort((a, b) => b.value.compareTo(a.value))).first.key,
+  };
 }
 
 /// Linienweg eines Fahrtabschnitts aus XML_TRIP_REQUEST2 (`legs[].coords`).

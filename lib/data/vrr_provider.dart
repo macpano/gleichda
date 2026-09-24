@@ -87,21 +87,35 @@ class VrrProvider implements TransitProvider {
     }();
   }
 
-  Future<List<Message>>? _all;
+  Future<({List<Message> messages, Map<String, String> operators})>? _all;
   DateTime? _allAt;
 
-  @override
-  Future<List<Message>> messagesForLine(String key) async {
-    // Alle Meldungen (≈ 4 MB) höchstens alle 10 min; gleichzeitige Aufrufe teilen sich den Abruf.
+  /// Alle Meldungen des Verbunds (≈ 4 MB) höchstens alle 10 min;
+  /// gleichzeitige Aufrufe teilen sich den Abruf.
+  Future<({List<Message> messages, Map<String, String> operators})> _allInfo() {
     if (_all == null || _allAt == null || DateTime.now().difference(_allAt!) > const Duration(minutes: 10)) {
       _allAt = DateTime.now();
-      _all = efa.allMessages()..catchError((Object _) {
+      _all = efa.allInfo()
+        ..catchError((Object _) {
           _all = null;
-          return <Message>[];
+          return (messages: const <Message>[], operators: const <String, String>{});
         });
     }
-    return (await _all!).where((m) => m.lineIds.contains(key)).toList();
+    return _all!;
   }
+
+  @override
+  Future<List<Message>> messagesForLine(String key) async =>
+      (await _allInfo()).messages.where((m) => m.lineIds.contains(key)).toList();
+
+  @override
+  Future<Map<String, String>> operatorDirectory() async => (await _allInfo()).operators;
+
+  @override
+  Future<List<Message>> messagesForOperator(String network) async => (await _allInfo())
+      .messages
+      .where((m) => m.lineIds.any((k) => k.split(':').first == network))
+      .toList();
 
   static double _distance(GeoPoint a, GeoPoint b) =>
       distanceBetween(Location(id: '', providerId: '', name: '', lat: a.lat, lon: a.lon), b) ?? double.infinity;

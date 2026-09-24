@@ -252,6 +252,12 @@ class MotisProvider implements TransitProvider {
   Future<List<Line>> linesAround(GeoPoint near) async => const [];
 
   @override
+  Future<Map<String, String>> operatorDirectory() async => const {};
+
+  @override
+  Future<List<Message>> messagesForOperator(String network) async => const [];
+
+  @override
   Future<List<Message>> messagesForLine(String lineKey) async => const [];
 
   @override

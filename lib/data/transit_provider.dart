@@ -164,6 +164,12 @@ abstract class TransitProvider {
   /// „wsw:66604“), unabhängig vom Ort.
   Future<List<Message>> messagesForLine(String lineKey);
 
+  /// Alle Verkehrsunternehmen des Verbunds mit Meldungen (Netzkürzel → Name).
+  Future<Map<String, String>> operatorDirectory();
+
+  /// Meldungen eines Verkehrsunternehmens im ganzen Verbund.
+  Future<List<Message>> messagesForOperator(String network);
+
   /// Linien zum Suchbegriff (Liniennummer), etwa zum Abonnieren –
   /// deutschlandweit, Linien in der Nähe von [near] zuerst.
   Future<List<Line>> searchLines(String query, {GeoPoint? near});

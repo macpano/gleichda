@@ -567,9 +567,18 @@ class MiniRoutePainter extends CustomPainter {
 /// (umrandet, gewählt gefüllt mit Haken); iPhone: Kapsel, gewählt schwarz.
 class ChoiceChipX extends StatelessWidget {
   const ChoiceChipX(
-      {super.key, required this.label, required this.selected, required this.onTap, this.icon, this.dropdown = false});
+      {super.key,
+      required this.label,
+      required this.selected,
+      required this.onTap,
+      this.icon,
+      this.dropdown = false,
+      this.tooltip});
 
   final String label;
+
+  /// Für Chips nur mit Symbol: Name beim langen Drücken und für Vorlesehilfen.
+  final String? tooltip;
   final bool selected;
   final VoidCallback onTap;
   final IconData? icon;
@@ -584,9 +593,10 @@ class ChoiceChipX extends StatelessWidget {
     final fg = ios ? (selected ? c.bg : c.ink) : (selected ? c.accent : c.ink2);
     final radius = BorderRadius.circular(ios ? 17 : 8);
     final lead = icon ?? (!ios && selected ? Icons.check : null);
-    return Semantics(
+    final chip = Semantics(
       button: true,
       selected: selected,
+      label: tooltip,
       child: Material(
         color: ios ? (selected ? c.ink : c.fill) : (selected ? c.indicator : Colors.transparent),
         shape: RoundedRectangleBorder(
@@ -601,7 +611,7 @@ class ChoiceChipX extends StatelessWidget {
             height: ios ? 34 : 32,
             padding: EdgeInsets.symmetric(horizontal: lead != null ? 10 : 12),
             child: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [
-              if (lead != null) ...[Icon(lead, size: 16, color: fg), const SizedBox(width: 6)],
+              if (lead != null) ...[Icon(lead, size: 16, color: fg), if (label.isNotEmpty) const SizedBox(width: 6)],
               Flexible(
                 child: Text(label,
                     maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis,
@@ -613,6 +623,7 @@ class ChoiceChipX extends StatelessWidget {
         ),
       ),
     );
+    return tooltip == null ? chip : Tooltip(message: tooltip!, excludeFromSemantics: true, child: chip);
   }
 }
 
