@@ -24,7 +24,7 @@ import 'package:gleichda/domain/settings.dart';
 import 'package:gleichda/domain/subscriptions.dart';
 import 'package:gleichda/ui/screens/map_screen.dart' show clusterPlatforms;
 import 'package:gleichda/state/alarm_planner.dart';
-import 'package:gleichda/data/trias/trias_provider.dart' show withEndpoints;
+import 'package:gleichda/data/trias/trias_provider.dart' show rankLocations, withEndpoints;
 import 'package:gleichda/ui/trip_status.dart' show isReplacement, sevStopHint;
 import 'package:gleichda/state/providers.dart' show MessagesState, arrivedLongAgo, tripEnd, walkEnds;
 import 'package:gleichda/ui/connection_views.dart';
@@ -54,6 +54,23 @@ Leg ride(String from, EventTime dep, String to, EventTime arr, {List<StopTime> v
     );
 
 void main() {
+  test('Suche: alle Wörter vor Nähe, Nähe vor Ferne, Haltestelle vor Adresse', () {
+    Location l(String id, String place, String name, LocationType type, double lat, double lon) =>
+        Location(id: id, providerId: 't', name: name, place: place, type: type, lat: lat, lon: lon);
+    const here = (lat: 51.256, lon: 7.15);
+    final list = [
+      l('a', 'Upsprunge', 'Abzw. Kirchstraße', LocationType.stop, 51.7, 8.5),
+      l('b', 'Wuppertal', 'Dönberg Kirche', LocationType.stop, 51.29, 7.16),
+      l('c', 'Wuppertal', 'Kirchstraße', LocationType.address, 51.27, 7.19),
+    ];
+    expect(rankLocations(list, 'Kirchstr', here).map((x) => x.id), ['c', 'a', 'b']);
+    final koeln = [
+      l('w', 'Wuppertal', 'Neumarkt', LocationType.address, 51.256, 7.149),
+      l('k', 'Köln', 'Neumarkt', LocationType.stop, 50.936, 6.947),
+    ];
+    expect(rankLocations(koeln, 'Köln Neumarkt', here).first.id, 'k');
+  });
+
   test('Kompass glätten über den Nullpunkt hinweg', () {
     expect(smoothHeading(350, 10, factor: 0.5), closeTo(0, 0.001));
     expect(smoothHeading(10, 350, factor: 0.5), closeTo(0, 0.001));
