@@ -60,11 +60,15 @@ class _TripMapState extends ConsumerState<TripMap> {
     final settings = ref.read(settingsProvider).value ?? const AppSettings();
     if (!settings.useLocation) return;
     try {
+      // Erst die Erlaubnis, dann sofort verfolgen – vorher wartete die Karte auf
+      // einen frischen Fix (bis zu 12 s), bevor sie die Position nachführte.
       final loc = ref.read(locationServiceProvider);
-      await loc.current();
+      await loc.ensureAllowed();
+      final last = await loc.lastKnown();
+      if (mounted && last != null && _me == null) setState(() => _me = LatLng(last.latitude, last.longitude));
       _sub = loc.watch().listen((p) {
         if (mounted) setState(() => _me = LatLng(p.latitude, p.longitude));
-      });
+      }, onError: (Object _) {});
     } catch (_) {
       // Ohne Standort zeigt die Karte nur Fahrt und Fahrzeug.
     }
