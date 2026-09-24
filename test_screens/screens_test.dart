@@ -38,6 +38,7 @@ import 'package:gleichda/ui/screens/trip_screen.dart';
 import 'package:gleichda/ui/screens/walk_screen.dart';
 import 'package:gleichda/domain/settings.dart';
 import 'package:gleichda/ui/theme.dart';
+import 'package:gleichda/ui/time_choice.dart' show TimeRuler;
 import 'package:gleichda/ui/widgets.dart' show ChoiceChipX;
 import 'package:gleichda/ui/trip_map.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -335,7 +336,7 @@ void main() {
         }
         await t.tap(find.text('Ankünfte'));
         await t.pump();
-        await t.tap(find.text('Fertig'));
+        await t.tap(find.text('Übernehmen'));
         for (var i = 0; i < 4; i++) {
           await t.pump(const Duration(milliseconds: 150));
         }
@@ -448,6 +449,17 @@ void main() {
   testWidgets('Suche leer', (t) => shot(t, 'suche_leer', const LocationSearchScreen(title: 'Nach'), seed: seedHome));
   testWidgets('Zeitwahl', (t) => shot(t, 'zeitwahl', const HomeShell(), seed: seedHome, act: (t) async {
         await t.tap(find.text('Jetzt').first);
+      }));
+  // Auf der Zeitleiste nach rechts gewischt: feste Zeit, Tag darüber.
+  testWidgets('Zeitwahl gewischt', (t) => shot(t, 'zeitwahl_gewischt', const HomeShell(), seed: seedHome, act: (t) async {
+        await t.tap(find.text('Jetzt').first);
+        for (var i = 0; i < 4; i++) {
+          await t.pump(const Duration(milliseconds: 150));
+        }
+        await t.drag(find.byType(TimeRuler), const Offset(-420, 0));
+        for (var i = 0; i < 8; i++) {
+          await t.pump(const Duration(milliseconds: 100));
+        }
       }));
   testWidgets('Suchoptionen', (t) => shot(t, 'suchoptionen', const HomeShell(), seed: seedHome, act: (t) async {
         await t.tap(find.text('Optionen').first);

@@ -424,3 +424,9 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   „ICE 557“ und „RB48“ schoben das Ziel nach rechts, jede Zeile begann woanders. Lange Namen werden kleiner
   statt breiter; die Spalte wächst mit großer Schrift
 - ✅ Haltestellenblatt auf der Karte hat feste Höhe mit Platzhalterzeilen statt Ladekreis – es wuchs nach dem Laden
+- ✅ Zeitwahl neu (Entwurf D „Zeitleiste“, vom Nutzer aus sieben Entwürfen gewählt): ein gemeinsames Fenster für
+  Suche („Abfahrt um | Ankunft um“) und Abfahrtstafel („Abfahrten | Ankünfte“), `lib/ui/time_choice.dart`.
+  Große Uhrzeit, darunter ein Zeitstrahl in 5-Minuten-Schritten, der einrastet und über Mitternacht mit dem
+  Wochentag in den nächsten Tag läuft (60 Tage); Tipp auf die Uhrzeit für die genaue Minute, Heute/Morgen/Datum
+  als Sprünge, „Jetzt“ oben rechts, „Übernehmen“ unten. Ersetzt die zwei unterschiedlichen Fenster mit
+  gestapelten Schalterreihen und abgeschnittenem „Morgen f…“
