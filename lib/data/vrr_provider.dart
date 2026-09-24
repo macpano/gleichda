@@ -65,16 +65,22 @@ class VrrProvider implements TransitProvider {
               ),
           ];
       // Gemeinden aus dem ganzen Umkreis (Sperrungen im Nachbarort betreffen
-      // oft die eigenen Linien); ab 10 km ein zweiter Ring auf halber Strecke,
-      // sonst fielen Orte zwischen den Punkten heraus. Verkehrsunternehmen nur
-      // aus dem halben Umkreis – sonst zählt in Hagen-Boele schon ganz
-      // Dortmund mit (gemessen: 45 DSW-Meldungen).
-      final wide = [near, if (radius >= 10000) ...ring(radius / 2), ...ring(radius.toDouble())];
+      // oft die eigenen Linien). Größere Umkreise bekommen zusätzliche Ringe
+      // bei 5 km und auf halber Strecke – mit nur einem Ring bei 10 km fielen
+      // bei 20 km Herdecke und Wetter heraus (gemessen 24.09.2026, Hagen-Boele).
+      // Verkehrsunternehmen nur aus dem halben Umkreis – sonst zählt in
+      // Hagen-Boele schon ganz Dortmund mit (gemessen: 45 DSW-Meldungen).
+      final radii = {
+        if (radius > 5000) 5000.0,
+        if (radius / 2 > 5000) radius / 2,
+        radius.toDouble(),
+      };
+      final wide = [near, for (final r in radii) ...ring(r)];
       final close = ring(radius / 2);
       Future<List<({String id, String? omc, String? place})>> find(GeoPoint p) => efa
           .stopsNear(p.lat, p.lon)
           .catchError((Object _) => <({String id, String? omc, String? place})>[]);
-      // Höchstens sechs Abfragen gleichzeitig – bei 20 km sind es 25 Punkte.
+      // Höchstens sechs Abfragen gleichzeitig – bei 20 km sind es 33 Punkte.
       final points = [...wide, ...close];
       final found = List<List<({String id, String? omc, String? place})>>.filled(points.length, const []);
       var next = 0;
@@ -104,7 +110,7 @@ class VrrProvider implements TransitProvider {
         for (final l in lineLists.expand((x) => x)) lineKey(l.id): l,
       };
       // Je Gemeinde eine Abfrage der Meldungen – bei großem Umkreis begrenzt.
-      final max = radius <= 5000 ? 6 : 16;
+      final max = radius <= 5000 ? 6 : 20;
       return (
         regions: Map.fromEntries(regions.entries.take(max)),
         lines: lines.values.toList(),
