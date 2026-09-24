@@ -406,5 +406,6 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   `OriginText`), Transitous `arriveBy` (`tripFrom`); ein Tipp zeigt die Fahrt vom Start bis zur Haltestelle.
   Live geprüft am Hbf und an einer Endhaltestelle (`test_live/ankuenfte_live_test.dart`)
 - ✅ Meldungen: Filter-Knopf mit Umkreis (2/5/10/20 km, gemerkt), Ort (Gemeinden im Umkreis, Namen aus der EFA)
-  und Unternehmen; wirkt zusätzlich zu Alle/Abos/Haltestellen. Ab 10 km ein zweiter Ring, höchstens 16 Orte,
-  höchstens sechs Abfragen gleichzeitig
+  und Unternehmen; wirkt zusätzlich zu Alle/Abos/Haltestellen. Ringe bei 5 km, halbem und ganzem Umkreis
+  (nur ein Ring bei 10 km ließ bei 20 km Herdecke und Wetter aus), höchstens 20 Orte, höchstens sechs Abfragen
+  gleichzeitig. Live Hagen-Boele: 2 km 2 Orte/12 Meldungen, 5 km 6/105, 10 km 8/105, 20 km 14/195, je unter 1 s
