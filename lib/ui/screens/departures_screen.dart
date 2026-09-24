@@ -12,6 +12,7 @@ import '../../state/location.dart';
 import '../../state/providers.dart';
 import '../format.dart';
 import '../theme.dart';
+import '../time_choice.dart';
 import '../widgets.dart';
 import 'location_search_screen.dart';
 import 'trip_screen.dart';
@@ -136,20 +137,21 @@ class _DeparturesScreenState extends ConsumerState<DeparturesScreen> {
   }
 
   Future<void> _pickTime() async {
-    final picked = await showModalBottomSheet<_BoardTime>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => _DepartureTimeSheet(current: (time: _time, arrivals: _arrivals)),
+    // Dieselbe Zeitleiste wie bei der Suche.
+    final picked = await showTimeChoice(
+      context,
+      initial: (time: _time, second: _arrivals),
+      modes: ('Abfahrten', 'Ankünfte'),
     );
     // Weggewischt: nichts ändern.
     if (!mounted || picked == null) return;
     for (final s in _stops ?? const <_StopBoard>[]) {
       // Beim Wechsel Abfahrten ↔ Ankünfte nicht kurz die falsche Liste zeigen.
-      if (picked.arrivals != _arrivals) s.board = null;
+      if (picked.second != _arrivals) s.board = null;
     }
     setState(() {
       _time = picked.time;
-      _arrivals = picked.arrivals;
+      _arrivals = picked.second;
     });
     await _refreshBoards();
   }
@@ -503,107 +505,6 @@ Future<void> _lineSheet(BuildContext context, WidgetRef ref, Line line) => showM
         );
       }),
     );
-
-/// Gewählte Zeit der Tafel: null = jetzt; mit [arrivals] Ankünfte.
-typedef _BoardTime = ({DateTime? time, bool arrivals});
-
-class _DepartureTimeSheet extends StatefulWidget {
-  const _DepartureTimeSheet({required this.current});
-
-  final _BoardTime current;
-
-  @override
-  State<_DepartureTimeSheet> createState() => _DepartureTimeSheetState();
-}
-
-class _DepartureTimeSheetState extends State<_DepartureTimeSheet> {
-  late DateTime? _t = widget.current.time;
-  late bool _arrivals = widget.current.arrivals;
-
-  _BoardTime get _result => (time: _t, arrivals: _arrivals);
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final now = DateTime.now();
-    final base = _t ?? now;
-    final today = DateTime(now.year, now.month, now.day);
-    final dayIndex = DateTime(base.year, base.month, base.day).difference(today).inDays.clamp(0, 2);
-    final quick = <(String, int?)>[('Jetzt', null), ('+15 min', 15), ('+30 min', 30), ('+1 Std', 60)];
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          SheetHeader('Zeit', onDone: () => Navigator.pop(context, _result)),
-          const SizedBox(height: 12),
-          // Wie in der Verbindungssuche „Abfahrt um | Ankunft um“.
-          Segmented<bool>(
-            options: const [(false, 'Abfahrten'), (true, 'Ankünfte')],
-            value: _arrivals,
-            onChanged: (a) => setState(() => _arrivals = a),
-          ),
-          const SizedBox(height: 12),
-          Segmented<int>(
-            options: const [(0, 'Heute'), (1, 'Morgen'), (2, 'Datum')],
-            value: dayIndex,
-            height: 34,
-            onChanged: (i) async {
-              if (i < 2) {
-                setState(() => _t = DateTime(today.year, today.month, today.day + i, base.hour, base.minute));
-                return;
-              }
-              final d = await showDatePicker(
-                  context: context, initialDate: base, firstDate: today, lastDate: today.add(const Duration(days: 60)));
-              if (d != null) setState(() => _t = DateTime(d.year, d.month, d.day, base.hour, base.minute));
-            },
-          ),
-          const SizedBox(height: 16),
-          Row(children: [
-            for (var i = 0; i < quick.length; i++) ...[
-              Expanded(
-                child: PickButton(
-                  label: quick[i].$1,
-                  selected: quick[i].$2 == null && _t == null,
-                  onTap: () => Navigator.pop(context, (
-                    time: quick[i].$2 == null ? null : now.add(Duration(minutes: quick[i].$2!)),
-                    arrivals: _arrivals,
-                  )),
-                ),
-              ),
-              if (i < quick.length - 1) const SizedBox(width: 8),
-            ],
-          ]),
-          const SizedBox(height: 16),
-          Container(
-            decoration: BoxDecoration(border: Border(top: BorderSide(color: c.hair))),
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(children: [
-              const Expanded(child: Text('Uhrzeit', style: TextStyle(fontSize: 16))),
-              Material(
-                color: c.fill,
-                borderRadius: BorderRadius.circular(8),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: () async {
-                    final p = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(base));
-                    if (p != null) setState(() => _t = DateTime(base.year, base.month, base.day, p.hour, p.minute));
-                  },
-                  child: Container(
-                    height: 36,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    alignment: Alignment.center,
-                    child: Text(hm(base), style: context.t.number(17)),
-                  ),
-                ),
-              ),
-            ]),
-          ),
-        ]),
-      ),
-    );
-  }
-}
 
 class _DepartureSkeleton extends StatelessWidget {
   const _DepartureSkeleton();
