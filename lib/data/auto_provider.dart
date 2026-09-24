@@ -116,5 +116,11 @@ class AutoProvider implements TransitProvider {
   Future<List<Message>> messagesForLine(String lineKey) => vrr.messagesForLine(lineKey);
 
   @override
+  Future<Map<String, String>> operatorDirectory() => vrr.operatorDirectory();
+
+  @override
+  Future<List<Message>> messagesForOperator(String network) => vrr.messagesForOperator(network);
+
+  @override
   Future<List<Line>> searchLines(String query, {GeoPoint? near}) => vrr.searchLines(query, near: near);
 }

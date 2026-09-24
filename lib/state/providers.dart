@@ -74,6 +74,10 @@ final favoritesProvider =
 bool isFavoriteStop(List<FavoriteItem> favs, Location stop) =>
     favs.any((f) => f.kind == 'stop' && f.stop != null && stopAreaId(f.stop!.id) == stopAreaId(stop.id));
 
+/// Alle Verkehrsunternehmen des Verbunds (für die Suche), einmal geladen.
+final operatorDirectoryProvider =
+    FutureProvider<Map<String, String>>((ref) => ref.watch(transitProvider).operatorDirectory());
+
 /// Zustand der zuletzt angesehenen Fahrt.
 class LastTripState {
   const LastTripState({

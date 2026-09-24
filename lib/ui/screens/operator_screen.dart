@@ -11,6 +11,10 @@ import 'messages_screen.dart' show MessageCard;
 
 /// Ein Verkehrsunternehmen ansehen: seine aktuellen und angekündigten
 /// Meldungen in der Umgebung, oben der Schalter zum Abonnieren.
+/// Meldungen eines Unternehmens im ganzen Verbund.
+final _operatorMessages = FutureProvider.autoDispose.family<List<Message>, String>(
+    (ref, network) => ref.watch(transitProvider).messagesForOperator(network));
+
 class OperatorScreen extends ConsumerWidget {
   const OperatorScreen({super.key, required this.network, required this.name});
 
@@ -20,12 +24,14 @@ class OperatorScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.c;
-    final state = ref.watch(messagesProvider).value;
+    final async = ref.watch(_operatorMessages(network));
+    // Bis der Verbund geladen ist: was in der Umgebung schon bekannt ist.
+    final nearby = ref.watch(messagesProvider).value?.messages ?? const <Message>[];
+    final source = async.value ?? nearby.where((m) => m.lineIds.any((k) => networkOf(k) == network)).toList();
     final subs = ref.watch(subscriptionsProvider).value ?? const <Subscription>[];
     final id = operatorSubId(network);
     final now = DateTime.now();
-    final mine = (state?.messages ?? const <Message>[])
-        .where((m) => m.lineIds.any((k) => networkOf(k) == network))
+    final mine = source
         .where((m) => m.validTo == null || m.validTo!.isAfter(now))
         .toList();
     final current = [for (final m in mine) if (m.validFrom == null || !m.validFrom!.isAfter(now)) m];
@@ -54,10 +60,10 @@ class OperatorScreen extends ConsumerWidget {
           Text('Abonniert meldet die App neue Störungen auf allen Linien von $name.',
               style: context.t.secondary.copyWith(color: c.muted, height: 1.4)),
           const SizedBox(height: 16),
-          if (state == null)
+          if (async.isLoading && mine.isEmpty)
             const SkeletonBlock(height: 92, radius: Radii.card)
           else if (mine.isEmpty)
-            Notice('Keine aktuellen Meldungen von $name in deiner Umgebung.')
+            Notice('Keine aktuellen Meldungen von $name.')
           else ...[
             if (current.isNotEmpty) ...[
               const SectionTitle('Aktuell'),
