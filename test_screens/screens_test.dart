@@ -23,6 +23,7 @@ import 'package:gleichda/domain/models.dart' as m show Platform;
 import 'package:gleichda/state/providers.dart';
 import 'package:gleichda/ui/screens/connections_screen.dart';
 import 'package:gleichda/ui/screens/departures_screen.dart';
+import 'package:gleichda/ui/screens/line_run_screen.dart';
 import 'package:gleichda/ui/screens/design_demo_screen.dart';
 import 'package:gleichda/ui/screens/alarms_screen.dart';
 import 'package:gleichda/ui/screens/alternatives_screen.dart';
@@ -101,7 +102,12 @@ class FakeProvider implements TransitProvider {
   Future<List<List<GeoPoint>?>> legPaths(Trip trip) async => List.filled(trip.legs.length, null);
 
   @override
-  Future<Trip?> tripOfDeparture(Departure departure, {bool whole = false}) async => null;
+  Future<Trip?> tripOfDeparture(Departure departure, {bool whole = false}) async {
+    if (!whole || trips.isEmpty) return null;
+    // Linienverlauf: die ganze erste Fahrt der Beispielverbindung.
+    final ride = trips.first.legs.lastWhere((l) => l.type == LegType.ride);
+    return Trip(id: 'linie:test', legs: [ride]);
+  }
 
   @override
   Future<List<Line>> linesNear(GeoPoint near) async => const [];
@@ -460,6 +466,10 @@ void main() {
   testWidgets('Karte', (t) {
     final onBoard = withCoords(tripsNow('trias_trip_alter_markt_vohwinkel.xml', lead: const Duration(minutes: -2)).first);
     return shot(t, 'karte', const TripMapScreen(), seed: (r) => r.saveLastTrip(onBoard));
+  });
+  testWidgets('Linienverlauf', (t) {
+    final ride = trips.first.legs.lastWhere((l) => l.type == LegType.ride);
+    return shot(t, 'linienverlauf', LineRunScreen(leg: ride));
   });
   testWidgets('Fahrtverlauf aus dem Abfahrtsmonitor', (t) {
     final ride = trips.first.legs.lastWhere((l) => l.type == LegType.ride);

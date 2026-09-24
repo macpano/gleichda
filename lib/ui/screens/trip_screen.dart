@@ -508,8 +508,10 @@ class _TripScreenState extends ConsumerState<TripScreen> {
     final tColor = passed ? c.muted : timeColor(context, t, status: s.status, neutral: main ? c.ink : c.ink2);
     final delayed = (t?.delayMinutes ?? 0) > 0;
     final platformChanged = s.plannedPlatform != null && s.platform != s.plannedPlatform;
+    // Zwischenhalte fest 46 hoch: Platz für die durchgestrichene Sollzeit,
+    // auch wenn (noch) keine Verspätung da ist – nichts springt.
     return _Row(
-      height: main ? 52 : 40,
+      height: main ? 52 : 46,
       rail: _Rail(
         color: color,
         fromTop: !first,
@@ -530,9 +532,10 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                 color: cancelled ? c.muted : tColor,
                 decoration: cancelled ? TextDecoration.lineThrough : null,
                 height: 22 / 15)),
-        if (main && delayed)
+        // Bei Verspätung auch die Sollzeit, durchgestrichen – an jedem Halt.
+        if (delayed)
           Text(hm(t!.planned),
-              style: context.t.number(12).copyWith(color: c.muted, decoration: TextDecoration.lineThrough)),
+              style: context.t.number(12).copyWith(color: c.muted, decoration: TextDecoration.lineThrough, height: 1.1)),
       ]),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
         Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [

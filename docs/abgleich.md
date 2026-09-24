@@ -475,3 +475,9 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   die Unterwegs-Leiste direkt darüber; geöffnete Ansichten halten den Platz für beide frei (`_CompanionReserve`,
   Tastatur zählt nur darüber hinaus). Ein Tipp auf einen Reiter führt von überall zurück. Über Blättern und Dialogen
   gleiten beide Leisten weg
+- ✅ „Losfahren“ reagiert sofort (Begleitung erst einschalten, dann Benachrichtigungs-Erlaubnis prüfen; doppelt
+  getippt zählt einmal)
+- ✅ Vor dem ersten Fußweg „Losgehen in … zu <Halt>“ in Leiste und Benachrichtigung (`CompanionStep.leaveAt` =
+  Abfahrt mit Echtzeit − Gehzeit), danach wie bisher „Einsteigen“
+- ✅ Fahrtverlauf: Sollzeit durchgestrichen an jedem Halt bei Verspätung (Zwischenhalte fest 46 hoch);
+  Linienverlauf mit Ankunft und Abfahrt je Halt

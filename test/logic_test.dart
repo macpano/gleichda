@@ -54,6 +54,26 @@ Leg ride(String from, EventTime dep, String to, EventTime arr, {List<StopTime> v
     );
 
 void main() {
+  test('Begleitung: vor dem ersten Fußweg „Losgehen“, verschiebt sich mit der Verspätung', () {
+    Trip mit({int? delay}) => Trip(id: 'f', legs: [
+          Leg(
+            type: LegType.walk,
+            from: StopTime(stop: stop('zuhause'), departure: at(14, 0)),
+            to: StopTime(stop: stop('A'), arrival: at(14, 10)),
+            durationMinutes: 10,
+          ),
+          ride('A', at(14, 10, delay: delay), 'B', at(14, 30, delay: delay)),
+        ]);
+    final step = nextStep(mit(), DateTime(2026, 9, 23, 13, 55));
+    expect(step.phase, CompanionPhase.toStop);
+    expect(step.leaveAt, DateTime(2026, 9, 23, 14, 0));
+    expect(step.beforeLeaving(DateTime(2026, 9, 23, 13, 55)), isTrue);
+    // 5 min Verspätung: 5 min später losgehen.
+    expect(nextStep(mit(delay: 5), DateTime(2026, 9, 23, 13, 55)).leaveAt, DateTime(2026, 9, 23, 14, 5));
+    // Nach dem Losgehen wieder „Einsteigen“.
+    expect(nextStep(mit(), DateTime(2026, 9, 23, 14, 3)).beforeLeaving(DateTime(2026, 9, 23, 14, 3)), isFalse);
+  });
+
   test('Suche: alle Wörter vor Nähe, Nähe vor Ferne, Haltestelle vor Adresse', () {
     Location l(String id, String place, String name, LocationType type, double lat, double lon) =>
         Location(id: id, providerId: 't', name: name, place: place, type: type, lat: lat, lon: lon);

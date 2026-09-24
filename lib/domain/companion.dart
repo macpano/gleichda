@@ -17,6 +17,7 @@ class CompanionStep {
     this.stopsLeft,
     this.nextStop,
     this.byGps = false,
+    this.leaveAt,
   });
 
   final CompanionPhase phase;
@@ -41,6 +42,13 @@ class CompanionStep {
 
   /// Position aus GPS statt aus der Uhrzeit.
   final bool byGps;
+
+  /// Vor dem ersten Fußweg: Zeit zum Losgehen (Abfahrt mit Echtzeit minus
+  /// Gehzeit). Liegt sie noch vor uns, heißt der Schritt „Losgehen in …“.
+  final DateTime? leaveAt;
+
+  /// Jetzt noch vor dem Losgehen.
+  bool beforeLeaving(DateTime now) => leaveAt != null && now.isBefore(leaveAt!);
 
   /// Nächster Halt, wenn er nicht schon der Ausstieg ist – „nächster Halt:
   /// Wuppertal Hbf“ neben „Aussteigen: Wuppertal Hbf“ wäre doppelt.
@@ -159,7 +167,15 @@ CompanionStep nextStep(Trip trip, DateTime now, {GeoPoint? gps}) {
       if (start != null && dep.isAfter(start)) {
         p = (now.difference(start).inSeconds / dep.difference(start).inSeconds).clamp(0.0, 1.0);
       }
-      return CompanionStep(phase: phase, where: r.from, when: r.from.departure, leg: r, progress: p);
+      // Erst zu Fuß zum Einstieg: wann losgehen.
+      DateTime? leaveAt;
+      if (phase == CompanionPhase.toStop) {
+        final walk = trip.legs
+            .take(trip.legs.indexWhere((l) => l.type == LegType.ride))
+            .fold<int>(0, (m, l) => m + (l.durationMinutes ?? 0));
+        leaveAt = walk > 0 ? dep.subtract(Duration(minutes: walk)) : trip.departure.best;
+      }
+      return CompanionStep(phase: phase, where: r.from, when: r.from.departure, leg: r, progress: p, leaveAt: leaveAt);
     }
     // Im Fahrzeug: mit GPS die Lage auf der Strecke, sonst nach Uhrzeit.
     final stops = [...r.intermediates, r.to];

@@ -103,22 +103,38 @@ class _LineRunScreenState extends ConsumerState<LineRunScreen> {
                   final s = stops[k];
                   final mine = k == bi || k == ai;
                   final between = bi >= 0 && ai >= bi && k >= bi && k <= ai;
-                  final t = s.departure ?? s.arrival;
                   final passed = isPassed(s, now);
+                  // Ankunft und Abfahrt untereinander; am Start nur ab, am Ende
+                  // nur an (Nutzerwunsch 24.09.2026).
+                  Widget time(String label, EventTime? t) => t == null
+                      ? const SizedBox(height: 18)
+                      : SizedBox(
+                          height: 18,
+                          child: Row(children: [
+                            SizedBox(
+                              width: 20,
+                              child: Text(label, style: TextStyle(fontSize: 12, color: c.muted)),
+                            ),
+                            Text(hm(t.best),
+                                style: context.t.number(14).copyWith(
+                                    color: passed ? c.muted : timeColor(context, t, status: s.status, neutral: c.ink2))),
+                          ]),
+                        );
                   return SizedBox(
-                    height: 44,
+                    height: 48,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(children: [
                         SizedBox(
-                          width: 52,
-                          child: Text(t == null ? '' : hm(t.best),
-                              style: context.t.number(15).copyWith(
-                                  color: passed ? c.muted : timeColor(context, t, status: s.status, neutral: c.ink2))),
+                          width: 70,
+                          child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            time('an', k == 0 ? null : s.arrival ?? s.departure),
+                            time('ab', k == stops.length - 1 ? null : s.departure ?? s.arrival),
+                          ]),
                         ),
                         Container(
                           width: 4,
-                          height: 44,
+                          height: 48,
                           color: between || mine ? lineColor(context, l.line) : c.hair,
                         ),
                         const SizedBox(width: 12),

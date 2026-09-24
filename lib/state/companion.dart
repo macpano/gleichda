@@ -100,8 +100,13 @@ class CompanionController extends Notifier<CompanionState> {
   Future<void> start() async {
     final trip = ref.read(lastTripProvider).value?.trip;
     if (trip == null) return;
-    await Notifications.requestPermission();
+    // Doppelt getippt: läuft schon.
+    if (state.active && state.tripId == trip.id) return;
+    // Sofort einschalten – die Leiste erscheint mit dem Tipp. Vorher wartete
+    // „Losfahren“ erst auf die Abfrage der Benachrichtigungs-Erlaubnis und
+    // reagierte deshalb manchmal spürbar verzögert (Nutzerbefund 24.09.2026).
     state = CompanionState(active: true, tripId: trip.id);
+    await Notifications.requestPermission();
     _problemKey = _alertedKey = null;
     _alternative = null;
     // Merken: übersteht, dass Android die App beendet.
@@ -297,6 +302,15 @@ final companionProvider = NotifierProvider<CompanionController, CompanionState>(
         where: 'Aussteigen: ${step.where.stop.name}',
         when: next == null ? when : '$when · nächster Halt ${next.stop.name}',
         headline: n <= 1 ? 'Nächster Halt: aussteigen' : 'Aussteigen in $n Halten',
+      );
+    case CompanionPhase.toStop when step.beforeLeaving(now):
+      final platform = step.where.platform == null ? '' : ', Steig ${step.where.platform}';
+      final leave = step.leaveAt!;
+      return (
+        header: header,
+        where: 'Losgehen zu ${step.where.stop.name}$platform',
+        when: '${countdownWithTime(leave, now)} · Abfahrt ${t == null ? '' : hm(t)}',
+        headline: 'Losgehen ${countdown(leave, now)}, $lineText Richtung ${leg?.direction ?? ''}$platform',
       );
     case CompanionPhase.transfer:
     case CompanionPhase.toStop:

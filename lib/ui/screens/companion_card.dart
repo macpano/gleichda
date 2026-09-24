@@ -61,13 +61,18 @@ class CompanionBar extends StatelessWidget {
                 : c.ink;
     final boarding = step.boarding;
     final walking = step.walking;
+    // Vor dem ersten Fußweg: „Losgehen in 4 min“, danach „Einsteigen …“.
+    final leaving = step.beforeLeaving(now);
     final label = switch (step.phase) {
       CompanionPhase.arrived => 'Angekommen',
       CompanionPhase.onBoard => 'Aussteigen',
       CompanionPhase.toDestination => 'Zu Fuß zum Ziel',
+      _ when leaving => 'Losgehen zu',
       _ => 'Einsteigen',
     };
+    final shownTime = leaving ? step.leaveAt! : step.when?.best;
     final detail = [
+      if (leaving && step.when != null) 'Abfahrt ${hm(step.when!.best)}',
       if (boarding && step.where.platform != null) 'Steig ${step.where.platform}',
       if (next != null)
         'nächster Halt ${next.stop.name}'
@@ -116,12 +121,12 @@ class CompanionBar extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text.rich(
                         TextSpan(children: [
-                          if (step.when != null) ...[
+                          if (shownTime != null) ...[
                             TextSpan(
-                                text: countdown(step.when!.best, now),
+                                text: countdown(shownTime, now),
                                 style: context.t.time(14).copyWith(color: whenColor)),
-                            if (!countdownHasTime(step.when!.best, now))
-                              TextSpan(text: ' · ${hm(step.when!.best)}', style: context.t.number(13)),
+                            if (!countdownHasTime(shownTime, now))
+                              TextSpan(text: ' · ${hm(shownTime)}', style: context.t.number(13)),
                           ],
                           for (final d in detail) TextSpan(text: ' · $d'),
                         ]),
