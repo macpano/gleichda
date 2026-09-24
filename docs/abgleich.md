@@ -468,3 +468,6 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   Wörter enthalten → im Umkreis von 30 km → Haltestelle vor Adresse → Entfernung. Standort sofort aus der zuletzt
   bekannten Position (bis 30 min). Ein Kreis um den Standort (TRIAS GeoRestriction) zusammen mit dem Suchtext
   liefert beim VRR nur Unsinn – geprüft 24.09.2026. Live: `test_live/suche_ort_live_test.dart`
+- ✅ Zeitraster passt sich den sichtbaren Fahrten an: Die Zeitachse umfasst nur die Spalten, die gerade zu sehen sind
+  (mindestens 60 % sichtbar), und gleitet beim seitlichen Wischen mit (`Motion.medium`); nach „Später“ blieben die
+  vorderen Fahrten sonst winzig. Höhe des Rasters fest, wenige Fahrten füllen die Breite; erste Anpassung ohne Übergang

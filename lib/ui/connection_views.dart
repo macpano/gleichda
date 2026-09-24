@@ -284,10 +284,11 @@ class TripTimeline extends StatelessWidget {
 /// Zeitraster wie in Öffi: Zeit von oben nach unten, je Verbindung eine
 /// Spalte, Fahrten als Balken, Fußwege und Umstiege gepunktet.
 ///
-/// Passt sich der Bildschirmhöhe an: Das Raster misst, wo es beginnt, und
-/// verteilt die Zeitspanne auf den Platz bis zum unteren Rand (abzüglich
-/// [reserveBelow] für das, was darunter steht) – senkrecht scrollen muss man
-/// nur bei sehr langen Zeitspannen.
+/// Passt sich an, was zu sehen ist: Die Zeitachse umfasst nur die Fahrten in
+/// den gerade sichtbaren Spalten und gleitet beim seitlichen Scrollen mit
+/// (vorher über alle geladenen Fahrten – nach „Später“ wurden die vorderen
+/// winzig). Wenige Fahrten füllen die ganze Breite. Die Höhe misst das Raster
+/// selbst: vom eigenen Beginn bis zum unteren Rand (abzüglich [reserveBelow]).
 class ConnectionGrid extends StatefulWidget {
   const ConnectionGrid({super.key, required this.items, required this.onTap, this.reserveBelow = 110});
 
@@ -297,6 +298,7 @@ class ConnectionGrid extends StatefulWidget {
   /// Platz unter dem Raster (Hinweis, „Früher | Später“, Rand).
   final double reserveBelow;
 
+  /// Mindestbreite einer Spalte; bei wenigen Fahrten werden sie breiter.
   static const colWidth = 58.0;
 
   /// Kopf jeder Spalte (Abfahrt, Dauer) – fest, damit die Zeitachse links
@@ -310,6 +312,46 @@ class ConnectionGrid extends StatefulWidget {
 class _ConnectionGridState extends State<ConnectionGrid> {
   /// Oberkante des Rasters im Inhalt der Seite (ohne Scrollversatz).
   double? _top;
+  final _h = ScrollController();
+
+  /// Zuletzt gemessene Spaltenbreite und sichtbare Breite (für den Bereich).
+  double _colW = ConnectionGrid.colWidth;
+  double _viewW = 0;
+
+  /// Sichtbare Spalten (erste, letzte).
+  (int, int)? _visible;
+
+  @override
+  void initState() {
+    super.initState();
+    _h.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _h.dispose();
+    super.dispose();
+  }
+
+  /// Spalten, die mindestens zu 60 % zu sehen sind.
+  (int, int) _range() {
+    final n = widget.items.length;
+    if (_viewW <= 0 || n == 0) return (0, n - 1);
+    final off = _h.hasClients ? _h.offset : 0.0;
+    final first = (off / _colW + 0.4).floor().clamp(0, n - 1);
+    final last = ((off + _viewW) / _colW - 0.4).floor().clamp(first, n - 1);
+    return (first, last);
+  }
+
+  /// Die erste Anpassung nach dem Öffnen ohne Übergang – sonst sähe man das
+  /// Raster erst mit allen Fahrten und dann auf die sichtbaren gleiten.
+  bool _instant = true;
+
+  void _onScroll() {
+    final r = _range();
+    if (r != _visible) setState(() => _visible = r);
+    if (_instant && _viewW > 0) WidgetsBinding.instance.addPostFrameCallback((_) => _instant = false);
+  }
 
   void _measure() {
     if (!mounted) return;
@@ -320,113 +362,127 @@ class _ConnectionGridState extends State<ConnectionGrid> {
     if (_top == null || (top - _top!).abs() > 1) setState(() => _top = top);
   }
 
+  static DateTime _startOf(Trip t) => (t.legs.first.from.departure ?? t.legs.first.from.arrival)!.best;
+
   @override
   Widget build(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
-    final c = context.c;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _measure();
+      _onScroll();
+    });
     final items = widget.items;
     if (items.isEmpty) return const SizedBox.shrink();
-    DateTime startOf(Trip t) => (t.legs.first.from.departure ?? t.legs.first.from.arrival)!.best;
-    final t0 = items.map((i) => startOf(i.trip)).reduce((a, b) => a.isBefore(b) ? a : b).toLocal();
-    final t1 = items.map((i) => i.trip.arrival.best).reduce((a, b) => a.isAfter(b) ? a : b);
-    // Skala in Ortszeit, auf 5 Minuten abgerundet.
-    final base = DateTime(t0.year, t0.month, t0.day, t0.hour, t0.minute - t0.minute % 5);
-    final minutes = t1.difference(base).inMinutes + 5;
+    // Bezugspunkt aller Minutenangaben: früheste Abfahrt, in Ortszeit auf
+    // 5 Minuten abgerundet.
+    final t0 = items.map((i) => _startOf(i.trip)).reduce((a, b) => a.isBefore(b) ? a : b).toLocal();
+    final ref = DateTime(t0.year, t0.month, t0.day, t0.hour, t0.minute - t0.minute % 5);
+    double minuteOf(DateTime t) => t.difference(ref).inSeconds / 60;
+
+    // Zeitspanne der sichtbaren Fahrten.
+    final (first, last) = _visible ?? (0, items.length - 1);
+    final shown = items.sublist(first.clamp(0, items.length - 1), (last + 1).clamp(1, items.length));
+    final from = shown.map((i) => minuteOf(_startOf(i.trip))).reduce(math.min);
+    final to = shown.map((i) => minuteOf(i.trip.arrival.best)).reduce(math.max);
+    final base = (from / 5).floor() * 5.0;
+    final span = math.max(to - base + 5, 20.0);
 
     // Verfügbare Höhe: Bildschirm minus Beginn des Rasters, Kopf, Innenrand
     // und was darunter steht. Vor der ersten Messung eine Schätzung.
     final mq = MediaQuery.of(context);
     final top = _top ?? mq.size.height * 0.4;
-    final avail = mq.size.height - top - mq.padding.bottom - widget.reserveBelow - ConnectionGrid.headHeight - 6 - 20;
-    // Kurze Zeitspannen dürfen groß werden (vorher höchstens 6 px je Minute –
-    // bei 35 min blieb der halbe Bildschirm leer und 3-min-Fahrten waren zu
-    // klein für die Liniennummer).
-    final perMinute = (avail / minutes).clamp(1.2, 16.0);
-    final height = minutes * perMinute;
-    double y(DateTime t) => t.difference(base).inSeconds / 60 * perMinute;
+    final avail = math.max(
+        160.0, mq.size.height - top - mq.padding.bottom - widget.reserveBelow - ConnectionGrid.headHeight - 6 - 20);
+
+    return TweenAnimationBuilder<Offset>(
+      tween: Tween(end: Offset(base, span)),
+      duration: _instant ? Duration.zero : Motion.of(context, Motion.medium),
+      curve: Motion.curve,
+      builder: (context, v, _) => _grid(context, items, ref, v.dx, v.dy, avail),
+    );
+  }
+
+  Widget _grid(BuildContext context, List<ConnectionItem> items, DateTime ref, double base, double span, double avail) {
+    final c = context.c;
+    // Kurze Zeitspannen dürfen groß werden; sehr lange werden höher als der
+    // Bildschirm (dann rollt die Seite).
+    final perMinute = (avail / span).clamp(1.2, 16.0);
+    // Feste Höhe: Beim Mitgleiten ändert sich die Skala, nicht der Platz.
+    final height = math.max(avail, span * perMinute);
+    double y(DateTime t) => (t.difference(ref).inSeconds / 60 - base) * perMinute;
 
     // Beschriftung der Zeitachse ausdünnen, damit sie nicht übereinanderliegt.
     final step = [5, 10, 15, 30, 60].firstWhere((m) => m * perMinute >= 20, orElse: () => 60);
     final ticks = <Widget>[];
-    for (var m = 0; m <= minutes; m += 5) {
-      final t = base.add(Duration(minutes: m));
+    for (var m = (base / step).ceil() * step; m <= base + height / perMinute; m += step) {
+      final t = ref.add(Duration(minutes: m.round()));
       if ((t.hour * 60 + t.minute) % step != 0) continue;
       ticks.add(Positioned(
-        top: m * perMinute - 7,
+        top: (m - base) * perMinute - 7,
         right: 6,
         child: Text(hm(t), textScaler: TextScaler.noScaling, style: context.t.number(11).copyWith(color: c.muted)),
       ));
     }
 
-    Widget column(ConnectionItem item) {
+    Widget column(ConnectionItem item, double width) {
       final trip = item.trip;
       final dep = trip.rides.isEmpty ? trip.departure : trip.rides.first.from.departure!;
       // Punkte (Fußwege, Warten) unten, Fahrten darüber – ein auf Mindesthöhe
       // gestreckter Balken verdeckt so die Punkte, nicht umgekehrt.
       final segs = <Widget>[];
       final dots = <Widget>[];
+      Widget dotted(double top, double h) => Positioned(
+            top: top,
+            left: width / 2 - 1.5,
+            width: 3,
+            height: h,
+            child: CustomPaint(painter: _DottedLine(c.muted)),
+          );
       for (final l in trip.legs) {
         final s = (l.from.departure ?? l.from.arrival)?.best;
-        final e = (l.to.arrival ?? l.to.departure)?.best ??
-            s?.add(Duration(minutes: l.durationMinutes ?? 0));
+        final e = (l.to.arrival ?? l.to.departure)?.best ?? s?.add(Duration(minutes: l.durationMinutes ?? 0));
         if (s == null || e == null) continue;
         final top = y(s);
         // Fahrten mindestens so hoch, dass die Liniennummer hineinpasst.
         final h = math.max(y(e) - top, l.type == LegType.ride ? 18.0 : 6.0);
-        if (l.type == LegType.ride) {
-          segs.add(Positioned(
-            top: top,
-            left: 4,
-            right: 4,
-            height: h,
-            child: Container(
-              // Liniennummer mittig im Balken (Nutzerwunsch 24.09.2026).
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              alignment: Alignment.center,
-              clipBehavior: Clip.hardEdge,
-              decoration: BoxDecoration(
-                color: lineColor(context, l.line),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              // Liniennummer immer; in knappen Balken etwas kleiner.
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(l.line?.name ?? '',
-                    maxLines: 1,
-                    textScaler: TextScaler.noScaling,
-                    style: context.t.lineNumber.copyWith(fontSize: h < 24 ? 11 : 12)),
-              ),
-            ),
-          ));
-        } else {
-          dots.add(Positioned(
-            top: top,
-            left: ConnectionGrid.colWidth / 2 - 1.5,
-            width: 3,
-            height: h,
-            child: CustomPaint(painter: _DottedLine(c.muted)),
-          ));
+        if (l.type != LegType.ride) {
+          dots.add(dotted(top, h));
+          continue;
         }
+        segs.add(Positioned(
+          top: top,
+          left: 4,
+          right: 4,
+          height: h,
+          child: Container(
+            // Liniennummer mittig im Balken (Nutzerwunsch 24.09.2026).
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            alignment: Alignment.center,
+            clipBehavior: Clip.hardEdge,
+            decoration: BoxDecoration(color: lineColor(context, l.line), borderRadius: BorderRadius.circular(6)),
+            // Liniennummer immer; in knappen Balken etwas kleiner.
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(l.line?.name ?? '',
+                  maxLines: 1,
+                  textScaler: TextScaler.noScaling,
+                  style: context.t.lineNumber.copyWith(fontSize: h < 24 ? 11 : 12)),
+            ),
+          ),
+        ));
       }
       // Wartezeiten zwischen Fahrten ohne eigenen Fußweg ebenfalls gepunktet.
       final rides = trip.rides;
       for (var i = 0; i + 1 < rides.length; i++) {
         final a = rides[i].to.arrival?.best, b = rides[i + 1].from.departure?.best;
         if (a == null || b == null || !b.isAfter(a)) continue;
-        dots.add(Positioned(
-          top: y(a),
-          left: ConnectionGrid.colWidth / 2 - 1.5,
-          width: 3,
-          height: y(b) - y(a),
-          child: CustomPaint(painter: _DottedLine(c.muted)),
-        ));
+        dots.add(dotted(y(a), y(b) - y(a)));
       }
       return Opacity(
         opacity: item.reachable ? 1 : 0.45,
         child: InkWell(
           onTap: () => widget.onTap(item),
           child: SizedBox(
-            width: ConnectionGrid.colWidth,
+            width: width,
             child: Column(children: [
               // Fester Kopf, einzeilig: „1 Std 18 min“ wird kleiner statt umzubrechen.
               SizedBox(
@@ -446,7 +502,8 @@ class _ConnectionGridState extends State<ConnectionGrid> {
                 ]),
               ),
               const SizedBox(height: 6),
-              SizedBox(height: height, child: Stack(children: [...dots, ...segs])),
+              // Was über oder unter der Achse liegt, wird abgeschnitten.
+              SizedBox(height: height, child: ClipRect(child: Stack(children: [...dots, ...segs]))),
             ]),
           ),
         ),
@@ -461,19 +518,25 @@ class _ConnectionGridState extends State<ConnectionGrid> {
           width: 44,
           child: Padding(
             padding: const EdgeInsets.only(top: ConnectionGrid.headHeight + 6),
-            child: SizedBox(
-              height: height,
-              child: Stack(clipBehavior: Clip.none, children: ticks),
-            ),
+            child: SizedBox(height: height, child: Stack(clipBehavior: Clip.none, children: ticks)),
           ),
         ),
         Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              for (final i in items) column(i),
-            ]),
-          ),
+          child: LayoutBuilder(builder: (context, box) {
+            // Wenige Fahrten füllen die Breite, viele rollen seitlich.
+            final w = items.length * ConnectionGrid.colWidth < box.maxWidth
+                ? box.maxWidth / items.length
+                : ConnectionGrid.colWidth;
+            _colW = w;
+            _viewW = box.maxWidth;
+            return SingleChildScrollView(
+              controller: _h,
+              scrollDirection: Axis.horizontal,
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                for (final i in items) column(i, w),
+              ]),
+            );
+          }),
         ),
       ]),
     );
