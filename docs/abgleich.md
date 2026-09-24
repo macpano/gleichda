@@ -447,3 +447,5 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   `de.gleichda/compass`, geglättet), solange „Auf mich zentrieren“ aktiv ist; Knopf „Norden oben“. Eigener Pfeil
   zeigt in die Blickrichtung. Nur noch der Zielsteig wird gezeigt (Nutzerwunsch „nur relevante Haltestellen“)
 - ✅ Karte und Fahrtkarte mit zwei Fingern drehbar, Schilder bleiben aufrecht, Kompassknopf bei gedrehter Karte
+- ✅ Dunkle Karte heller (Nutzerbefund „zu dunkel“): statt des OpenFreeMap-Stils „dark“ der helle Stil mit
+  Farbfilter (Helligkeit umkehren, Farbton zurückdrehen, angehoben) – dunkelgrauer Grund, Fluss blau, Straßen gelb
