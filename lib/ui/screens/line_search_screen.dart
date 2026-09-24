@@ -226,7 +226,7 @@ class _LineRow extends StatelessWidget {
           padding: const EdgeInsets.only(left: 16, right: 8),
           child: Row(
             children: [
-              LineBadge(line),
+              LineBadge(line, slot: 56),
               const SizedBox(width: 12),
               Expanded(
                 child: OneLine(sub, style: TextStyle(fontSize: 14, color: c.ink2)),

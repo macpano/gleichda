@@ -29,28 +29,53 @@ Color lineColor(BuildContext context, Line? line) {
 
 /// Linienplakette: feste Breite, weiße Liniennummer.
 class LineBadge extends StatelessWidget {
-  const LineBadge(this.line, {super.key, this.width = 34, this.height = 20});
+  const LineBadge(this.line, {super.key, this.width = 34, this.height = 20, this.slot});
 
   final Line? line;
   final double width;
   final double height;
 
+  /// In Listen: feste Spalte dieser Breite (wächst mit großer Schrift), das
+  /// Schild links darin. Lange Namen („ICE 557“) werden kleiner statt
+  /// breiter – so beginnt der Text daneben in jeder Zeile an derselben Stelle.
+  final double? slot;
+
   @override
   Widget build(BuildContext context) {
+    final s = slot;
+    if (s != null) {
+      final w = s * textGrowth(context);
+      return SizedBox(
+        width: w,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: w),
+            child: LineBadge(line, width: width, height: height),
+          ),
+        ),
+      );
+    }
     final name = line?.name ?? '';
     return Container(
       constraints: BoxConstraints(minWidth: width),
       height: height,
       padding: const EdgeInsets.symmetric(horizontal: 4),
-      alignment: Alignment.center,
       decoration: BoxDecoration(
         color: lineColor(context, line),
         borderRadius: BorderRadius.circular(Radii.badge * height / 32),
       ),
-      child: Text(name,
-          maxLines: 1,
-          overflow: TextOverflow.clip,
-          style: context.t.lineNumber.copyWith(fontSize: height < 22 ? 12 : 13.5)),
+      // So breit wie der Name (mindestens [width]), nie breiter als der Platz.
+      child: Center(
+        widthFactor: 1,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(name,
+              maxLines: 1,
+              style: context.t.lineNumber.copyWith(fontSize: height < 22 ? 12 : 13.5)),
+        ),
+      ),
     );
   }
 }

@@ -3,7 +3,10 @@ import 'dart:io';
 
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gleichda/ui/widgets.dart' show LineBadge;
+import 'package:gleichda/ui/theme.dart';
 import 'package:gleichda/background.dart';
 import 'package:gleichda/data/db/database.dart';
 import 'package:gleichda/data/efa/efa_client.dart';
@@ -50,6 +53,27 @@ Leg ride(String from, EventTime dep, String to, EventTime arr, {List<StopTime> v
     );
 
 void main() {
+  testWidgets('Linienschilder in Listen: feste Spalte, lange Namen passen hinein', (t) async {
+    Future<Size> size(String name) async {
+      await t.pumpWidget(MaterialApp(
+        theme: buildTheme(Brightness.light, TargetPlatform.android),
+        home: Row(children: [
+          LineBadge(Line(id: name, name: name, mode: TransportMode.rail), width: 40, height: 24, slot: 60),
+          const Expanded(child: SizedBox()),
+        ]),
+      ));
+      // Spalte (äußeres Schild) und das Schild darin.
+      expect(t.getSize(find.byType(LineBadge).first).width, 60, reason: name);
+      return t.getSize(find.byType(LineBadge).last);
+    }
+
+    for (final name in ['6', '611', 'RB48', 'ICE 557', 'SEV S7 Ersatz']) {
+      final s = await size(name);
+      expect(s.width, inInclusiveRange(40, 60), reason: name);
+      expect(t.takeException(), isNull, reason: name);
+    }
+  });
+
   test('Steige nur zusammenfassen, wenn sie nah beieinanderliegen', () {
     Platform at(String id, double dLat, double dLon) =>
         Platform(id: id, stopId: 's', lat: 51.25 + dLat / 111000, lon: 7.15 + dLon / 69500);
