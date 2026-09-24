@@ -382,6 +382,13 @@ void main() {
           await t.pump(const Duration(milliseconds: 150));
         }
       }));
+  // Gespeicherte Auswahl kommt nach dem Neustart wieder.
+  testWidgets('Meldungen: Filter gemerkt', (t) => shot(t, 'meldungen_gemerkt', const Scaffold(body: MessagesScreen()),
+      overrides: [messagesProvider.overrideWith(_AreaMessages.new)],
+      seed: (r) => r.setSetting('messagesFilter', '{"tab":"myStops","places":["5124000"],"operators":["wsw"]}'),
+      act: (t) async {
+        expect(find.text('Nur Wuppertal · WSW'), findsOneWidget);
+      }));
   testWidgets('Meldungen: Filter', (t) => shot(t, 'meldungen_filter', const Scaffold(body: MessagesScreen()),
       overrides: [messagesProvider.overrideWith(_AreaMessages.new)],
       act: (t) async {

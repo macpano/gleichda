@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -65,6 +67,43 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
   Set<String> _operators = {};
   Set<String> _places = {};
 
+  /// Die Auswahl übersteht das Beenden der App (Nutzerwunsch 24.09.2026).
+  static const _key = 'messagesFilter';
+
+  @override
+  void initState() {
+    super.initState();
+    _restore();
+  }
+
+  Future<void> _restore() async {
+    final raw = await ref.read(repositoryProvider).setting(_key);
+    if (raw == null || !mounted) return;
+    try {
+      final m = jsonDecode(raw) as Map<String, dynamic>;
+      setState(() {
+        _filter = _Filter.values.firstWhere((f) => f.name == m['tab'], orElse: () => _Filter.all);
+        _places = {...(m['places'] as List? ?? const []).cast<String>()};
+        _operators = {...(m['operators'] as List? ?? const []).cast<String>()};
+      });
+    } catch (_) {
+      // Unlesbar gespeichert: mit „Alle“ beginnen.
+    }
+  }
+
+  /// Auswahl ändern und merken.
+  void _set({_Filter? filter, Set<String>? places, Set<String>? operators}) {
+    setState(() {
+      _filter = filter ?? _filter;
+      _places = places ?? _places;
+      _operators = operators ?? _operators;
+    });
+    ref.read(repositoryProvider).setSetting(
+          _key,
+          jsonEncode({'tab': _filter.name, 'places': _places.toList(), 'operators': _operators.toList()}),
+        );
+  }
+
   Future<void> _openFilter() => showModalBottomSheet<void>(
         context: context,
         showDragHandle: true,
@@ -72,8 +111,8 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
         builder: (_) => _FilterSheet(
           places: _places,
           operators: _operators,
-          onPlaces: (p) => setState(() => _places = p),
-          onOperators: (o) => setState(() => _operators = o),
+          onPlaces: (p) => _set(places: p),
+          onOperators: (o) => _set(operators: o),
         ),
       );
 
@@ -164,7 +203,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
               ])
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChipX(label: label, selected: _filter == f, onTap: () => setState(() => _filter = f)),
+                  child: ChoiceChipX(label: label, selected: _filter == f, onTap: () => _set(filter: f)),
                 ),
               // Umkreis, Ort und Verkehrsunternehmen: Symbol, bei Auswahl mit
               // deren Zahl; die Namen stehen in der Zeile darunter.
@@ -193,10 +232,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () => setState(() {
-                      _places = {};
-                      _operators = {};
-                    }),
+                    onPressed: () => _set(places: {}, operators: {}),
                     child: const Text('Aufheben'),
                   ),
                 ],
