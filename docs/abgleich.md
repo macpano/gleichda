@@ -449,3 +449,6 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Karte und Fahrtkarte mit zwei Fingern drehbar, Schilder bleiben aufrecht, Kompassknopf bei gedrehter Karte
 - ✅ Dunkle Karte heller (Nutzerbefund „zu dunkel“): statt des OpenFreeMap-Stils „dark“ der helle Stil mit
   Farbfilter (Helligkeit umkehren, Farbton zurückdrehen, angehoben) – dunkelgrauer Grund, Fluss blau, Straßen gelb
+- ✅ Laufweg: Ging der erste Weg von der zuletzt bekannten, alten oder ungenauen Position aus (älter als 30 s oder
+  ungenauer als 40 m), wird beim ersten guten Standort sofort neu gerechnet statt nach der 10-Sekunden-Sperre.
+  Sonst wie bisher: neu, sobald man mehr als 25 m vom Weg abweicht (höchstens alle 10 s)
