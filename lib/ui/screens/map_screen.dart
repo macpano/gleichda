@@ -240,30 +240,39 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               height: 24,
               child: GestureDetector(
                 onTap: () => _showStop(stop, platform: p),
-                child: _PlatformMarker(label: p.name ?? '', color: color),
+                // Ohne Nummer (etwa Schwebebahn-Richtungen) ein Punkt.
+                child: p.name == null ? _StopMarker(color: color, small: true) : _PlatformMarker(label: p.name!, color: color),
               ),
             ),
           );
         }
         continue;
       }
-      final lat = pf.isEmpty ? stop.lat : pf.map((p) => p.lat).reduce((a, b) => a + b) / pf.length;
-      final lon = pf.isEmpty ? stop.lon : pf.map((p) => p.lon).reduce((a, b) => a + b) / pf.length;
-      if (lat == null || lon == null) continue;
-      out.add(
-        Marker(
-          point: LatLng(lat, lon),
-          width: 28,
-          height: 28,
-          child: GestureDetector(
-            onTap: () => _showStop(stop),
-            child: _StopMarker(color: color),
-          ),
-        ),
-      );
+      if (pf.isEmpty) {
+        if (stop.lat == null || stop.lon == null) continue;
+        out.add(_stopMarker(LatLng(stop.lat!, stop.lon!), stop, color));
+        continue;
+      }
+      // Zusammengefasst nur, was nah beieinanderliegt – sonst stand das
+      // Zeichen zwischen zwei Straßen. Große Haltestellen großzügiger.
+      for (final group in clusterPlatforms(pf)) {
+        final lat = group.map((p) => p.lat).reduce((a, b) => a + b) / group.length;
+        final lon = group.map((p) => p.lon).reduce((a, b) => a + b) / group.length;
+        out.add(_stopMarker(LatLng(lat, lon), stop, color));
+      }
     }
     return out;
   }
+
+  Marker _stopMarker(LatLng at, Location stop, Color color) => Marker(
+        point: at,
+        width: 28,
+        height: 28,
+        child: GestureDetector(
+          onTap: () => _showStop(stop),
+          child: _StopMarker(color: color),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -452,15 +461,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 }
 
 class _StopMarker extends StatelessWidget {
-  const _StopMarker({required this.color});
+  const _StopMarker({required this.color, this.small = false});
 
   final Color color;
+  final bool small;
 
   @override
   Widget build(BuildContext context) => Center(
     child: Container(
-      width: 20,
-      height: 20,
+      width: small ? 16 : 20,
+      height: small ? 16 : 20,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: context.c.surface,
@@ -470,7 +480,7 @@ class _StopMarker extends StatelessWidget {
       child: Text(
         'H',
         textScaler: TextScaler.noScaling,
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color, height: 1),
+        style: TextStyle(fontSize: small ? 8 : 10, fontWeight: FontWeight.w700, color: color, height: 1),
       ),
     ),
   );
@@ -620,4 +630,29 @@ class _StopSheetState extends ConsumerState<_StopSheet> {
       ),
     );
   }
+}
+
+/// Steige einer Haltestelle, die auf der Karte zu einem Zeichen werden:
+/// verbunden ist, was höchstens [near] Meter auseinanderliegt (über
+/// Zwischenstationen hinweg). Ab [bigFrom] Steigen gilt die Haltestelle als
+/// groß – dort reicht [nearBig], damit ein Busbahnhof ein Zeichen bleibt.
+@visibleForTesting
+List<List<Platform>> clusterPlatforms(List<Platform> pf,
+    {double near = 40, double nearBig = 150, int bigFrom = 6}) {
+  const d = Distance();
+  final limit = pf.length >= bigFrom ? nearBig : near;
+  final group = List<int>.generate(pf.length, (i) => i);
+  int root(int i) => group[i] == i ? i : group[i] = root(group[i]);
+  for (var i = 0; i < pf.length; i++) {
+    for (var j = i + 1; j < pf.length; j++) {
+      if (d.as(LengthUnit.Meter, LatLng(pf[i].lat, pf[i].lon), LatLng(pf[j].lat, pf[j].lon)) <= limit) {
+        group[root(i)] = root(j);
+      }
+    }
+  }
+  final out = <int, List<Platform>>{};
+  for (var i = 0; i < pf.length; i++) {
+    out.putIfAbsent(root(i), () => []).add(pf[i]);
+  }
+  return out.values.toList();
 }

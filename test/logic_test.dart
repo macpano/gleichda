@@ -18,6 +18,7 @@ import 'package:gleichda/domain/connections.dart';
 import 'package:gleichda/domain/models.dart';
 import 'package:gleichda/domain/settings.dart';
 import 'package:gleichda/domain/subscriptions.dart';
+import 'package:gleichda/ui/screens/map_screen.dart' show clusterPlatforms;
 import 'package:gleichda/state/alarm_planner.dart';
 import 'package:gleichda/data/trias/trias_provider.dart' show withEndpoints;
 import 'package:gleichda/ui/trip_status.dart' show isReplacement, sevStopHint;
@@ -49,6 +50,27 @@ Leg ride(String from, EventTime dep, String to, EventTime arr, {List<StopTime> v
     );
 
 void main() {
+  test('Steige nur zusammenfassen, wenn sie nah beieinanderliegen', () {
+    Platform at(String id, double dLat, double dLon) =>
+        Platform(id: id, stopId: 's', lat: 51.25 + dLat / 111000, lon: 7.15 + dLon / 69500);
+    // Zwei Steige gegenüber (25 m) und einer um die Ecke (120 m).
+    final small = clusterPlatforms([at('1', 0, 0), at('2', 25, 0), at('3', 0, 120)]);
+    expect(small.map((g) => g.length).toList()..sort(), [1, 2]);
+    // Großer Busbahnhof: sechs Steige im Abstand von 60 m bleiben ein Zeichen.
+    final big = clusterPlatforms([for (var i = 0; i < 6; i++) at('$i', 0, i * 60.0)]);
+    expect(big, hasLength(1));
+  });
+
+  test('Steignummer nur, wo eine steht', () {
+    expect(platformLabel('de:05914:2020:0:A.1', const {}), '1');
+    expect(platformLabel('de:05124:11376:2:3', const {}), '3');
+    expect(platformLabel('de:05124:11376:91:2', const {'STOP_POINT_LONGNAME': '2'}), '2');
+    expect(platformLabel('de:05124:11376:2:12a', const {}), '12a');
+    for (final id in ['de:05124:11341:1:B', 'de:05124:11376:2:Buch', 'de:05124:11376:2:An', 'de:05124:11376:3:SEV2', 'de:05124:11376:21:S1']) {
+      expect(platformLabel(id, const {}), isNull, reason: id);
+    }
+  });
+
   test('Ankünfte aus TRIAS: Ankunftszeit und Herkunft', () {
     const hbf = Location(id: 'de:05124:11376', providerId: 'vrr', name: 'Wuppertal Hbf', type: LocationType.stop);
     final xml = File('test/fixtures/trias_se_ankuenfte.xml').readAsStringSync();
