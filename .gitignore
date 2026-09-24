@@ -52,5 +52,7 @@ docs/chat-verlauf.txt
 docs/anschreiben-vrr-opendata.md
 
 # Arbeitsnotizen (nur lokal)
+CLAUDE.md
+.claude/
 docs/prompts.md
 docs/superpowers/
