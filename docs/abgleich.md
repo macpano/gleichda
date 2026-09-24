@@ -455,3 +455,5 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Fahrtansicht bei großer Schrift nicht mehr abgeschnitten: Linienschild dort wieder in eigener Breite (die
   feste Spalte wuchs mit der Schrift), Pfeil statt „Richtung“, Zwischenhalte und Echtzeit über die ganze Breite
   darunter; Umstieg zweizeilig („16 min Umstieg“ / „Anschluss sicher“)
+- ✅ Zoomgrenze Stufe 19 auf allen Karten (`mapMaxZoom`): ohne Grenze wurde die Vektorkarte beim Hineinzoomen weiß;
+  der Raster-Rückfall vergrößert ab Stufe 19 seine Kacheln statt zu verschwinden

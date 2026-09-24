@@ -70,7 +70,8 @@ class _BaseMapLayerState extends State<BaseMapLayer> {
     if (s == null) {
       // Bis der Stil da ist: nichts (Kartenhintergrund); scheitert er, Raster.
       return _failed
-          ? TileLayer(urlTemplate: tileUrl, userAgentPackageName: 'de.gleichda.app', maxZoom: 19)
+          // FOSSGIS liefert bis Stufe 19; darüber werden diese Kacheln vergrößert.
+          ? TileLayer(urlTemplate: tileUrl, userAgentPackageName: 'de.gleichda.app', maxNativeZoom: 19, maxZoom: mapMaxZoom)
           : const SizedBox.shrink();
     }
     final layer = vt.VectorTileLayer(
@@ -89,6 +90,11 @@ class _BaseMapLayerState extends State<BaseMapLayer> {
 final _trimmed = Expando<vt.Theme>();
 vt.Theme _withoutTransit(vt.Theme t) => _trimmed[t] ??=
     vt.Theme(id: '${t.id}-ohne-oepnv', layers: t.layers.where((l) => l.id != 'poi_transit').toList());
+
+/// Größte Zoomstufe aller Karten. Die Kartendaten reichen bis Stufe 14, alles
+/// darüber wird hochgerechnet; ohne Grenze wurde die Karte beim Hineinzoomen
+/// irgendwann weiß (Nutzerbefund 24.09.2026). 19 reicht bis auf Gehwegbreite.
+const mapMaxZoom = 19.0;
 
 /// Namensnennung für den Kartengrund (Bedingung von OpenFreeMap und ODbL).
 const mapAttribution = '© OpenStreetMap-Mitwirkende · OpenMapTiles · OpenFreeMap';
