@@ -461,3 +461,10 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   Positionsstrom, solange die Karte sichtbar ist (im Hintergrund ruht das GPS). Fahrtkarte verfolgt sofort nach der
   Erlaubnis (vorher erst nach einem frischen Fix, bis zu 12 s)
 - ✅ Meldungsfilter (Reiter, Orte, Unternehmen) übersteht das Beenden der App: gespeichert in `messagesFilter`
+- ✅ Zeitraster: Skala bis 16 px je Minute (vorher 6 – bei kurzen Zeitspannen blieb der halbe Bildschirm leer),
+  Fahrten mindestens 18 px hoch, Liniennummer immer und mittig im Balken, Punkte unter den Balken
+- ✅ Suche nach Adressen und Haltestellen: zwei Abfragen zugleich – deutschlandweit und mit dem eigenen Ort davor
+  („Wuppertal Kirchstr“); die Auskunft lieferte sonst die ersten 20 Treffer aus ganz Deutschland. Rangfolge: alle
+  Wörter enthalten → im Umkreis von 30 km → Haltestelle vor Adresse → Entfernung. Standort sofort aus der zuletzt
+  bekannten Position (bis 30 min). Ein Kreis um den Standort (TRIAS GeoRestriction) zusammen mit dem Suchtext
+  liefert beim VRR nur Unsinn – geprüft 24.09.2026. Live: `test_live/suche_ort_live_test.dart`

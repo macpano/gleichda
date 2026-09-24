@@ -55,8 +55,48 @@ class TriasProvider implements TransitProvider {
           .compareTo(distanceBetween(b, near) ?? 1e9));
       return list;
     }
-    final list = parseLocations(await _post(_req.locationInformation(q, limit: limit < 20 ? 20 : limit)));
+    // Zwei Abfragen zugleich: deutschlandweit und mit dem eigenen Ort davor.
+    // Die Auskunft liefert sonst die ersten 20 Treffer aus ganz Deutschland –
+    // „Kirchstr“ fand nur Upsprunge, „Friedrich-Ebert-Str 100“ nur andere
+    // Städte; mit „Wuppertal …“ kommt die Adresse vor Ort (gemessen 24.09.2026).
+    final n = limit < 20 ? 20 : limit;
+    final place = near == null ? null : await _placeNear(near);
+    final withPlace = place != null && !q.toLowerCase().contains(place.toLowerCase());
+    final results = await Future.wait([
+      _post(_req.locationInformation(q, limit: n)).then(parseLocations),
+      if (withPlace)
+        _post(_req.locationInformation('$place $q', limit: n))
+            .then(parseLocations)
+            .catchError((Object _) => <Location>[]),
+    ]);
+    final seen = <String>{};
+    final list = [
+      for (final r in results.reversed)
+        for (final l in r)
+          if (seen.add(l.id)) l,
+    ];
     return rankLocations(list, q, near);
+  }
+
+  ({double lat, double lon})? _placeAt;
+  Future<String?>? _place;
+
+  /// Ort (Gemeinde) am Standort aus der nächsten Haltestelle; je Standort
+  /// einmal, neu nach mehr als 2 km.
+  Future<String?> _placeNear(({double lat, double lon}) near) {
+    final last = _placeAt;
+    final moved = last == null ||
+        (distanceBetween(Location(id: '', providerId: '', name: '', lat: last.lat, lon: last.lon), near) ?? 1e9) > 2000;
+    if (_place == null || moved) {
+      _placeAt = near;
+      _place = _post(_req.locationsNear(near.lat, near.lon, radiusMeters: 3000, limit: 3))
+          .then((xml) => parseLocations(xml).map((l) => l.place).whereType<String>().firstOrNull)
+          .catchError((Object _) {
+        _place = null;
+        return null;
+      });
+    }
+    return _place!;
   }
 
   @override
@@ -232,14 +272,27 @@ List<Location> rankLocations(
     return d == null ? double.infinity : (d / 250).floorToDouble();
   }
 
-  // Haltestellen immer vor Orten, Adressen und Sonderzielen.
+  // Was im Umkreis von 30 km liegt, vor Fernem – sonst stand eine gleichnamige
+  // Haltestelle 300 km weg vor der Adresse vor Ort (Nutzerbefund 24.09.2026).
+  int far(Location l) {
+    if (near == null) return 0;
+    final d = distanceBetween(l, near);
+    return d != null && d > 30000 ? 1 : 0;
+  }
+
+  // Innerhalb dessen Haltestellen vor Orten, Adressen und Sonderzielen.
   int kind(Location l) => l.type == LocationType.stop ? 0 : 1;
   final keyed = [for (final l in list) (l, tier(l), bucket(l), quality(l))];
+  // Reihenfolge: alle eingegebenen Wörter enthalten („Köln Neumarkt“ findet
+  // Köln, nicht den Neumarkt vor Ort) → nah vor fern → Haltestelle vor
+  // Adresse → Entfernung → Güte.
   keyed.sort((a, b) {
-    final k = kind(a.$1).compareTo(kind(b.$1));
-    if (k != 0) return k;
     final t = a.$2.compareTo(b.$2);
     if (t != 0) return t;
+    final f = far(a.$1).compareTo(far(b.$1));
+    if (f != 0) return f;
+    final k = kind(a.$1).compareTo(kind(b.$1));
+    if (k != 0) return k;
     final d = a.$3.compareTo(b.$3);
     if (d != 0) return d;
     return b.$4.compareTo(a.$4);

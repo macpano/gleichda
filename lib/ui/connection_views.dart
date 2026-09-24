@@ -338,7 +338,10 @@ class _ConnectionGridState extends State<ConnectionGrid> {
     final mq = MediaQuery.of(context);
     final top = _top ?? mq.size.height * 0.4;
     final avail = mq.size.height - top - mq.padding.bottom - widget.reserveBelow - ConnectionGrid.headHeight - 6 - 20;
-    final perMinute = (avail / minutes).clamp(1.2, 6.0);
+    // Kurze Zeitspannen dürfen groß werden (vorher höchstens 6 px je Minute –
+    // bei 35 min blieb der halbe Bildschirm leer und 3-min-Fahrten waren zu
+    // klein für die Liniennummer).
+    final perMinute = (avail / minutes).clamp(1.2, 16.0);
     final height = minutes * perMinute;
     double y(DateTime t) => t.difference(base).inSeconds / 60 * perMinute;
 
@@ -358,13 +361,18 @@ class _ConnectionGridState extends State<ConnectionGrid> {
     Widget column(ConnectionItem item) {
       final trip = item.trip;
       final dep = trip.rides.isEmpty ? trip.departure : trip.rides.first.from.departure!;
+      // Punkte (Fußwege, Warten) unten, Fahrten darüber – ein auf Mindesthöhe
+      // gestreckter Balken verdeckt so die Punkte, nicht umgekehrt.
       final segs = <Widget>[];
+      final dots = <Widget>[];
       for (final l in trip.legs) {
         final s = (l.from.departure ?? l.from.arrival)?.best;
         final e = (l.to.arrival ?? l.to.departure)?.best ??
             s?.add(Duration(minutes: l.durationMinutes ?? 0));
         if (s == null || e == null) continue;
-        final top = y(s), h = math.max(y(e) - top, 6.0);
+        final top = y(s);
+        // Fahrten mindestens so hoch, dass die Liniennummer hineinpasst.
+        final h = math.max(y(e) - top, l.type == LegType.ride ? 18.0 : 6.0);
         if (l.type == LegType.ride) {
           segs.add(Positioned(
             top: top,
@@ -372,25 +380,26 @@ class _ConnectionGridState extends State<ConnectionGrid> {
             right: 4,
             height: h,
             child: Container(
-              padding: const EdgeInsets.only(top: 4),
-              alignment: Alignment.topCenter,
+              // Liniennummer mittig im Balken (Nutzerwunsch 24.09.2026).
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              alignment: Alignment.center,
               clipBehavior: Clip.hardEdge,
               decoration: BoxDecoration(
                 color: lineColor(context, l.line),
                 borderRadius: BorderRadius.circular(6),
               ),
-              // Name nur, wenn der Balken hoch genug ist.
-              child: h < 20
-                  ? null
-                  : Text(l.line?.name ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.clip,
-                      textScaler: TextScaler.noScaling,
-                      style: context.t.lineNumber.copyWith(fontSize: 12)),
+              // Liniennummer immer; in knappen Balken etwas kleiner.
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(l.line?.name ?? '',
+                    maxLines: 1,
+                    textScaler: TextScaler.noScaling,
+                    style: context.t.lineNumber.copyWith(fontSize: h < 24 ? 11 : 12)),
+              ),
             ),
           ));
         } else {
-          segs.add(Positioned(
+          dots.add(Positioned(
             top: top,
             left: ConnectionGrid.colWidth / 2 - 1.5,
             width: 3,
@@ -404,7 +413,7 @@ class _ConnectionGridState extends State<ConnectionGrid> {
       for (var i = 0; i + 1 < rides.length; i++) {
         final a = rides[i].to.arrival?.best, b = rides[i + 1].from.departure?.best;
         if (a == null || b == null || !b.isAfter(a)) continue;
-        segs.add(Positioned(
+        dots.add(Positioned(
           top: y(a),
           left: ConnectionGrid.colWidth / 2 - 1.5,
           width: 3,
@@ -437,7 +446,7 @@ class _ConnectionGridState extends State<ConnectionGrid> {
                 ]),
               ),
               const SizedBox(height: 6),
-              SizedBox(height: height, child: Stack(children: segs)),
+              SizedBox(height: height, child: Stack(children: [...dots, ...segs])),
             ]),
           ),
         ),

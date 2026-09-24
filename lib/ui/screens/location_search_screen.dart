@@ -71,7 +71,15 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
 
   Future<void> _locate() async {
     try {
-      final p = await ref.read(locationServiceProvider).current();
+      // Sofort die zuletzt bekannte Position (bis 30 min alt) zum Sortieren –
+      // sonst wartete die Suche bis zu 12 s auf einen frischen Fix und suchte
+      // in der Zeit ohne Standort. Die frische Position ersetzt sie danach.
+      final loc = ref.read(locationServiceProvider);
+      final known = await loc.lastKnown(maxAge: const Duration(minutes: 30));
+      if (known != null && mounted && _here == null) {
+        setState(() => _here = (lat: known.latitude, lon: known.longitude));
+      }
+      final p = await loc.current(preferRecent: true);
       if (!mounted) return;
       setState(() => _here = p);
       if (!widget.showNearby) return;
