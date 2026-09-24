@@ -391,3 +391,20 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Unternehmen suchen im ganzen Verbund: `parseOperators` liest aus allen Meldungen (`XML_ADDINFO_REQUEST`, ein Abruf,
   10 min gemerkt) je Netzkürzel den Betreibernamen; die Suche zeigt ohne Eingabe die Umgebung, mit Eingabe alle.
   Die Unternehmensseite zeigt Meldungen im ganzen Verbund statt nur in der Umgebung
+
+## 0.4.17 (24.09.2026) – Nutzerbefunde
+- ✅ Karte lädt nicht mehr bei jedem Verschieben neu: Haltestellen und Steige bleiben im Speicher, nachgeladen
+  wird nur, wenn der Ausschnitt aus den schon abgefragten Kreisen herausragt (ein Stück größer abgefragt, bei
+  voller Liste gilt nur der halbe Kreis als abgedeckt). Der Hinweis „Wird geladen …“ erscheint nur noch, solange
+  gar nichts da ist
+- ✅ Einzelne Steige erst ab Zoomstufe 17,5 (vorher 16,5); darunter zusammengefasst. Die Fußweg-Navigation zeigt
+  die Steige weiterhin immer
+- ✅ Vergangene Fahrten behalten ihre Echtzeit: Die VRR-Auskunft kennt Ist-Zeiten nur etwa eine Stunde, danach
+  überschrieb die Aktualisierung sie mit Planzeiten. `keepKnownRealtime` behält bekannte Ist-Zeiten vergangener
+  Halte. Wer eine Fahrt erst Stunden später öffnet, sieht weiterhin nur den Plan – die Daten gibt es nicht mehr
+- ✅ Ankünfte: Abfahrtstafel → Zeit → „Abfahrten | Ankünfte“. TRIAS `StopEventType arrival` (Herkunft aus
+  `OriginText`), Transitous `arriveBy` (`tripFrom`); ein Tipp zeigt die Fahrt vom Start bis zur Haltestelle.
+  Live geprüft am Hbf und an einer Endhaltestelle (`test_live/ankuenfte_live_test.dart`)
+- ✅ Meldungen: Filter-Knopf mit Umkreis (2/5/10/20 km, gemerkt), Ort (Gemeinden im Umkreis, Namen aus der EFA)
+  und Unternehmen; wirkt zusätzlich zu Alle/Abos/Haltestellen. Ab 10 km ein zweiter Ring, höchstens 16 Orte,
+  höchstens sechs Abfragen gleichzeitig

@@ -111,9 +111,10 @@ abstract class TransitProvider {
   Future<List<Location>> searchLocations(String query,
       {({double lat, double lon})? near, int limit = 10, int radiusMeters = 1000});
 
-  /// Abfahrten an einer Haltestelle ab [time] (Standard: jetzt).
+  /// Abfahrten an einer Haltestelle ab [time] (Standard: jetzt); mit
+  /// [arrivals] die ankommenden Fahrten.
   Future<DepartureBoard> departures(Location stop,
-      {DateTime? time, int limit = 20});
+      {DateTime? time, int limit = 20, bool arrivals = false});
 
   /// Verbindungen von A nach B.
   Future<List<Trip>> planTrip(TripQuery query);
@@ -126,8 +127,8 @@ abstract class TransitProvider {
   Future<List<Message>> messages({List<String> lineIds = const [], List<String> regions = const []});
 
   /// Gebiete für Meldungen rund um einen Ort (beim VRR die Gemeinden im
-  /// Umkreis von etwa 5 km, der eigene Ort zuerst).
-  Future<List<String>> regionsOf(GeoPoint near);
+  /// Umkreis [radiusMeters], der eigene Ort zuerst): Kennung → Name.
+  Future<Map<String, String>> regionsOf(GeoPoint near, {int radiusMeters = 5000});
 
   /// Steige einer Haltestelle mit Koordinaten. Leer, wenn unbekannt.
   Future<List<Platform>> platforms(Location stop);
@@ -158,7 +159,7 @@ abstract class TransitProvider {
 
   /// Linien in der weiteren Umgebung (etwa 5 km) – daraus ergeben sich die
   /// Verkehrsunternehmen vor Ort.
-  Future<List<Line>> linesAround(GeoPoint near);
+  Future<List<Line>> linesAround(GeoPoint near, {int radiusMeters = 5000});
 
   /// Aktuelle und angekündigte Meldungen zu einer Linie (Schlüssel wie
   /// „wsw:66604“), unabhängig vom Ort.

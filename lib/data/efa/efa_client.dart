@@ -184,7 +184,8 @@ class EfaClient {
   }
 
   /// Nächste Haltestellen (Kennung und Gemeinde) nahe einer Koordinate.
-  Future<List<({String id, String? omc})>> stopsNear(double lat, double lon, {int radiusMeters = 1500}) async {
+  Future<List<({String id, String? omc, String? place})>> stopsNear(double lat, double lon,
+      {int radiusMeters = 1500}) async {
     final json = await _get('XML_COORD_REQUEST', {
       'coord': '${lon.toStringAsFixed(5)}:${lat.toStringAsFixed(5)}:WGS84[dd.ddddd]',
       'inclFilter': '1',
@@ -195,7 +196,11 @@ class EfaClient {
     return [
       for (final l in (json['locations'] as List?) ?? const [])
         if (l is Map && l['id'] is String)
-          (id: l['id'] as String, omc: omcFromPlaceId(((l['parent'] as Map?)?['id']) as String?)),
+          (
+            id: l['id'] as String,
+            omc: omcFromPlaceId(((l['parent'] as Map?)?['id']) as String?),
+            place: ((l['parent'] as Map?)?['name']) as String?,
+          ),
     ];
   }
 

@@ -215,6 +215,10 @@ abstract class Departure with _$Departure {
     String? journeyRef,
     String? operatingDay,
     @Default(<String>[]) List<String> messageIds,
+
+    /// Ankunft statt Abfahrt: [time] ist die Ankunft, [direction] die
+    /// Herkunft der Fahrt.
+    @Default(false) bool arrival,
   }) = _Departure;
 
   factory Departure.fromJson(Map<String, dynamic> json) =>

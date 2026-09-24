@@ -20,9 +20,9 @@ void main() {
       final near = await p.linesNear(at);
       final around = await p.linesAround(at);
       final nets = {for (final l in [...near, ...around]) lineKey(l.id).split(':').first};
-      final list = await p.messages(regions: regions);
+      final list = await p.messages(regions: regions.keys.toList());
       final s = MessagesState(list, DateTime.now(),
-          nearLines: {for (final l in near) lineKey(l.id)}, homeRegion: regions.firstOrNull, areaNetworks: nets);
+          nearLines: {for (final l in near) lineKey(l.id)}, homeRegion: regions.keys.firstOrNull, areaNetworks: nets);
       // ignore: avoid_print
       print('$name: Gebiete $regions, Netze $nets, ${list.length} Meldungen, relevant ${list.where(s.isRelevant).length}');
       for (final m in list.where((m) => m.lineNames.contains('511') || m.title.contains('511') || (m.text ?? '').contains('511'))) {

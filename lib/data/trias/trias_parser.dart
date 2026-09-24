@@ -300,7 +300,9 @@ List<Location> parseLocations(String xml) {
   return out;
 }
 
-DepartureBoard parseStopEvents(String xml, Location stop) {
+/// Abfahrten – mit [arrivals] Ankünfte: Zeit ist dann die Ankunft,
+/// Richtung die Herkunft („OriginText“).
+DepartureBoard parseStopEvents(String xml, Location stop, {bool arrivals = false}) {
   final payload = _payload(xml);
   final res = payload.el('StopEventResponse');
   if (res == null) return const DepartureBoard([], []);
@@ -311,7 +313,7 @@ DepartureBoard parseStopEvents(String xml, Location stop) {
     final call = ev?.path(['ThisCall', 'CallAtStop']);
     final service = ev?.el('Service');
     if (call == null || service == null) continue;
-    final time = _eventTime(call.el('ServiceDeparture'));
+    final time = _eventTime(call.el(arrivals ? 'ServiceArrival' : 'ServiceDeparture'));
     if (time == null) continue;
     final cancelled = service.el('Cancelled')?.innerText.trim() == 'true';
     final deviation = service.el('Deviation')?.innerText.trim() == 'true';
@@ -324,7 +326,8 @@ DepartureBoard parseStopEvents(String xml, Location stop) {
     deps.add(Departure(
       stop: stop,
       line: line,
-      direction: displayName(service.txt('DestinationText') ?? '', homePlace),
+      direction: displayName(
+          (arrivals ? service.txt('OriginText') : null) ?? service.txt('DestinationText') ?? '', homePlace),
       time: time,
       plannedPlatform: call.txt('PlannedBay'),
       platform: call.txt('EstimatedBay') ?? call.txt('PlannedBay'),
@@ -332,6 +335,7 @@ DepartureBoard parseStopEvents(String xml, Location stop) {
       journeyRef: service.el('JourneyRef')?.innerText.trim(),
       operatingDay: service.el('OperatingDayRef')?.innerText.trim(),
       messageIds: _situationRefs(service),
+      arrival: arrivals,
     ));
   }
   deps.sort((a, b) => a.time.best.compareTo(b.time.best));

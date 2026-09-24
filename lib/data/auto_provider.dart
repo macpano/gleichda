@@ -44,8 +44,8 @@ class AutoProvider implements TransitProvider {
   }
 
   @override
-  Future<DepartureBoard> departures(Location stop, {DateTime? time, int limit = 20}) =>
-      (_isMotis(stop) ? motis : vrr).departures(stop, time: time, limit: limit);
+  Future<DepartureBoard> departures(Location stop, {DateTime? time, int limit = 20, bool arrivals = false}) =>
+      (_isMotis(stop) ? motis : vrr).departures(stop, time: time, limit: limit, arrivals: arrivals);
 
   @override
   Future<List<Trip>> planTrip(TripQuery query) async {
@@ -101,16 +101,16 @@ class AutoProvider implements TransitProvider {
       vrr.messages(lineIds: lineIds, regions: regions);
 
   @override
-  Future<List<String>> regionsOf(GeoPoint near) =>
-      inVrrLand(near.lat, near.lon) ? vrr.regionsOf(near) : Future.value(const []);
+  Future<Map<String, String>> regionsOf(GeoPoint near, {int radiusMeters = 5000}) =>
+      inVrrLand(near.lat, near.lon) ? vrr.regionsOf(near, radiusMeters: radiusMeters) : Future.value(const {});
 
   @override
   Future<List<Line>> linesNear(GeoPoint near) =>
       inVrrLand(near.lat, near.lon) ? vrr.linesNear(near) : Future.value(const []);
 
   @override
-  Future<List<Line>> linesAround(GeoPoint near) =>
-      inVrrLand(near.lat, near.lon) ? vrr.linesAround(near) : Future.value(const []);
+  Future<List<Line>> linesAround(GeoPoint near, {int radiusMeters = 5000}) =>
+      inVrrLand(near.lat, near.lon) ? vrr.linesAround(near, radiusMeters: radiusMeters) : Future.value(const []);
 
   @override
   Future<List<Message>> messagesForLine(String lineKey) => vrr.messagesForLine(lineKey);

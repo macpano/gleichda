@@ -210,6 +210,7 @@ _Departure _$DepartureFromJson(Map<String, dynamic> json) => _Departure(
           ?.map((e) => e as String)
           .toList() ??
       const <String>[],
+  arrival: json['arrival'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$DepartureToJson(_Departure instance) =>
@@ -224,6 +225,7 @@ Map<String, dynamic> _$DepartureToJson(_Departure instance) =>
       'journeyRef': ?instance.journeyRef,
       'operatingDay': ?instance.operatingDay,
       'messageIds': instance.messageIds,
+      'arrival': instance.arrival,
     };
 
 _Message _$MessageFromJson(Map<String, dynamic> json) => _Message(
