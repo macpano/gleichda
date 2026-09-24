@@ -395,6 +395,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "8.3.2"
+  flutter_map_vector_tiles:
+    dependency: "direct main"
+    description:
+      name: flutter_map_vector_tiles
+      sha256: "77176ea773abd1fc4859561093208bdd1fe2b82b2f4e6bf01f5e0086cd5977a8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.9.0"
   flutter_native_splash:
     dependency: "direct dev"
     description:

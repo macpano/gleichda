@@ -17,6 +17,7 @@ import 'package:gleichda/data/transit_provider.dart';
 import 'package:gleichda/data/trias/trias_parser.dart';
 import 'package:gleichda/domain/companion.dart';
 import 'package:gleichda/domain/realtime_memory.dart';
+import 'package:gleichda/state/compass.dart' show smoothHeading;
 import 'package:gleichda/domain/connections.dart';
 import 'package:gleichda/domain/models.dart';
 import 'package:gleichda/domain/settings.dart';
@@ -53,6 +54,12 @@ Leg ride(String from, EventTime dep, String to, EventTime arr, {List<StopTime> v
     );
 
 void main() {
+  test('Kompass glätten über den Nullpunkt hinweg', () {
+    expect(smoothHeading(350, 10, factor: 0.5), closeTo(0, 0.001));
+    expect(smoothHeading(10, 350, factor: 0.5), closeTo(0, 0.001));
+    expect(smoothHeading(90, 180, factor: 1), closeTo(180, 0.001));
+  });
+
   testWidgets('Linienschilder in Listen: feste Spalte, lange Namen passen hinein', (t) async {
     Future<Size> size(String name) async {
       await t.pumpWidget(MaterialApp(

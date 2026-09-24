@@ -13,9 +13,9 @@ import '../domain/settings.dart';
 import '../state/companion.dart';
 import '../state/location.dart';
 import '../state/providers.dart';
-import 'screens/walk_screen.dart' show tileUrl;
 import 'theme.dart';
 import 'widgets.dart';
+import 'base_map.dart';
 
 LatLng? _ll(StopTime s) => s.stop.lat == null || s.stop.lon == null ? null : LatLng(s.stop.lat!, s.stop.lon!);
 
@@ -38,6 +38,9 @@ class TripMap extends ConsumerStatefulWidget {
 
 class _TripMapState extends ConsumerState<TripMap> {
   final _map = MapController();
+
+  /// Karte gedreht: Kompassknopf zeigen.
+  bool _rotated = false;
   StreamSubscription<Position>? _sub;
   LatLng? _me;
 
@@ -163,14 +166,19 @@ class _TripMapState extends ConsumerState<TripMap> {
       mapController: _map,
       options: MapOptions(
         initialCameraFit: CameraFit.coordinates(coordinates: pts, padding: const EdgeInsets.all(40), maxZoom: 16),
+        // Mit zwei Fingern drehbar; die Vektorkarte hält die Schrift aufrecht.
         interactionOptions: InteractionOptions(
-          flags: widget.interactive ? InteractiveFlag.all & ~InteractiveFlag.rotate : InteractiveFlag.none,
+          flags: widget.interactive ? InteractiveFlag.all : InteractiveFlag.none,
         ),
+        onPositionChanged: (camera, _) {
+          final rotated = camera.rotation.abs() % 360 > 0.5;
+          if (rotated != _rotated) setState(() => _rotated = rotated);
+        },
       ),
       children: [
-        TileLayer(urlTemplate: tileUrl, userAgentPackageName: 'de.gleichda.app', maxZoom: 19),
+        const BaseMapLayer(),
         PolylineLayer(polylines: lines),
-        MarkerLayer(markers: [
+        MarkerLayer(rotate: true, markers: [
           ...stops,
           if (_me != null)
             Marker(
@@ -195,11 +203,17 @@ class _TripMapState extends ConsumerState<TripMap> {
             alignment: Alignment.topRight,
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: MapButton(
-                icon: Icons.my_location,
-                tooltip: 'Auf mich zentrieren',
-                onTap: () => _map.move(_me!, _map.camera.zoom < 15 ? 16 : _map.camera.zoom),
-              ),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                MapButton(
+                  icon: Icons.my_location,
+                  tooltip: 'Auf mich zentrieren',
+                  onTap: () => _map.move(_me!, _map.camera.zoom < 15 ? 16 : _map.camera.zoom),
+                ),
+                if (_rotated) ...[
+                  const SizedBox(height: 10),
+                  MapButton(icon: Icons.explore, tooltip: 'Norden oben', onTap: () => _map.rotate(0)),
+                ],
+              ]),
             ),
           ),
       ],
@@ -250,7 +264,7 @@ class MapCredit extends StatelessWidget {
           color: c.surface.withValues(alpha: 0.75),
           borderRadius: BorderRadius.circular(3),
         ),
-        child: Text('© OpenStreetMap-Mitwirkende',
+        child: Text(mapAttribution,
             textScaler: TextScaler.noScaling, style: TextStyle(fontSize: 9, color: c.muted)),
       ),
     );

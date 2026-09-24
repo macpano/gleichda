@@ -12,12 +12,14 @@ import '../../data/transit_provider.dart';
 import '../../data/walk_route.dart';
 import '../../domain/models.dart';
 import '../../domain/settings.dart';
+import '../../state/compass.dart';
 import '../../state/location.dart';
 import '../../state/providers.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../trip_map.dart' show MapButton, MapCredit;
 import '../widgets.dart';
+import '../base_map.dart';
 
 /// Kartenkacheln: FOSSGIS (tile.openstreetmap.de). Der Kachelserver von
 /// openstreetmap.org selbst darf von Apps nicht dauerhaft genutzt werden.
@@ -63,11 +65,45 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
   /// verschiebt.
   bool _follow = false;
 
+  /// Blickrichtung aus dem Kompass (0 = Norden), geglättet; null ohne Sensor.
+  double? _heading;
+  StreamSubscription<double>? _compassSub;
+
+  /// Beim Folgen dreht sich die Karte mit der Blickrichtung; der
+  /// Kompassknopf stellt Norden wieder nach oben.
+  bool _headingUp = true;
+
   void _center() {
     final p = _pos;
     if (p == null) return;
     setState(() => _follow = true);
-    _map.move(LatLng(p.latitude, p.longitude), math.max(_map.camera.zoom, 17.5));
+    _map.moveAndRotate(
+      LatLng(p.latitude, p.longitude),
+      math.max(_map.camera.zoom, 17.5),
+      _headingUp && _heading != null ? -_heading! : 0,
+    );
+  }
+
+  void _onHeading(double raw) {
+    final prev = _heading;
+    final next = prev == null ? raw : smoothHeading(prev, raw);
+    // Kleine Zitterbewegungen nicht zeichnen.
+    if (prev != null && (((next - prev + 540) % 360) - 180).abs() < 1.5) return;
+    setState(() => _heading = next);
+    if (_follow && _headingUp) {
+      try {
+        _map.rotate(-next);
+      } catch (_) {
+        // Karte noch nicht bereit.
+      }
+    }
+  }
+
+  void _toggleNorth() {
+    setState(() => _headingUp = !_headingUp);
+    try {
+      _map.rotate(_headingUp && _follow && _heading != null ? -_heading! : 0);
+    } catch (_) {}
   }
 
   /// Mehr als 2 km entfernt: keine Führung vom Standort (sonst „333 min zu
@@ -145,10 +181,12 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
     super.initState();
     _loadPlatforms();
     _startLocation();
+    _compassSub = compassHeadings().listen(_onHeading);
   }
 
   @override
   void dispose() {
+    _compassSub?.cancel();
     _sub?.cancel();
     super.dispose();
   }
@@ -262,6 +300,8 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
     final now = ref.watch(clockProvider).value ?? DateTime.now();
     final t = _target;
     final p = _pos;
+    // Blickrichtung: Kompass, sonst beim Gehen der GPS-Kurs.
+    final facing = _heading ?? (p != null && p.speed > 0.6 && p.heading > 0 ? p.heading : null);
     double? dist;
     String? direction;
     double? bearing;
@@ -286,8 +326,8 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
           ? (turn.step.type == 'arrive'
               ? 'Ziel in ${distanceText(turn.meters)}'
               : 'In ${distanceText(turn.meters)}: ${turn.step.text}')
-          : p.speed > 0.6 && p.heading > 0
-              ? _relative(bearing, p.heading)
+          : facing != null
+              ? _relative(bearing, facing)
               : 'Richtung ${_compass(bearing)}';
     }
     // Gehzeit: Weg (sonst Luftlinie × 1,3) bei 1,3 m/s, angepasst an die
@@ -303,7 +343,7 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
     final platformName = t?.name ?? widget.platform;
     final headerTitle = platformName != null ? 'Zu Steig $platformName' : 'Zur Haltestelle';
     final minutesLeft = dep?.difference(now).inMinutes;
-    final arrow = p != null && p.speed > 0.6 && p.heading > 0 && bearing != null ? bearing - p.heading : bearing;
+    final arrow = facing != null && bearing != null ? bearing - facing : bearing;
     final instruction = dist == null
         ? (_error ?? 'Standort wird ermittelt')
         : direction![0].toUpperCase() + direction.substring(1);
@@ -354,7 +394,7 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
                         },
                       ),
                       children: [
-                        TileLayer(urlTemplate: tileUrl, userAgentPackageName: 'de.gleichda.app', maxZoom: 19),
+                        const BaseMapLayer(),
                         if (route != null)
                           PolylineLayer(polylines: [
                             Polyline(
@@ -374,31 +414,30 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
                               pattern: StrokePattern.dotted(),
                             ),
                           ]),
-                        MarkerLayer(markers: [
-                          for (final o in _platforms ?? const <Platform>[])
-                            if (o.id != t.id)
-                              Marker(
-                                point: LatLng(o.lat, o.lon),
-                                width: 24,
-                                height: 24,
-                                child: _PlatformDot(label: o.name ?? '', color: c.muted, bg: c.surface),
-                              ),
+                        // Steigschilder bleiben beim Drehen der Karte aufrecht.
+                        // Nur der Steig, zu dem es geht – andere Steige und
+                        // Haltestellen lenken in der Navigation nur ab.
+                        MarkerLayer(rotate: true, markers: [
                           Marker(
                             point: LatLng(t.lat, t.lon),
                             width: 30,
                             height: 30,
                             child: _PlatformDot(label: platformName ?? 'H', color: c.onAccent, bg: c.accent, big: true),
                           ),
+                        ]),
+                        // Eigener Pfeil: dreht mit der Karte, zeigt also immer
+                        // in die echte Blickrichtung.
+                        MarkerLayer(markers: [
                           if (p != null)
                             Marker(
                               point: LatLng(p.latitude, p.longitude),
                               width: 34,
                               height: 34,
-                              // Beim Gehen ein Pfeil in Laufrichtung (GPS-Kurs,
-                              // Karte ist genordet), im Stand ein Punkt.
-                              child: p.speed > 0.6 && p.heading > 0
+                              // Pfeil in Blickrichtung (Kompass, sonst GPS-Kurs
+                              // beim Gehen), ohne beides ein Punkt.
+                              child: facing != null
                                   ? Transform.rotate(
-                                      angle: p.heading * math.pi / 180,
+                                      angle: facing * math.pi / 180,
                                       child: const Icon(Icons.navigation, size: 30, color: Color(0xFF1D5FD1),
                                           shadows: [Shadow(color: Colors.white, blurRadius: 3)]),
                                     )
@@ -422,12 +461,24 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
                             alignment: Alignment.topRight,
                             child: Padding(
                               padding: const EdgeInsets.all(12),
-                              child: MapButton(
-                                icon: _follow ? Icons.my_location : Icons.location_searching,
-                                tooltip: 'Auf mich zentrieren',
-                                active: _follow,
-                                onTap: _center,
-                              ),
+                              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                                MapButton(
+                                  icon: _follow ? Icons.my_location : Icons.location_searching,
+                                  tooltip: 'Auf mich zentrieren',
+                                  active: _follow,
+                                  onTap: _center,
+                                ),
+                                // Kompass: Blickrichtung oben ↔ Norden oben.
+                                if (_heading != null) ...[
+                                  const SizedBox(height: 10),
+                                  MapButton(
+                                    icon: _headingUp ? Icons.explore : Icons.explore_outlined,
+                                    tooltip: _headingUp ? 'Norden oben' : 'Blickrichtung oben',
+                                    active: _headingUp,
+                                    onTap: _toggleNorth,
+                                  ),
+                                ],
+                              ]),
                             ),
                           ),
                       ],

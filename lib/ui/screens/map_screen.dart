@@ -16,7 +16,7 @@ import '../trip_map.dart' show MapButton, MapCredit;
 import '../widgets.dart';
 import 'departures_screen.dart' show DepartureRow;
 import 'trip_screen.dart';
-import 'walk_screen.dart' show tileUrl;
+import '../base_map.dart';
 
 /// Reiter „Karte“: Haltestellen im sichtbaren Ausschnitt; Tipp auf eine
 /// Haltestelle zeigt ihre Abfahrten, Tipp auf eine Abfahrt die Fahrt mit
@@ -67,6 +67,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   /// Höchstens so viele Haltestellen je Abfrage.
   static const _limit = 60;
   bool _detail = false;
+
+  /// Karte gedreht: Kompassknopf zeigen.
+  bool _rotated = false;
 
   /// Wuppertal Hbf, bis der Standort da ist.
   static const _fallback = LatLng(51.2544, 7.1495);
@@ -296,7 +299,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           options: MapOptions(
             initialCenter: _me ?? _fallback,
             initialZoom: 15.5,
-            interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
+            // Mit zwei Fingern drehbar; die Vektorkarte hält die Schrift aufrecht.
+            interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
             // Auch Bewegungen per Knopf (Zentrieren, Fahrt zeigen) laden nach.
             onPositionChanged: (camera, gesture) {
               _scheduleStops();
@@ -304,12 +308,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 _bounds = camera.visibleBounds;
                 _detail = camera.zoom >= _platformZoom;
                 _tooFar = camera.zoom < _minZoom;
+                _rotated = camera.rotation.abs() % 360 > 0.5;
               });
             },
             onMapReady: _scheduleStops,
           ),
           children: [
-            TileLayer(urlTemplate: tileUrl, userAgentPackageName: 'de.gleichda.app', maxZoom: 19),
+            const BaseMapLayer(),
             if (tripLine.length >= 2)
               PolylineLayer(
                 polylines: [
@@ -322,7 +327,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   ),
                 ],
               ),
+            // Haltestellen- und Steigschilder bleiben beim Drehen aufrecht.
             MarkerLayer(
+              rotate: true,
               markers: [
                 ..._stopMarkers(c.accent),
                 for (final s in tripStops)
@@ -392,11 +399,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   ],
                 ),
               ),
-              MapButton(
-                icon: Icons.my_location,
-                tooltip: 'Auf mich zentrieren',
-                onTap: () => _me == null ? _locate() : _map.move(_me!, math.max(_map.camera.zoom, 16)),
-              ),
+              Column(mainAxisSize: MainAxisSize.min, children: [
+                MapButton(
+                  icon: Icons.my_location,
+                  tooltip: 'Auf mich zentrieren',
+                  onTap: () => _me == null ? _locate() : _map.move(_me!, math.max(_map.camera.zoom, 16)),
+                ),
+                if (_rotated) ...[
+                  const SizedBox(height: 10),
+                  MapButton(icon: Icons.explore, tooltip: 'Norden oben', onTap: () => _map.rotate(0)),
+                ],
+              ]),
             ],
           ),
         ),

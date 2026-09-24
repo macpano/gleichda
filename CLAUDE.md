@@ -164,4 +164,7 @@ keine Echtzeit. Keine Verläufe, keine Schatten, Systemschrift.
 - **Rückmeldung** (Mehr → Funktion vorschlagen / Fehler melden): FormSubmit mit Kennung `feedbackEndpoint`
   (`lib/data/feedback.dart`), Anfragen brauchen `Origin`/`Referer` https://github.com/macpano/gleich.da. Die
   Empfängeradresse steht **nie** im Repo (öffentlich) – nur die Kennung.
-- Kartenkacheln vorläufig FOSSGIS (`tile.openstreetmap.de`), offene Entscheidung im Konzept.
+- **Karte (seit 24.09.2026):** Vektorkarte von OpenFreeMap (`lib/ui/base_map.dart`, Paket `flutter_map_vector_tiles`),
+  Schrift bleibt beim Drehen aufrecht; FOSSGIS-Raster (`tile.openstreetmap.de`) nur als Rückfall. Im Widget-Test zeichnet
+  das Paket nicht (Grund bleibt leer) – prüfen über eine Web-Probe (`flutter build web` einer kleinen Karte, im Browser).
+  Kompass für die Fußweg-Navigation über `MainActivity` (EventChannel `de.gleichda/compass`), in Tests `compassSource` leer.
