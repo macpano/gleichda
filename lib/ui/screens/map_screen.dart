@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart' show Position;
 import 'package:latlong2/latlong.dart';
 
 import '../../data/trias/trias_parser.dart' show stopAreaId;
@@ -74,6 +75,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   /// Wuppertal Hbf, bis der Standort da ist.
   static const _fallback = LatLng(51.2544, 7.1495);
 
+  /// Laufende Standortverfolgung – nur solange die Karte zu sehen ist (die
+  /// Reiter bleiben im Hintergrund bestehen, das GPS soll dort ruhen).
+  StreamSubscription<Position>? _sub;
+  bool _located = false;
+
   @override
   void initState() {
     super.initState();
@@ -81,7 +87,25 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _followLocation(TickerMode.valuesOf(context).enabled);
+  }
+
+  void _followLocation(bool visible) {
+    if (visible && _located && _sub == null) {
+      _sub = ref.read(locationServiceProvider).watch().listen((p) {
+        if (mounted) setState(() => _me = LatLng(p.latitude, p.longitude));
+      }, onError: (Object _) {});
+    } else if (!visible && _sub != null) {
+      _sub!.cancel();
+      _sub = null;
+    }
+  }
+
+  @override
   void dispose() {
+    _sub?.cancel();
     _debounce?.cancel();
     super.dispose();
   }
@@ -93,6 +117,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       setState(() => _me = LatLng(p.lat, p.lon));
       if (move) _map.move(_me!, 16);
       _scheduleStops();
+      // Erlaubnis ist da: ab jetzt laufend nachführen.
+      _located = true;
+      _followLocation(TickerMode.valuesOf(context).enabled);
     } catch (_) {
       _scheduleStops();
     }
