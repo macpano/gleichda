@@ -38,6 +38,7 @@ import 'package:gleichda/ui/screens/trip_screen.dart';
 import 'package:gleichda/ui/screens/walk_screen.dart';
 import 'package:gleichda/domain/settings.dart';
 import 'package:gleichda/ui/theme.dart';
+import 'package:gleichda/ui/widgets.dart' show ChoiceChipX;
 import 'package:gleichda/ui/trip_map.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -353,7 +354,9 @@ void main() {
           await t.pump(const Duration(milliseconds: 150));
         }
         await t.tap(find.text('Wuppertal'));
+        await t.tap(find.text('Herdecke'));
         await t.tap(find.text('VER'));
+        await t.tap(find.widgetWithText(ChoiceChipX, 'WSW').last);
         await t.pump();
         await t.tap(find.text('Fertig'));
         for (var i = 0; i < 4; i++) {
@@ -368,6 +371,8 @@ void main() {
           await t.pump(const Duration(milliseconds: 150));
         }
         await t.tap(find.text('Herdecke'));
+        await t.tap(find.text('Solingen'));
+        await t.tap(find.widgetWithText(ChoiceChipX, 'WSW').last);
         await t.pump(const Duration(milliseconds: 200));
       }));
   testWidgets('Mehr', (t) => shot(t, 'mehr', const Scaffold(body: MoreScreen())));
