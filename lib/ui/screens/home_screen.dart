@@ -855,7 +855,7 @@ class _HistorySection extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
-              'Deine Suchen erscheinen hier und lassen sich mit einem Tipp wiederholen.',
+              'Deine Suchen erscheinen hier; ein Tipp übernimmt Start und Ziel in die Suche.',
               style: context.t.secondary.copyWith(color: c.muted),
             ),
           )
@@ -877,7 +877,9 @@ class _HistorySection extends ConsumerWidget {
                   },
                   onDismissed: (_) => ref.read(repositoryProvider).deleteHistory(h.key),
                   child: InkWell(
-                    onTap: () => openConnections(context, ref, h.from, h.to),
+                    // Nur in die Felder übernehmen: Zeit und Optionen lassen sich
+                    // vor dem Suchen noch einstellen.
+                    onTap: () => fillSearch(context, ref, h.from, h.to),
                     child: Container(
                       height: 52,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -896,6 +898,19 @@ class _HistorySection extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// Start und Ziel in die Suchfelder übernehmen und nach oben rollen, wo
+/// die Felder stehen.
+void fillSearch(BuildContext context, WidgetRef ref, Location from, Location to) {
+  ref.read(routeProvider.notifier)
+    ..setFrom(from)
+    ..setTo(to);
+  Scrollable.maybeOf(context)?.position.animateTo(
+        0,
+        duration: Motion.of(context, Motion.page),
+        curve: Motion.curve,
+      );
 }
 
 /// Führt eine gespeicherte Suche mit „jetzt“ erneut aus.

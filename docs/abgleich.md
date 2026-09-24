@@ -430,3 +430,5 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   Wochentag in den nächsten Tag läuft (60 Tage); Tipp auf die Uhrzeit für die genaue Minute, Heute/Morgen/Datum
   als Sprünge, „Jetzt“ oben rechts, „Übernehmen“ unten. Ersetzt die zwei unterschiedlichen Fenster mit
   gestapelten Schalterreihen und abgeschnittenem „Morgen f…“
+- ✅ „Zuletzt gesucht“: Ein Tipp übernimmt Start und Ziel nur in die Suchfelder und rollt nach oben (`fillSearch`);
+  Zeit und Optionen lassen sich vor „Suchen“ einstellen. Favoriten-Verbindungen suchen weiter sofort

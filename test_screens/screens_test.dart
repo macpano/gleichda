@@ -257,6 +257,20 @@ void main() {
   }
 
   testWidgets('Start hell', (t) => shot(t, 'start_hell', const HomeShell(), seed: seedHome));
+  // Ein Tipp auf „Zuletzt gesucht“ füllt nur die Felder und rollt nach oben –
+  // gesucht wird erst mit „Suchen“.
+  testWidgets('Zuletzt gesucht übernommen', (t) => shot(t, 'verlauf_uebernommen', const HomeShell(), seed: seedHome,
+      act: (t) async {
+        final entry = find.textContaining('→').last;
+        await t.ensureVisible(entry);
+        await t.pump(const Duration(milliseconds: 300));
+        await t.tap(entry);
+        for (var i = 0; i < 6; i++) {
+          await t.pump(const Duration(milliseconds: 100));
+        }
+        expect(find.byType(ConnectionsScreen), findsNothing);
+        expect(find.text('Suchen'), findsOneWidget);
+      }));
   testWidgets('Start: Ankunft morgen', (t) => shot(t, 'start_morgen', const HomeShell(),
       brightness: Brightness.dark,
       act: (t) async {
