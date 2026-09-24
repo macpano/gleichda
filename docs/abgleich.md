@@ -471,3 +471,7 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Zeitraster passt sich den sichtbaren Fahrten an: Die Zeitachse umfasst nur die Spalten, die gerade zu sehen sind
   (mindestens 60 % sichtbar), und gleitet beim seitlichen Wischen mit (`Motion.medium`); nach „Später“ blieben die
   vorderen Fahrten sonst winzig. Höhe des Rasters fest, wenige Fahrten füllen die Breite; erste Anpassung ohne Übergang
+- ✅ Reiterleiste auf jeder Ansicht (Nutzerwunsch): liegt im App-Rahmen (`appFrame`, `currentTab`, `selectTab`),
+  die Unterwegs-Leiste direkt darüber; geöffnete Ansichten halten den Platz für beide frei (`_CompanionReserve`,
+  Tastatur zählt nur darüber hinaus). Ein Tipp auf einen Reiter führt von überall zurück. Über Blättern und Dialogen
+  gleiten beide Leisten weg

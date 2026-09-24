@@ -204,6 +204,8 @@ void main() {
     tester.platformDispatcher.textScaleFactorTestValue = textScale;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     tabBarHeight.value = 0; // Reiterleiste eines vorigen Tests vergessen
+    currentTab.value = 0; // gewählter Reiter ist app-weit – je Bild neu
+    shellMounted.value = false;
     tester.view.physicalSize = const Size(390 * 3, 844 * 3);
     tester.view.devicePixelRatio = 3;
     tester.view.padding = const FakeViewPadding(top: 24 * 3, bottom: 16 * 3);
@@ -431,7 +433,7 @@ void main() {
         overrides: [companionProvider.overrideWith(() => _Following(onBoard.id))],
         act: (t) async {
           // Von der Startseite in die Fahrt: Die Leiste gleitet nach ganz unten.
-          Navigator.of(t.element(find.byType(NavigationBar)))
+          Navigator.of(t.element(find.byType(HomeShell)))
               .push(MaterialPageRoute<void>(builder: (_) => const TripScreen()));
           for (var i = 0; i < 6; i++) {
             await t.pump(const Duration(milliseconds: 100));
@@ -444,7 +446,7 @@ void main() {
         seed: (r) => r.saveLastTrip(onBoard),
         overrides: [companionProvider.overrideWith(() => _Following(onBoard.id))],
         act: (t) async {
-          Navigator.of(t.element(find.byType(NavigationBar)))
+          Navigator.of(t.element(find.byType(HomeShell)))
               .push(MaterialPageRoute<void>(builder: (_) => const TripScreen()));
           await t.pump();
           await t.pump(const Duration(milliseconds: 110)); // mitten im Wechsel

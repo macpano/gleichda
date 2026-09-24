@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 
@@ -419,16 +421,30 @@ class _CompanionReserve extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final inset = MediaQuery.paddingOf(context).bottom;
     final bar = Theme.of(context).extension<AppColors>()!.bar;
     // Immer derselbe Aufbau – sonst ginge beim Losfahren der Zustand der Seite verloren.
     return ValueListenableBuilder<double>(
       valueListenable: companionReserve,
       child: child,
-      builder: (context, h, child) => Column(children: [
-        Expanded(child: MediaQuery.removePadding(context: context, removeBottom: h > 0, child: child!)),
-        ColoredBox(color: bar, child: SizedBox(width: double.infinity, height: h > 0 ? h + inset : 0)),
-      ]),
+      builder: (context, h, child) {
+        // Die Tastatur verdeckt die Leisten mit – sie zählt nur, soweit sie
+        // über den freigehaltenen Platz hinausreicht.
+        final mq = MediaQuery.of(context);
+        final kb = math.max(0.0, mq.viewInsets.bottom - h);
+        return Column(children: [
+          Expanded(
+            child: MediaQuery(
+              data: mq.copyWith(
+                padding: h > 0 ? mq.padding.copyWith(bottom: 0) : mq.padding,
+                viewPadding: h > 0 ? mq.viewPadding.copyWith(bottom: 0) : mq.viewPadding,
+                viewInsets: mq.viewInsets.copyWith(bottom: kb),
+              ),
+              child: child!,
+            ),
+          ),
+          ColoredBox(color: bar, child: SizedBox(width: double.infinity, height: h)),
+        ]);
+      },
     );
   }
 }

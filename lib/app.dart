@@ -41,9 +41,32 @@ final popupOnHome = ValueNotifier<bool>(false);
 /// beim Öffnen, Zurückgehen und bei der Zurück-Geste.
 final firstPageAnimation = ValueNotifier<Animation<double>?>(null);
 
-/// Höhe der Reiterleiste: So weit über dem unteren Rand steht die
-/// Unterwegs-Leiste auf der Startseite.
+/// Höhe der Reiterleiste (mit dem Rand unten): So weit über dem unteren Rand
+/// steht die Unterwegs-Leiste.
 final tabBarHeight = ValueNotifier<double>(0);
+
+/// Gewählter Reiter der Startseite. Die Reiterleiste liegt im App-Rahmen und
+/// bleibt auf jeder Ansicht stehen (Nutzerwunsch 24.09.2026) – ein Tipp führt
+/// von überall zu diesem Reiter zurück.
+final currentTab = ValueNotifier<int>(0);
+
+/// Die Startseite mit den Reitern liegt unten im Stapel (in Bildschirmfotos
+/// einzelner Ansichten nicht) – nur dann gibt es die Reiterleiste.
+final shellMounted = ValueNotifier<bool>(false);
+
+const shellTabs = [
+  (Icons.search, 'Suche'),
+  (Icons.schedule, 'Abfahrten'),
+  (Icons.map_outlined, 'Karte'),
+  (Icons.notifications_none, 'Meldungen'),
+  (Icons.more_horiz, 'Mehr'),
+];
+
+/// Reiter wählen – aus einer geöffneten Ansicht zurück zur Startseite.
+void selectTab(int i) {
+  navigatorKey.currentState?.popUntil((r) => r.isFirst);
+  currentTab.value = i;
+}
 
 /// Merkt sich den Stapel der Ansichten: für [homeOnTop] und dafür, dass
 /// [pushOnce] keine Ansicht doppelt öffnet.
@@ -168,65 +191,84 @@ Widget appFrame(BuildContext context, Widget? child) {
   final inset = MediaQuery.paddingOf(context).bottom;
   return Consumer(builder: (context, ref, _) {
     final shown = companionShown(ref);
-    // Platz unter den Seiten freihalten (nach dem Bild, nicht im Aufbau).
-    final reserve = shown ? companionBarHeight : 0.0;
-    if (companionReserve.value != reserve) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => companionReserve.value = reserve);
-    }
-    return Stack(children: [
-      // Die Ansicht behält die ganze Höhe; Seiten über der Startseite halten
-      // den Platz der Leiste selbst frei (CompanionAwareTransitions).
-      Positioned.fill(child: child!),
-      if (shown)
-        ListenableBuilder(
-          listenable: Listenable.merge([homeOnTop, popupOnHome, tabBarHeight, firstPageAnimation]),
-          builder: (context, _) {
-            final anim = firstPageAnimation.value;
-            final tabs = tabBarHeight.value;
-            final hidden = popupOnHome.value;
-            return AnimatedBuilder(
-              animation: anim ?? const AlwaysStoppedAnimation(0.0),
-              builder: (context, _) {
-                // 0 = über den Reitern (Startseite), 1 = ganz unten.
-                final t = tabs <= 0
-                    ? 1.0
-                    : anim == null
-                        ? (homeOnTop.value ? 0.0 : 1.0)
-                        : (MediaQuery.of(context).disableAnimations ? anim.value.roundToDouble() : Motion.curve.transform(anim.value));
-                return Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: tabs * (1 - t),
-                  child: IgnorePointer(
-                    ignoring: hidden,
-                    child: AnimatedOpacity(
-                      duration: Motion.of(context, Motion.short),
-                      opacity: hidden ? 0 : 1,
-                      child: _SlideIn(
-                        child: ColoredBox(
-                          color: context.c.bar,
-                          child: Column(mainAxisSize: MainAxisSize.min, children: [
-                            const GlobalCompanionBar(),
-                            SizedBox(height: inset * t),
-                          ]),
-                        ),
-                      ),
-                    ),
+    return ListenableBuilder(
+      listenable: Listenable.merge([shellMounted, tabBarHeight, popupOnHome]),
+      builder: (context, _) {
+        final shell = shellMounted.value;
+        // Platz unter jeder geöffneten Ansicht: Unterwegs-Leiste und Reiter
+        // (nach dem Bild setzen, nicht im Aufbau).
+        final reserve = (shown ? companionBarHeight : 0.0) + (shell ? tabBarHeight.value : (shown ? inset : 0.0));
+        if (companionReserve.value != reserve) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => companionReserve.value = reserve);
+        }
+        final hidden = popupOnHome.value;
+        return Stack(children: [
+          Positioned.fill(child: child!),
+          // Unten: Unterwegs-Leiste und darunter die Reiter – auf jeder Ansicht.
+          // Über Blättern von unten und Dialogen treten beide zurück.
+          if (shell || shown)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: IgnorePointer(
+                ignoring: hidden,
+                child: AnimatedSlide(
+                  duration: Motion.of(context, Motion.short),
+                  curve: Motion.curve,
+                  offset: hidden ? const Offset(0, 1) : Offset.zero,
+                  child: ColoredBox(
+                    color: context.c.bar,
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      if (shown) const _SlideIn(child: GlobalCompanionBar()),
+                      if (shell)
+                        const _TabBar()
+                      else if (shown)
+                        SizedBox(height: inset),
+                    ]),
                   ),
-                );
-              },
-            );
-          },
-        ),
-      Positioned(
-        top: 0,
-        left: 0,
-        right: 0,
-        height: top,
-        child: IgnorePointer(child: ColoredBox(color: Theme.of(context).scaffoldBackgroundColor)),
-      ),
-    ]);
+                ),
+              ),
+            ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: top,
+            child: IgnorePointer(child: ColoredBox(color: Theme.of(context).scaffoldBackgroundColor)),
+          ),
+        ]);
+      },
+    );
   });
+}
+
+/// Reiterleiste für die ganze App.
+class _TabBar extends StatelessWidget {
+  const _TabBar();
+
+  @override
+  Widget build(BuildContext context) => _MeasureHeight(
+        onHeight: (h) => tabBarHeight.value = h,
+        child: ValueListenableBuilder<int>(
+          valueListenable: currentTab,
+          builder: (context, tab, _) => Material(
+            type: MaterialType.transparency,
+            child: context.isIOS
+                ? _IosTabBar(index: tab, onTap: selectTab, tabs: shellTabs)
+                : NavigationBar(
+                    selectedIndex: tab,
+                    onDestinationSelected: selectTab,
+                    labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                    destinations: [
+                      // Ohne Tooltip: Die Beschriftung steht darunter, und über dem
+                      // Navigator (App-Rahmen) gibt es keine Ebene für Tooltips.
+                      for (final t in shellTabs) NavigationDestination(icon: Icon(t.$1), label: t.$2, tooltip: ''),
+                    ],
+                  ),
+          ),
+        ),
+      );
 }
 
 /// Die Leiste erscheint beim Losfahren von unten statt plötzlich.
@@ -265,13 +307,18 @@ class HomeShell extends ConsumerStatefulWidget {
 }
 
 class _HomeShellState extends ConsumerState<HomeShell> {
-  int _tab = 0;
+  int get _tab => currentTab.value;
   final _visited = <int>{0};
+
+  void _onTab() => setState(() => _visited.add(currentTab.value));
   late final AppLifecycleListener _life;
 
   @override
   void initState() {
     super.initState();
+    currentTab.addListener(_onTab);
+    _visited.add(currentTab.value);
+    WidgetsBinding.instance.addPostFrameCallback((_) => shellMounted.value = true);
     // Versionsabgleich beim Start anstoßen.
     Future.microtask(() => ref.read(updateProvider));
     // Erster Start: erklären, wofür der Standort gebraucht wird – bevor
@@ -313,22 +360,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   @override
   void dispose() {
+    currentTab.removeListener(_onTab);
+    shellMounted.value = false;
     _life.dispose();
     super.dispose();
   }
-
-  void _select(int i) => setState(() {
-        _tab = i;
-        _visited.add(i);
-      });
-
-  static const _tabs = [
-    (Icons.search, 'Suche'),
-    (Icons.schedule, 'Abfahrten'),
-    (Icons.map_outlined, 'Karte'),
-    (Icons.notifications_none, 'Meldungen'),
-    (Icons.more_horiz, 'Mehr'),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -356,29 +392,16 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           ),
           const Positioned(left: 12, right: 12, bottom: 12, child: UpdateToast()),
         ]),
-        // Platz für die Unterwegs-Leiste über den Reitern (sie selbst liegt
-        // in appFrame und gleitet beim Ansichtwechsel); die Reiter bleiben fest.
-        bottomNavigationBar: Column(mainAxisSize: MainAxisSize.min, children: [
-          AnimatedContainer(
+        // Platz für Unterwegs-Leiste und Reiter – beide liegen im App-Rahmen
+        // und bleiben auf jeder Ansicht stehen.
+        bottomNavigationBar: ValueListenableBuilder<double>(
+          valueListenable: tabBarHeight,
+          builder: (context, tabs, _) => AnimatedContainer(
             duration: companionMove,
             curve: Motion.curve,
-            height: companionShown(ref) ? companionBarHeight : 0,
+            height: (companionShown(ref) ? companionBarHeight : 0) + tabs,
           ),
-          _MeasureHeight(
-            onHeight: (h) => tabBarHeight.value = h,
-            child: context.isIOS
-            ? _IosTabBar(index: _tab, onTap: _select, tabs: _tabs)
-            : NavigationBar(
-                selectedIndex: _tab,
-                onDestinationSelected: _select,
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                destinations: [
-                  for (final t in _tabs)
-                    NavigationDestination(icon: Icon(t.$1), label: t.$2),
-                ],
-              ),
-          ),
-        ]),
+        ),
       ),
     );
   }
