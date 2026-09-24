@@ -540,7 +540,12 @@ class _ConnectionsScreenState extends ConsumerState<ConnectionsScreen> {
                         : items.isEmpty
                             ? Notice('Keine Verbindungen gefunden.', action: 'Erneut versuchen', onAction: _load)
                             : grid
-                                ? ConnectionGrid(items: items, onTap: (i) => _open(i.trip))
+                                ? ConnectionGrid(
+                                    items: items,
+                                    onTap: (i) => _open(i.trip),
+                                    // Darunter: Hinweis (falls da), „Früher | Später“, Seitenrand.
+                                    reserveBelow: (unreachable > 0 ? 32 : 0) + 44 + 24 + 8,
+                                  )
                                 : ListGroup(
                                     indent: 0,
                                     children: [

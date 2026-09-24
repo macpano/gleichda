@@ -157,11 +157,17 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
     try {
       final list = await ref.read(transitProvider).platforms(widget.target);
       if (!mounted) return;
-      Platform? t;
-      if (widget.platform != null) {
+      // Zuerst der genaue Haltepunkt der Fahrt („de:05124:11376:98:4“ =
+      // Gleis 4). Erst danach die Nummer allein: Am Hbf gibt es Bussteig 4
+      // und Gleis 4, die Nummer führte zum Bus nach Lüttringhausen statt zur S8.
+      final tg = widget.target;
+      Platform? t = list.where((p) => p.id == tg.id).firstOrNull;
+      if (t == null && tg.id.split(':').length >= 5 && tg.lat != null) {
+        t = Platform(id: tg.id, stopId: tg.id, name: widget.platform, lat: tg.lat!, lon: tg.lon!);
+      }
+      if (t == null && widget.platform != null) {
         t = list.where((p) => p.name == widget.platform).firstOrNull;
       }
-      t ??= list.where((p) => p.id == widget.target.id).firstOrNull;
       if (t == null && widget.target.lat != null && list.isNotEmpty) {
         final tl = widget.target;
         t = list.reduce((a, b) =>
