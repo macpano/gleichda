@@ -37,6 +37,7 @@ import 'package:gleichda/ui/screens/more_screen.dart';
 import 'package:gleichda/ui/screens/trip_screen.dart';
 import 'package:gleichda/ui/screens/walk_screen.dart';
 import 'package:gleichda/domain/settings.dart';
+import 'package:gleichda/state/compass.dart' show compassSource;
 import 'package:gleichda/ui/theme.dart';
 import 'package:gleichda/ui/time_choice.dart' show TimeRuler;
 import 'package:gleichda/ui/widgets.dart' show ChoiceChipX;
@@ -164,6 +165,9 @@ Future<void> loadFonts() async {
 }
 
 void main() {
+  // Kein Kompass-Sensor im Test.
+  compassSource = () => const Stream<double>.empty();
+
   late List<Trip> trips;
   late DepartureBoard board;
   late Location hbf;

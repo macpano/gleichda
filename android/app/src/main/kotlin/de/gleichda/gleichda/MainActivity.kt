@@ -2,14 +2,20 @@ package de.gleichda.gleichda
 
 import android.content.Context
 import android.content.Intent
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.view.Surface
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.FlutterEngineCache
 import io.flutter.embedding.engine.dart.DartExecutor
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
@@ -34,6 +40,53 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // Kompass für die Fußweg-Karte: Blickrichtung in Grad (0 = Norden) aus
+        // dem Drehvektor-Sensor, passend zur Bildschirmdrehung.
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, "de.gleichda/compass")
+            .setStreamHandler(object : EventChannel.StreamHandler {
+                private var listener: SensorEventListener? = null
+
+                override fun onListen(arguments: Any?, sink: EventChannel.EventSink) {
+                    val sm = applicationContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+                    val sensor = sm.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+                    if (sensor == null) {
+                        sink.endOfStream()
+                        return
+                    }
+                    val rot = FloatArray(9)
+                    val remapped = FloatArray(9)
+                    val orientation = FloatArray(3)
+                    listener = object : SensorEventListener {
+                        override fun onSensorChanged(e: SensorEvent) {
+                            SensorManager.getRotationMatrixFromVector(rot, e.values)
+                            val rotation = try {
+                                @Suppress("DEPRECATION")
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display?.rotation else windowManager.defaultDisplay.rotation
+                            } catch (_: Exception) {
+                                Surface.ROTATION_0
+                            }
+                            val (x, y) = when (rotation) {
+                                Surface.ROTATION_90 -> SensorManager.AXIS_Y to SensorManager.AXIS_MINUS_X
+                                Surface.ROTATION_180 -> SensorManager.AXIS_MINUS_X to SensorManager.AXIS_MINUS_Y
+                                Surface.ROTATION_270 -> SensorManager.AXIS_MINUS_Y to SensorManager.AXIS_X
+                                else -> SensorManager.AXIS_X to SensorManager.AXIS_Y
+                            }
+                            SensorManager.remapCoordinateSystem(rot, x, y, remapped)
+                            SensorManager.getOrientation(remapped, orientation)
+                            sink.success((Math.toDegrees(orientation[0].toDouble()) + 360.0) % 360.0)
+                        }
+
+                        override fun onAccuracyChanged(s: Sensor?, accuracy: Int) {}
+                    }
+                    sm.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI)
+                }
+
+                override fun onCancel(arguments: Any?) {
+                    val sm = applicationContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+                    listener?.let { sm.unregisterListener(it) }
+                    listener = null
+                }
+            })
         // Selbst-Aktualisierung: die geladene APK dem System-Installer übergeben.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "de.gleichda/update")
             .setMethodCallHandler { call, result ->

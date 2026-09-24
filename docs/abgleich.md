@@ -437,3 +437,13 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   40 px und einzeilig – vorher brach „1 Std 18 min“ um und die Achse stand neben den Balken
 - ✅ Fußweg zum Steig: zuerst der genaue Haltepunkt der Fahrt (`de:05124:11376:98:4`), erst dann die Nummer.
   Am Hbf führte „Steig 4“ zu Bussteig 4 (Richtung Lüttringhausen) statt zu Gleis 4 der S8
+- ✅ Vektorkarte statt Rasterkacheln (`lib/ui/base_map.dart`): OpenFreeMap (frei, ohne Schlüssel, OSM-Daten;
+  Namensnennung „© OpenStreetMap-Mitwirkende · OpenMapTiles · OpenFreeMap“), Stil „liberty“ hell, „dark“ dunkel,
+  gezeichnet mit `flutter_map_vector_tiles` 2.9 in flutter_map. Die Schrift bleibt beim Drehen aufrecht. Die
+  Haltestellen-Symbole des Stils (`poi_transit`) sind ausgeblendet – die App zeichnet ihre eigenen. Rückfall
+  offline ohne Zwischenspeicher: FOSSGIS-Raster. Geprüft über eine Web-Probe (gedreht 45°, Namen lesbar); im
+  Widget-Test zeichnet das Paket nicht (GPU-Bilder), dort bleibt der Grund leer
+- ✅ Fußweg-Navigation dreht mit der Blickrichtung: Kompass über den Drehvektor-Sensor (`MainActivity`, Kanal
+  `de.gleichda/compass`, geglättet), solange „Auf mich zentrieren“ aktiv ist; Knopf „Norden oben“. Eigener Pfeil
+  zeigt in die Blickrichtung. Nur noch der Zielsteig wird gezeigt (Nutzerwunsch „nur relevante Haltestellen“)
+- ✅ Karte und Fahrtkarte mit zwei Fingern drehbar, Schilder bleiben aufrecht, Kompassknopf bei gedrehter Karte
