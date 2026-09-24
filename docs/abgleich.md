@@ -412,3 +412,9 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Meldungsfilter mit Mehrfachauswahl: mehrere Orte und mehrere Unternehmen zugleich („Alle“ hebt auf); der
   Knopf zeigt die Zahl der Haken, darunter „Nur Hagen, Herdecke · VER, WSW“. Die Auswahl wird beim Tippen frisch
   gelesen – bei schnellem Tippen ging sonst ein Haken verloren
+- ✅ Karte herausgezoomt: Steige einer Haltestelle werden nur zusammengefasst, wenn sie höchstens 40 m
+  auseinanderliegen (über Zwischenstationen); ab sechs Steigen (Busbahnhof, Hbf) 150 m. Vorher stand das Zeichen
+  in der Mitte aller Steige, bei der Morianstraße (181 m) also zwischen zwei Straßen (`clusterPlatforms`)
+- ✅ Steignummern: Die App nahm das letzte Stück der Kennung („B“, „Buch“, „An“, „SEV2“, „S1“, „A.1“). Die Auskunft
+  nennt dort keinen bzw. einen anderen Steig (TRIAS PlannedBay für „…:0:A.1“ ist „1“). `platformLabel` nimmt
+  `STOP_POINT_LONGNAME`, sonst nur echte Nummern; ohne Nummer zeigt die Karte einen Punkt

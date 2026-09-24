@@ -175,7 +175,7 @@ class EfaClient {
           Platform(
             id: l['id'] as String,
             stopId: ((l['parent'] as Map?)?['id'] as String?) ?? stopAreaId(l['id'] as String),
-            name: (l['id'] as String).split(':').last,
+            name: platformLabel(l['id'] as String, (l['properties'] as Map?) ?? const {}),
             direction: l['name'] as String?,
             lat: ((l['coord'] as List)[0] as num).toDouble(),
             lon: ((l['coord'] as List)[1] as num).toDouble(),
@@ -299,6 +299,21 @@ List<StopTime>? parseTripStopTimes(Map<String, dynamic> json) {
 
 /// Steige aus den Abfahrten einer Haltestelle (XML_DM_REQUEST): Die EFA
 /// liefert je Abfahrt den Steig mit Koordinate.
+/// Steigbezeichnung, wie sie an der Haltestelle und in der Abfahrtstafel
+/// steht. Die EFA nennt sie nur teilweise (`STOP_POINT_LONGNAME`, bei Gleisen);
+/// sonst ist der letzte Teil der Kennung nur dann eine Nummer, wenn er eine ist:
+/// „…:0:A.1“ heißt in der Auskunft Steig „1“, „2a“ bleibt „2a“. Kürzel wie
+/// „B“, „Buch“, „An“, „SEV2“ oder „S1“ (Schwebebahn-Richtung) sind interne
+/// Kennungen – dann ohne Nummer (geprüft 24.09.2026 gegen TRIAS PlannedBay).
+String? platformLabel(String id, Map<dynamic, dynamic> props) {
+  final long = (props['STOP_POINT_LONGNAME'] ?? props['platformName'] ?? props['platform']) as String?;
+  if (long != null && long.trim().isNotEmpty) return long.trim();
+  var last = id.split(':').last;
+  final dot = last.lastIndexOf('.');
+  if (dot >= 0) last = last.substring(dot + 1);
+  return RegExp(r'^\d{1,3}[a-z]?$').hasMatch(last) ? last : null;
+}
+
 List<Platform> parsePlatforms(Map<String, dynamic> json, String stopId) {
   final events = json['stopEvents'];
   if (events is! List) return const [];
