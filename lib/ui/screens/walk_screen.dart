@@ -56,6 +56,15 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
   /// Gehweg zum Steig; neu berechnet, wenn man mehr als 35 m davon abweicht.
   WalkRoute? _route;
   DateTime? _routedAt;
+
+  /// Der aktuelle Weg ging von einer alten oder ungenauen Position aus (zuletzt
+  /// bekannte Position beim Öffnen). Dann wird beim ersten guten Standort sofort
+  /// neu gerechnet, nicht erst nach der 10-Sekunden-Sperre.
+  bool _routedFromRough = false;
+
+  /// Alter als 30 s oder ungenauer als 40 m.
+  static bool _rough(Position p) =>
+      p.accuracy > 40 || DateTime.now().difference(p.timestamp) > const Duration(seconds: 30);
   bool _routing = false;
 
   /// Zuletzt erreichter Wegpunkt; gesucht wird nur vorwärts.
@@ -146,7 +155,8 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
     final r = _route;
     final off = r == null ? double.infinity : r.locate(here, from: _routeIndex).off;
     final recent = _routedAt != null && DateTime.now().difference(_routedAt!) < const Duration(seconds: 10);
-    if (off <= 25 || (r != null && recent)) return;
+    final better = _routedFromRough && !_rough(p);
+    if (!better && (off <= 25 || (r != null && recent))) return;
     _routing = true;
     try {
       final route = await ref.read(walkRouterProvider).route(here, (lat: t.lat, lon: t.lon));
@@ -155,6 +165,7 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
           _route = route;
           _routeIndex = 0;
         });
+        _routedFromRough = _rough(p);
       }
     } on ProviderException {
       // Ohne Router bleibt die Luftlinie.
