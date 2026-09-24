@@ -61,9 +61,9 @@ class TriasProvider implements TransitProvider {
 
   @override
   Future<DepartureBoard> departures(Location stop,
-      {DateTime? time, int limit = 20}) async {
-    final xml = await _post(_req.stopEvent(stop.id, time: time, limit: limit));
-    return parseStopEvents(xml, stop);
+      {DateTime? time, int limit = 20, bool arrivals = false}) async {
+    final xml = await _post(_req.stopEvent(stop.id, time: time, limit: limit, arrivals: arrivals));
+    return parseStopEvents(xml, stop, arrivals: arrivals);
   }
 
   @override
@@ -155,7 +155,7 @@ class TriasProvider implements TransitProvider {
   Future<List<Line>> linesNear(GeoPoint near) async => const [];
 
   @override
-  Future<List<Line>> linesAround(GeoPoint near) async => const [];
+  Future<List<Line>> linesAround(GeoPoint near, {int radiusMeters = 5000}) async => const [];
 
   @override
   Future<Map<String, String>> operatorDirectory() async => const {};
@@ -179,7 +179,7 @@ class TriasProvider implements TransitProvider {
   }
 
   @override
-  Future<List<String>> regionsOf(GeoPoint near) async => const [];
+  Future<Map<String, String>> regionsOf(GeoPoint near, {int radiusMeters = 5000}) async => const {};
 
   @override
   Future<List<Message>> messages({List<String> lineIds = const [], List<String> regions = const []}) async {

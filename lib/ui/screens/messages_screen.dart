@@ -13,7 +13,7 @@ import '../widgets.dart';
 import 'line_search_screen.dart';
 import 'subscriptions_screen.dart';
 
-enum _Filter { all, myLines, myStops, operator }
+enum _Filter { all, myLines, myStops }
 
 /// Gilt erst in der Zukunft (z. B. „ab 25.09.“).
 bool _upcoming(Message m, DateTime now) => m.validFrom != null && m.validFrom!.isAfter(now);
@@ -59,8 +59,22 @@ class MessagesScreen extends ConsumerStatefulWidget {
 class _MessagesScreenState extends ConsumerState<MessagesScreen> {
   _Filter _filter = _Filter.all;
 
-  /// Gewähltes Verkehrsunternehmen (Netzkürzel) beim Filter „Unternehmen“.
+  /// Zusätzlich eingeschränkt auf ein Verkehrsunternehmen (Netzkürzel) und
+  /// einen Ort (Gemeindeschlüssel) – beides über „Filter“.
   String? _operator;
+  String? _place;
+
+  Future<void> _openFilter() => showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        builder: (_) => _FilterSheet(
+          place: _place,
+          operator: _operator,
+          onPlace: (p) => setState(() => _place = p),
+          onOperator: (o) => setState(() => _operator = o),
+        ),
+      );
 
   Set<String> _myStops() {
     final ids = <String>{};
@@ -96,19 +110,26 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
     final state = async.value;
     final subKeys = subs.map((s) => s.lineId).toSet();
     final stopKeys = _myStops();
+    // Ein Ort, der nach Änderung des Umkreises nicht mehr dazugehört, fällt weg.
+    final place = state != null && state.regionNames.containsKey(_place) ? _place : null;
+    final narrowed = place != null || _operator != null;
     final list = (state?.messages ?? const <Message>[])
         .where(
           (m) => switch (_filter) {
             // Alle: in der Nähe und im eigenen Ort; Nachbargemeinden nur mit
-            // Linien, die hier halten.
-            _Filter.all => state!.isRelevant(m),
+            // Linien, die hier halten. Mit Ort oder Unternehmen gilt deren Auswahl.
+            _Filter.all => narrowed || state!.isRelevant(m),
             _Filter.myLines => subs.any((s) => subscriptionCovers(s, m)),
             _Filter.myStops => m.stopIds.map(stopAreaId).any(stopKeys.contains),
-            _Filter.operator => m.lineIds.any((k) => networkOf(k) == _operator),
           },
         )
+        .where((m) => place == null || m.regions.contains(place))
+        .where((m) => _operator == null || m.lineIds.any((k) => networkOf(k) == _operator))
         .toList();
-    final operators = (state?.operators.entries.toList() ?? [])..sort((a, b) => a.value.compareTo(b.value));
+    final active = [
+      if (place != null) state!.regionNames[place]!,
+      if (_operator != null) state?.operators[_operator] ?? _operator!.toUpperCase(),
+    ];
     return RefreshIndicator(
       edgeOffset: MediaQuery.paddingOf(context).top,
       onRefresh: () => ref.read(messagesProvider.notifier).refresh(),
@@ -137,38 +158,42 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChipX(label: label, selected: _filter == f, onTap: () => setState(() => _filter = f)),
                 ),
-              // Verkehrsunternehmen der Umgebung (statt einzelner Linien).
-              if (operators.isNotEmpty)
+              // Umkreis, Ort und Verkehrsunternehmen: Symbol, bei Auswahl mit
+              // deren Zahl; die Namen stehen in der Zeile darunter.
+              if (state != null)
                 Flexible(
-                  child: MenuAnchor(
-                    builder: (context, menu, _) => ChoiceChipX(
-                      icon: _filter == _Filter.operator ? null : Icons.apartment,
-                      // Unausgewählt nur Symbol und Pfeil – „Unternehmen“ passte
-                      // nicht mit in die Reihe.
-                      label: _filter == _Filter.operator ? (state!.operators[_operator] ?? '') : '',
-                      tooltip: _filter == _Filter.operator ? null : 'Unternehmen',
-                      selected: _filter == _Filter.operator,
-                      dropdown: true,
-                      onTap: () => menu.isOpen ? menu.close() : menu.open(),
-                    ),
-                    menuChildren: [
-                      for (final o in operators)
-                        MenuItemButton(
-                          leadingIcon: Icon(
-                            _filter == _Filter.operator && _operator == o.key ? Icons.check : null,
-                            size: 18,
-                          ),
-                          onPressed: () => setState(() {
-                            _filter = _Filter.operator;
-                            _operator = o.key;
-                          }),
-                          child: Text(o.value),
-                        ),
-                    ],
+                  child: ChoiceChipX(
+                    icon: Icons.tune,
+                    label: active.isEmpty ? '' : '${active.length}',
+                    tooltip: 'Filter',
+                    selected: active.isNotEmpty,
+                    dropdown: true,
+                    onTap: _openFilter,
                   ),
                 ),
             ],
           ),
+          if (active.isNotEmpty)
+            SizedBox(
+              height: 36,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OneLine(
+                      'Nur ${active.join(' · ')}',
+                      style: TextStyle(fontSize: 14, color: c.muted),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => setState(() {
+                      _place = null;
+                      _operator = null;
+                    }),
+                    child: const Text('Aufheben'),
+                  ),
+                ],
+              ),
+            ),
           const SizedBox(height: 16),
           ListGroup(
             children: [
@@ -209,8 +234,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                     ? 'Noch keine Linien abonniert. Über „Linie suchen und abonnieren“ oder eine Linie in einer Meldung.'
                     : 'Keine Meldungen zu deinen Linien.',
               _Filter.myStops => 'Keine Meldungen zu deinen Haltestellen.',
-              _Filter.operator => 'Keine Meldungen von ${state.operators[_operator] ?? 'diesem Unternehmen'}.',
-              _Filter.all => 'Keine aktuellen Meldungen.',
+              _Filter.all => narrowed ? 'Keine Meldungen für ${active.join(' · ')}.' : 'Keine aktuellen Meldungen.',
             })
           else ...[
             // In deiner Nähe (Linien, die hier halten) zuerst, dann der Rest
@@ -228,7 +252,8 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                'Quelle: VRR-Auskunft (EFA). „In deiner Nähe“: Linien an Haltestellen im Umkreis von 1,5 km; darunter die Verkehrsunternehmen der Umgebung.',
+                'Quelle: VRR-Auskunft (EFA). „In deiner Nähe“: Linien an Haltestellen im Umkreis von 1,5 km; '
+                'darunter die Verkehrsunternehmen der Umgebung. Orte im Umkreis von ${state.radius ~/ 1000} km.',
                 style: TextStyle(fontSize: 12, color: c.muted),
               ),
             ),
@@ -414,3 +439,105 @@ Future<void> showMessageSheet(BuildContext context, WidgetRef ref, Message m) =>
     },
   ),
 );
+
+/// Filter der Meldungen: Umkreis, Ort und Verkehrsunternehmen.
+class _FilterSheet extends ConsumerStatefulWidget {
+  const _FilterSheet({required this.place, required this.operator, required this.onPlace, required this.onOperator});
+
+  final String? place;
+  final String? operator;
+  final ValueChanged<String?> onPlace;
+  final ValueChanged<String?> onOperator;
+
+  @override
+  ConsumerState<_FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends ConsumerState<_FilterSheet> {
+  late String? _place = widget.place;
+  late String? _operator = widget.operator;
+  int? _loadingRadius;
+
+  Future<void> _setRadius(int m) async {
+    setState(() => _loadingRadius = m);
+    await ref.read(messagesProvider.notifier).setRadius(m);
+    if (mounted) setState(() => _loadingRadius = null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final state = ref.watch(messagesProvider).value;
+    final places = state?.regionNames ?? const <String, String>{};
+    final operators = (state?.operators.entries.toList() ?? [])..sort((a, b) => a.value.compareTo(b.value));
+    Widget title(String t) => Padding(
+          padding: const EdgeInsets.only(top: 16, bottom: 8),
+          child: Text(t, style: context.t.section),
+        );
+    Widget chips(List<(String?, String)> items, String? selected, ValueChanged<String?> pick) => Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final (key, label) in items)
+              ChoiceChipX(label: label, selected: selected == key, onTap: () => pick(key)),
+          ],
+        );
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SheetHeader('Filter'),
+              title('Umkreis'),
+              Segmented<int>(
+                options: [for (final r in messagesRadii) (r, '${r ~/ 1000} km')],
+                value: _loadingRadius ?? state?.radius ?? defaultMessagesRadius,
+                onChanged: _setRadius,
+              ),
+              // Platz für den Hinweis ist immer da – nichts springt.
+              SizedBox(
+                height: 22,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    _loadingRadius != null
+                        ? 'Orte und Meldungen werden geladen …'
+                        : places.length == 1
+                            ? '1 Ort'
+                            : '${places.length} Orte',
+                    style: TextStyle(fontSize: 12, color: c.muted),
+                  ),
+                ),
+              ),
+              if (places.isNotEmpty) ...[
+                title('Ort'),
+                chips(
+                  [(null, 'Alle Orte'), for (final e in places.entries) (e.key, e.value)],
+                  places.containsKey(_place) ? _place : null,
+                  (p) {
+                    setState(() => _place = p);
+                    widget.onPlace(p);
+                  },
+                ),
+              ],
+              if (operators.isNotEmpty) ...[
+                title('Unternehmen'),
+                chips(
+                  [(null, 'Alle'), for (final o in operators) (o.key, o.value)],
+                  _operator,
+                  (o) {
+                    setState(() => _operator = o);
+                    widget.onOperator(o);
+                  },
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

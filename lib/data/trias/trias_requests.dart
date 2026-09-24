@@ -129,7 +129,7 @@ class TriasRequests {
 
   /// Abfahrten (bzw. mit [onwardCalls] auch die folgenden Halte je Fahrt).
   String stopEvent(String stopRef,
-          {DateTime? time, int limit = 20, bool onwardCalls = false}) =>
+          {DateTime? time, int limit = 20, bool onwardCalls = false, bool arrivals = false}) =>
       _envelope((b) {
         b.element('StopEventRequest', nest: () {
           b.element('Location', nest: () {
@@ -138,7 +138,7 @@ class TriasRequests {
           });
           b.element('Params', nest: () {
             b.element('NumberOfResults', nest: '$limit');
-            b.element('StopEventType', nest: 'departure');
+            b.element('StopEventType', nest: arrivals ? 'arrival' : 'departure');
             b.element('IncludePreviousCalls', nest: 'false');
             b.element('IncludeOnwardCalls', nest: '$onwardCalls');
             b.element('IncludeRealtimeData', nest: 'true');

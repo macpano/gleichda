@@ -31,10 +31,18 @@ class MapScreen extends ConsumerStatefulWidget {
 class _MapScreenState extends ConsumerState<MapScreen> {
   final _map = MapController();
   Timer? _debounce;
-  List<Location> _stops = const [];
 
-  /// Steige mit genauer Lage (EFA); die Haltestelle steht an deren Mitte.
-  List<Platform> _platforms = const [];
+  /// Bisher geladene Haltestellen und Steige (mit genauer Lage aus der EFA;
+  /// die Haltestelle steht an deren Mitte). Sie bleiben beim Verschieben
+  /// stehen – Haltestellen ändern sich nicht, neu geladen wird nur, was noch
+  /// fehlt.
+  final _stopById = <String, Location>{};
+  final _platformById = <String, Platform>{};
+
+  /// Schon abgefragte Kreise; liegt der Ausschnitt ganz in einem, wird
+  /// nichts nachgeladen.
+  final _covered = <({LatLng center, double radius})>[];
+  LatLngBounds? _bounds;
   bool _loadingStops = false;
 
   /// Letzter Abruf fehlgeschlagen (Netz weg, Server langsam).
@@ -52,8 +60,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   /// Ab dieser Zoomstufe werden Haltestellen geladen (sonst zu viele).
   static const _minZoom = 14.5;
 
-  /// Ab dieser Zoomstufe jeder Steig einzeln statt einer Haltestelle.
-  static const _platformZoom = 16.5;
+  /// Ab dieser Zoomstufe jeder Steig einzeln statt einer Haltestelle – erst
+  /// nah am Straßenraum, sonst liegen die Schilder übereinander.
+  static const _platformZoom = 17.5;
+
+  /// Höchstens so viele Haltestellen je Abfrage.
+  static const _limit = 60;
   bool _detail = false;
 
   /// Wuppertal Hbf, bis der Standort da ist.
@@ -88,38 +100,49 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     _debounce = Timer(const Duration(milliseconds: 450), _loadStops);
   }
 
-  /// Haltestellen im Ausschnitt: Umkreis um die Mitte bis zur Ecke, höchstens 3 km.
+  static const _dist = Distance();
+
+  /// Haltestellen im Ausschnitt. Liegt er in einem schon abgefragten Kreis,
+  /// geschieht nichts; sonst wird ein etwas größerer Kreis geladen (höchstens
+  /// 3 km), damit kleine Verschiebungen nicht gleich wieder nachladen.
   Future<void> _loadStops() async {
     final cam = _map.camera;
-    final seq = ++_stopsSeq;
     if (cam.zoom < _minZoom) {
-      setState(() {
-        _stops = const [];
-        _platforms = const [];
-        _stopsFailed = false;
-        _loadingStops = false;
-      });
+      if (_stopsFailed) setState(() => _stopsFailed = false);
       return;
     }
     final center = cam.center;
-    final corner = cam.visibleBounds.northEast;
-    final radius = math.min(3000, const Distance().as(LengthUnit.Meter, center, corner)).round();
+    final need = _dist.as(LengthUnit.Meter, center, cam.visibleBounds.northEast);
+    if (_covered.any((c) => _dist.as(LengthUnit.Meter, center, c.center) + need <= c.radius)) return;
+    final seq = ++_stopsSeq;
+    final radius = math.min(3000.0, math.max(need * 1.6, 800.0));
     setState(() => _loadingStops = true);
     try {
       final p = ref.read(transitProvider);
       final at = (lat: center.latitude, lon: center.longitude);
       final results = await Future.wait([
-        p.searchLocations('', near: at, limit: 60, radiusMeters: radius),
-        p.platformsNear(at, radiusMeters: radius).catchError((Object _) => <Platform>[]),
+        p.searchLocations('', near: at, limit: _limit, radiusMeters: radius.round()),
+        p.platformsNear(at, radiusMeters: radius.round()).catchError((Object _) => <Platform>[]),
       ]);
-      // Nur die neueste Anfrage zählt – eine ältere, langsamere überschreibt sie nicht.
-      if (mounted && seq == _stopsSeq) {
-        setState(() {
-          _stops = (results[0] as List<Location>).where((l) => l.lat != null).toList();
-          _platforms = results[1] as List<Platform>;
-          _stopsFailed = false;
-        });
+      if (!mounted) return;
+      final stops = (results[0] as List<Location>).where((l) => l.lat != null).toList();
+      // Volle Liste: Weiter außen fehlen womöglich Haltestellen – als
+      // abgedeckt gilt dann nur der Kreis bis zur nächstgelegenen Hälfte.
+      var covered = radius;
+      if (stops.length >= _limit) {
+        final d = [for (final s in stops) _dist.as(LengthUnit.Meter, center, LatLng(s.lat!, s.lon!))]..sort();
+        covered = d[d.length ~/ 2];
       }
+      setState(() {
+        for (final s in stops) {
+          _stopById[stopAreaId(s.id)] = s;
+        }
+        for (final pf in results[1] as List<Platform>) {
+          _platformById[pf.id] = pf;
+        }
+        _covered.add((center: center, radius: covered));
+        _stopsFailed = false;
+      });
     } catch (_) {
       // Netz weg: vorhandene Haltestellen bleiben stehen, Hinweis zum Wiederholen.
       if (mounted && seq == _stopsSeq) setState(() => _stopsFailed = true);
@@ -183,11 +206,24 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   /// einzeln mit Nummer. Haltestellen ohne bekannte Steige an der
   /// TRIAS-Position.
   List<Marker> _stopMarkers(Color color) {
-    final byStop = <String, List<Platform>>{};
-    for (final p in _platforms) {
-      byStop.putIfAbsent(p.stopId, () => []).add(p);
+    if (_tooFar) return const [];
+    // Nur, was im Ausschnitt (mit etwas Rand) liegt – der Vorrat wächst mit
+    // jedem Verschieben.
+    final b = _bounds;
+    bool inView(double lat, double lon) {
+      if (b == null) return true;
+      final dLat = (b.north - b.south) * 0.3, dLon = (b.east - b.west) * 0.3;
+      return lat >= b.south - dLat && lat <= b.north + dLat && lon >= b.west - dLon && lon <= b.east + dLon;
     }
-    final names = {for (final s in _stops) stopAreaId(s.id): s};
+
+    final byStop = <String, List<Platform>>{};
+    for (final p in _platformById.values) {
+      if (inView(p.lat, p.lon)) byStop.putIfAbsent(p.stopId, () => []).add(p);
+    }
+    final names = {
+      for (final e in _stopById.entries)
+        if (inView(e.value.lat!, e.value.lon!)) e.key: e.value,
+    };
     final out = <Marker>[];
     final ids = {...names.keys, ...byStop.keys};
     for (final id in ids) {
@@ -255,14 +291,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             // Auch Bewegungen per Knopf (Zentrieren, Fahrt zeigen) laden nach.
             onPositionChanged: (camera, gesture) {
               _scheduleStops();
-              final detail = camera.zoom >= _platformZoom;
-              final tooFar = camera.zoom < _minZoom;
-              if (detail != _detail || tooFar != _tooFar) {
-                setState(() {
-                  _detail = detail;
-                  _tooFar = tooFar;
-                });
-              }
+              setState(() {
+                _bounds = camera.visibleBounds;
+                _detail = camera.zoom >= _platformZoom;
+                _tooFar = camera.zoom < _minZoom;
+              });
             },
             onMapReady: _scheduleStops,
           ),
@@ -336,7 +369,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   runSpacing: 8,
                   children: [
                     _Pill(text: 'Karte', bold: true),
-                    if (_loadingStops || _loadingTrip)
+                    // Nachladen am Rand läuft still – nur solange noch gar nichts
+                    // da ist, steht ein Hinweis.
+                    if (_loadingTrip || (_loadingStops && _stopById.isEmpty))
                       const _Pill(text: 'Wird geladen …')
                     else if (_tooFar)
                       const _Pill(text: 'Hineinzoomen für Haltestellen')

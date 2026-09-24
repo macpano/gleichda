@@ -26,29 +26,35 @@ class VrrProvider implements TransitProvider {
   /// Ohne bekannten Ort: Wuppertal (Gemeindeschlüssel 05124 → OMC 5124000).
   static const defaultRegion = '5124000';
 
-  /// Gebiete rund um einen Ort: die Gemeinden an der Mitte und an acht
-  /// Punkten im Abstand von 5 km. Eine Sperrung in Herdecke betrifft auch
-  /// Hagener Linien, steht bei der EFA aber nur unter Herdecke (gemessen
-  /// 23.09.2026: 518/519 nur unter OMC 5954020). Die EFA braucht den vollen
-  /// Gemeindeschlüssel; aus der Haltestellenkennung („de:05954:…“) ergäbe
-  /// sich nur der Kreis, und der liefert keine Meldungen.
+  /// Gebiete rund um einen Ort: die Gemeinden an der Mitte und auf Ringen
+  /// bis [radiusMeters]. Eine Sperrung in Herdecke betrifft auch Hagener
+  /// Linien, steht bei der EFA aber nur unter Herdecke (gemessen 23.09.2026:
+  /// 518/519 nur unter OMC 5954020). Die EFA braucht den vollen
+  /// Gemeindeschlüssel; aus der Haltestellenkennung („de:05954:…“) ergäbe sich
+  /// nur der Kreis, und der liefert keine Meldungen.
   @override
-  Future<List<String>> regionsOf(GeoPoint near) async => (await _area(near)).regions;
+  Future<Map<String, String>> regionsOf(GeoPoint near, {int radiusMeters = 5000}) async =>
+      (await _area(near, radiusMeters)).regions;
 
   @override
-  Future<List<Line>> linesAround(GeoPoint near) async => (await _area(near)).lines;
+  Future<List<Line>> linesAround(GeoPoint near, {int radiusMeters = 5000}) async =>
+      (await _area(near, radiusMeters)).lines;
 
   GeoPoint? _areaAt;
-  Future<({List<String> regions, List<Line> lines})>? _areaResult;
+  int? _areaRadius;
+  Future<({Map<String, String> regions, List<Line> lines})>? _areaResult;
 
-  /// Umgebung eines Orts: Haltestellen an der Mitte und an acht Punkten im
-  /// Abstand von 5 km – daraus die Gemeinden (für Meldungen) und die Linien
-  /// an diesen Haltestellen (für die Verkehrsunternehmen vor Ort). Je Ort
-  /// einmal, neu erst nach über 1 km Ortswechsel.
-  Future<({List<String> regions, List<Line> lines})> _area(GeoPoint near) {
+  /// Umgebung eines Orts: Haltestellen an der Mitte und auf Ringen bis
+  /// [radius] – daraus die Gemeinden (für Meldungen) und die Linien an den
+  /// Haltestellen im halben Umkreis (für die Verkehrsunternehmen vor Ort).
+  /// Je Ort und Umkreis einmal, neu erst nach über 1 km Ortswechsel.
+  Future<({Map<String, String> regions, List<Line> lines})> _area(GeoPoint near, int radius) {
     final last = _areaAt;
-    if (_areaResult != null && last != null && _distance(last, near) < 1000) return _areaResult!;
+    if (_areaResult != null && last != null && _areaRadius == radius && _distance(last, near) < 1000) {
+      return _areaResult!;
+    }
     _areaAt = near;
+    _areaRadius = radius;
     return _areaResult = () async {
       final k = math.cos(near.lat * math.pi / 180);
       List<GeoPoint> ring(double m) => [
@@ -58,21 +64,35 @@ class VrrProvider implements TransitProvider {
                 lon: near.lon + m * math.sin(a * math.pi / 180) / (111320 * k),
               ),
           ];
-      // Gemeinden aus 5 km (Sperrungen im Nachbarort betreffen oft die
-      // eigenen Linien), Verkehrsunternehmen nur aus 2,5 km – sonst zählt in
-      // Hagen-Boele schon ganz Dortmund mit (gemessen: 45 DSW-Meldungen).
-      final wide = [near, ...ring(5000)];
-      final close = ring(2500);
-      Future<List<({String id, String? omc})>> find(GeoPoint p) =>
-          efa.stopsNear(p.lat, p.lon).catchError((Object _) => <({String id, String? omc})>[]);
-      final found = await Future.wait([...wide, ...close].map(find));
-      final regions = <String>[];
+      // Gemeinden aus dem ganzen Umkreis (Sperrungen im Nachbarort betreffen
+      // oft die eigenen Linien); ab 10 km ein zweiter Ring auf halber Strecke,
+      // sonst fielen Orte zwischen den Punkten heraus. Verkehrsunternehmen nur
+      // aus dem halben Umkreis – sonst zählt in Hagen-Boele schon ganz
+      // Dortmund mit (gemessen: 45 DSW-Meldungen).
+      final wide = [near, if (radius >= 10000) ...ring(radius / 2), ...ring(radius.toDouble())];
+      final close = ring(radius / 2);
+      Future<List<({String id, String? omc, String? place})>> find(GeoPoint p) => efa
+          .stopsNear(p.lat, p.lon)
+          .catchError((Object _) => <({String id, String? omc, String? place})>[]);
+      // Höchstens sechs Abfragen gleichzeitig – bei 20 km sind es 25 Punkte.
+      final points = [...wide, ...close];
+      final found = List<List<({String id, String? omc, String? place})>>.filled(points.length, const []);
+      var next = 0;
+      Future<void> worker() async {
+        while (next < points.length) {
+          final i = next++;
+          found[i] = await find(points[i]);
+        }
+      }
+
+      await Future.wait([for (var w = 0; w < 6; w++) worker()]);
+      final regions = <String, String>{};
       final stops = <String>{};
       for (var i = 0; i < found.length; i++) {
         final list = found[i];
         if (i < wide.length) {
           for (final s in list) {
-            if (s.omc != null && !regions.contains(s.omc)) regions.add(s.omc!);
+            if (s.omc != null) regions.putIfAbsent(s.omc!, () => s.place ?? s.omc!);
           }
         }
         // Linien: Mitte und der enge Kreis.
@@ -83,7 +103,12 @@ class VrrProvider implements TransitProvider {
       final lines = <String, Line>{
         for (final l in lineLists.expand((x) => x)) lineKey(l.id): l,
       };
-      return (regions: regions.take(6).toList(), lines: lines.values.toList());
+      // Je Gemeinde eine Abfrage der Meldungen – bei großem Umkreis begrenzt.
+      final max = radius <= 5000 ? 6 : 16;
+      return (
+        regions: Map.fromEntries(regions.entries.take(max)),
+        lines: lines.values.toList(),
+      );
     }();
   }
 
@@ -122,8 +147,8 @@ class VrrProvider implements TransitProvider {
 
   @override
   Future<DepartureBoard> departures(Location stop,
-          {DateTime? time, int limit = 20}) =>
-      trias.departures(stop, time: time, limit: limit);
+          {DateTime? time, int limit = 20, bool arrivals = false}) =>
+      trias.departures(stop, time: time, limit: limit, arrivals: arrivals);
 
   @override
   Future<List<Trip>> planTrip(TripQuery query) => trias.planTrip(query);
@@ -322,6 +347,28 @@ class VrrProvider implements TransitProvider {
     final stops = await efa.tripStopTimes(key);
     if (stops == null || stops.length < 2) return null;
     final area = stopAreaId(d.stop.id);
+    if (d.arrival) {
+      // Ankunft: die Fahrt vom Start bis hierher, Richtung = Ziel der Fahrt.
+      var j = stops.indexWhere((s) => stopAreaId(s.stop.id) == area && s.arrival?.planned == dep);
+      if (j < 0) j = stops.lastIndexWhere((s) => stopAreaId(s.stop.id) == area);
+      if (j <= 0) return null;
+      return Trip(
+        id: 'ankunft:$ref:${dep.toIso8601String()}',
+        legs: [
+          Leg(
+            type: LegType.ride,
+            from: stops.first.copyWith(arrival: null),
+            to: stops[j].copyWith(departure: null),
+            intermediates: stops.sublist(1, j),
+            line: d.line,
+            direction: stops.last.stop.name,
+            journeyRef: ref,
+            operatingDay: d.operatingDay,
+            messageIds: d.messageIds,
+          ),
+        ],
+      );
+    }
     var i = stops.indexWhere((s) => stopAreaId(s.stop.id) == area && s.departure?.planned == dep);
     if (i < 0) i = stops.indexWhere((s) => stopAreaId(s.stop.id) == area);
     if (i < 0 || i >= stops.length - 1) return null;

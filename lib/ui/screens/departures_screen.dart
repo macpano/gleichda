@@ -45,6 +45,9 @@ class _DeparturesScreenState extends ConsumerState<DeparturesScreen> {
   List<_StopBoard>? _stops;
   Location? _chosen;
   DateTime? _time;
+
+  /// Ankommende statt abfahrende Fahrten.
+  bool _arrivals = false;
   DateTime? _updatedAt;
   Set<ModeGroup> _hidden = {};
   bool _loading = false;
@@ -109,7 +112,7 @@ class _DeparturesScreenState extends ConsumerState<DeparturesScreen> {
     final p = ref.read(transitProvider);
     await Future.wait(stops.map((s) async {
       try {
-        s.board = await p.departures(s.stop, time: _time, limit: 16);
+        s.board = await p.departures(s.stop, time: _time, limit: 16, arrivals: _arrivals);
         s.error = null;
       } on ProviderException catch (e) {
         s.error = e.message;
@@ -133,13 +136,21 @@ class _DeparturesScreenState extends ConsumerState<DeparturesScreen> {
   }
 
   Future<void> _pickTime() async {
-    final picked = await showModalBottomSheet<DateTime?>(
+    final picked = await showModalBottomSheet<_BoardTime>(
       context: context,
       showDragHandle: true,
-      builder: (ctx) => _DepartureTimeSheet(current: _time),
+      builder: (ctx) => _DepartureTimeSheet(current: (time: _time, arrivals: _arrivals)),
     );
-    if (!mounted) return;
-    setState(() => _time = picked);
+    // Weggewischt: nichts ändern.
+    if (!mounted || picked == null) return;
+    for (final s in _stops ?? const <_StopBoard>[]) {
+      // Beim Wechsel Abfahrten ↔ Ankünfte nicht kurz die falsche Liste zeigen.
+      if (picked.arrivals != _arrivals) s.board = null;
+    }
+    setState(() {
+      _time = picked.time;
+      _arrivals = picked.arrivals;
+    });
     await _refreshBoards();
   }
 
@@ -193,7 +204,7 @@ class _DeparturesScreenState extends ConsumerState<DeparturesScreen> {
               ),
               const SizedBox(width: 4),
             ],
-            Expanded(child: Text('Abfahrten', style: context.t.screenTitle)),
+            Expanded(child: Text(_arrivals ? 'Ankünfte' : 'Abfahrten', style: context.t.screenTitle)),
             if (stops != null && stops.isNotEmpty)
               FreshnessStamp(updatedAt: _updatedAt, now: now, refreshing: _loading,
                   failed: stops.every((s) => s.error != null)),
@@ -224,7 +235,9 @@ class _DeparturesScreenState extends ConsumerState<DeparturesScreen> {
             const SizedBox(width: 8),
             ChoiceChipX(
               icon: Icons.schedule,
-              label: _time == null ? 'Jetzt' : '${relativeDay(_time!, now) == 'Heute' ? '' : '${relativeDay(_time!, now)} '}${hm(_time!)}',
+              label: _time == null
+                  ? (_arrivals ? 'Ankünfte' : 'Jetzt')
+                  : '${_arrivals ? 'an ' : ''}${relativeDay(_time!, now) == 'Heute' ? '' : '${relativeDay(_time!, now)} '}${hm(_time!)}',
               selected: false,
               onTap: _pickTime,
             ),
@@ -249,6 +262,7 @@ class _DeparturesScreenState extends ConsumerState<DeparturesScreen> {
                   data: s,
                   now: now,
                   hidden: _hidden,
+                  arrivals: _arrivals,
                   walkMinutes: s.distance == null
                       ? null
                       : (s.distance! * 1.3 / (1.3 * walkPace.walkPercent / 100) / 60).ceil(),
@@ -271,9 +285,11 @@ class _StopSection extends ConsumerWidget {
     required this.hidden,
     required this.onToggle,
     this.walkMinutes,
+    this.arrivals = false,
   });
 
   final _StopBoard data;
+  final bool arrivals;
   final DateTime now;
   final Set<ModeGroup> hidden;
   final int? walkMinutes;
@@ -313,14 +329,19 @@ class _StopSection extends ConsumerWidget {
         else if (all.isEmpty)
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text('Keine Abfahrten in der nächsten Zeit.', style: TextStyle(color: c.muted)),
+            child: Text(arrivals
+                    ? 'Keine Ankünfte in der nächsten Zeit.'
+                    : 'Keine Abfahrten in der nächsten Zeit.',
+                style: TextStyle(color: c.muted)),
           )
         else ...[
           for (final d in shown) DepartureRow(d, now: now, next: _nextOfSame(all, d)),
           if (all.length > 3)
             SizedBox(
               height: 44,
-              child: TextButton(onPressed: onToggle, child: Text(data.expanded ? 'Weniger' : 'Alle Abfahrten')),
+              child: TextButton(
+                  onPressed: onToggle,
+                  child: Text(data.expanded ? 'Weniger' : (arrivals ? 'Alle Ankünfte' : 'Alle Abfahrten'))),
             ),
         ],
       ]),
@@ -420,7 +441,7 @@ class DepartureRowState extends ConsumerState<DepartureRow> {
             const SizedBox(width: 12),
             Expanded(
               child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                OneLine(d.direction,
+                OneLine(d.arrival ? 'von ${d.direction}' : d.direction,
                     style: TextStyle(
                         fontSize: 16,
                         color: cancelled ? c.muted : c.ink,
@@ -483,17 +504,23 @@ Future<void> _lineSheet(BuildContext context, WidgetRef ref, Line line) => showM
       }),
     );
 
+/// Gewählte Zeit der Tafel: null = jetzt; mit [arrivals] Ankünfte.
+typedef _BoardTime = ({DateTime? time, bool arrivals});
+
 class _DepartureTimeSheet extends StatefulWidget {
   const _DepartureTimeSheet({required this.current});
 
-  final DateTime? current;
+  final _BoardTime current;
 
   @override
   State<_DepartureTimeSheet> createState() => _DepartureTimeSheetState();
 }
 
 class _DepartureTimeSheetState extends State<_DepartureTimeSheet> {
-  late DateTime? _t = widget.current;
+  late DateTime? _t = widget.current.time;
+  late bool _arrivals = widget.current.arrivals;
+
+  _BoardTime get _result => (time: _t, arrivals: _arrivals);
 
   @override
   Widget build(BuildContext context) {
@@ -507,7 +534,14 @@ class _DepartureTimeSheetState extends State<_DepartureTimeSheet> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          SheetHeader('Abfahrtszeit', onDone: () => Navigator.pop(context, _t)),
+          SheetHeader('Zeit', onDone: () => Navigator.pop(context, _result)),
+          const SizedBox(height: 12),
+          // Wie in der Verbindungssuche „Abfahrt um | Ankunft um“.
+          Segmented<bool>(
+            options: const [(false, 'Abfahrten'), (true, 'Ankünfte')],
+            value: _arrivals,
+            onChanged: (a) => setState(() => _arrivals = a),
+          ),
           const SizedBox(height: 12),
           Segmented<int>(
             options: const [(0, 'Heute'), (1, 'Morgen'), (2, 'Datum')],
@@ -530,8 +564,10 @@ class _DepartureTimeSheetState extends State<_DepartureTimeSheet> {
                 child: PickButton(
                   label: quick[i].$1,
                   selected: quick[i].$2 == null && _t == null,
-                  onTap: () => Navigator.pop(
-                      context, quick[i].$2 == null ? null : now.add(Duration(minutes: quick[i].$2!))),
+                  onTap: () => Navigator.pop(context, (
+                    time: quick[i].$2 == null ? null : now.add(Duration(minutes: quick[i].$2!)),
+                    arrivals: _arrivals,
+                  )),
                 ),
               ),
               if (i < quick.length - 1) const SizedBox(width: 8),

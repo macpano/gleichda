@@ -1911,7 +1911,9 @@ as List<Message>,
 /// @nodoc
 mixin _$Departure {
 
- Location get stop; Line get line; String get direction; EventTime get time; String? get plannedPlatform; String? get platform; StopStatus get status; String? get journeyRef; String? get operatingDay; List<String> get messageIds;
+ Location get stop; Line get line; String get direction; EventTime get time; String? get plannedPlatform; String? get platform; StopStatus get status; String? get journeyRef; String? get operatingDay; List<String> get messageIds;/// Ankunft statt Abfahrt: [time] ist die Ankunft, [direction] die
+/// Herkunft der Fahrt.
+ bool get arrival;
 /// Create a copy of Departure
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1925,20 +1927,20 @@ $DepartureCopyWith<Departure> get copyWith => _$DepartureCopyWithImpl<Departure>
 @override
 bool operator ==(Object other) {
   final _this = this as Departure;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Departure&&(identical(other.stop, _this.stop) || other.stop == _this.stop)&&(identical(other.line, _this.line) || other.line == _this.line)&&(identical(other.direction, _this.direction) || other.direction == _this.direction)&&(identical(other.time, _this.time) || other.time == _this.time)&&(identical(other.plannedPlatform, _this.plannedPlatform) || other.plannedPlatform == _this.plannedPlatform)&&(identical(other.platform, _this.platform) || other.platform == _this.platform)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.journeyRef, _this.journeyRef) || other.journeyRef == _this.journeyRef)&&(identical(other.operatingDay, _this.operatingDay) || other.operatingDay == _this.operatingDay)&&const DeepCollectionEquality().equals(other.messageIds, _this.messageIds));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Departure&&(identical(other.stop, _this.stop) || other.stop == _this.stop)&&(identical(other.line, _this.line) || other.line == _this.line)&&(identical(other.direction, _this.direction) || other.direction == _this.direction)&&(identical(other.time, _this.time) || other.time == _this.time)&&(identical(other.plannedPlatform, _this.plannedPlatform) || other.plannedPlatform == _this.plannedPlatform)&&(identical(other.platform, _this.platform) || other.platform == _this.platform)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.journeyRef, _this.journeyRef) || other.journeyRef == _this.journeyRef)&&(identical(other.operatingDay, _this.operatingDay) || other.operatingDay == _this.operatingDay)&&const DeepCollectionEquality().equals(other.messageIds, _this.messageIds)&&(identical(other.arrival, _this.arrival) || other.arrival == _this.arrival));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Departure;
-  return Object.hash(runtimeType,_this.stop,_this.line,_this.direction,_this.time,_this.plannedPlatform,_this.platform,_this.status,_this.journeyRef,_this.operatingDay,const DeepCollectionEquality().hash(_this.messageIds));
+  return Object.hash(runtimeType,_this.stop,_this.line,_this.direction,_this.time,_this.plannedPlatform,_this.platform,_this.status,_this.journeyRef,_this.operatingDay,const DeepCollectionEquality().hash(_this.messageIds),_this.arrival);
 }
 
 @override
 String toString() {
   final _this = this as Departure;
-  return 'Departure(stop: ${_this.stop}, line: ${_this.line}, direction: ${_this.direction}, time: ${_this.time}, plannedPlatform: ${_this.plannedPlatform}, platform: ${_this.platform}, status: ${_this.status}, journeyRef: ${_this.journeyRef}, operatingDay: ${_this.operatingDay}, messageIds: ${_this.messageIds})';
+  return 'Departure(stop: ${_this.stop}, line: ${_this.line}, direction: ${_this.direction}, time: ${_this.time}, plannedPlatform: ${_this.plannedPlatform}, platform: ${_this.platform}, status: ${_this.status}, journeyRef: ${_this.journeyRef}, operatingDay: ${_this.operatingDay}, messageIds: ${_this.messageIds}, arrival: ${_this.arrival})';
 }
 
 
@@ -1949,7 +1951,7 @@ abstract mixin class $DepartureCopyWith<$Res>  {
   factory $DepartureCopyWith(Departure value, $Res Function(Departure) _then) = _$DepartureCopyWithImpl;
 @useResult
 $Res call({
- Location stop, Line line, String direction, EventTime time, String? plannedPlatform, String? platform, StopStatus status, String? journeyRef, String? operatingDay, List<String> messageIds
+ Location stop, Line line, String direction, EventTime time, String? plannedPlatform, String? platform, StopStatus status, String? journeyRef, String? operatingDay, List<String> messageIds, bool arrival
 });
 
 
@@ -1966,7 +1968,7 @@ class _$DepartureCopyWithImpl<$Res>
 
 /// Create a copy of Departure
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? stop = null,Object? line = null,Object? direction = null,Object? time = null,Object? plannedPlatform = freezed,Object? platform = freezed,Object? status = null,Object? journeyRef = freezed,Object? operatingDay = freezed,Object? messageIds = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? stop = null,Object? line = null,Object? direction = null,Object? time = null,Object? plannedPlatform = freezed,Object? platform = freezed,Object? status = null,Object? journeyRef = freezed,Object? operatingDay = freezed,Object? messageIds = null,Object? arrival = null,}) {
   return _then(Departure(
 stop: null == stop ? _self.stop : stop // ignore: cast_nullable_to_non_nullable
 as Location,line: null == line ? _self.line : line // ignore: cast_nullable_to_non_nullable
@@ -1978,7 +1980,8 @@ as String?,status: null == status ? _self.status : status // ignore: cast_nullab
 as StopStatus,journeyRef: freezed == journeyRef ? _self.journeyRef : journeyRef // ignore: cast_nullable_to_non_nullable
 as String?,operatingDay: freezed == operatingDay ? _self.operatingDay : operatingDay // ignore: cast_nullable_to_non_nullable
 as String?,messageIds: null == messageIds ? _self.messageIds : messageIds // ignore: cast_nullable_to_non_nullable
-as List<String>,
+as List<String>,arrival: null == arrival ? _self.arrival : arrival // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 /// Create a copy of Departure
@@ -2090,10 +2093,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Location stop,  Line line,  String direction,  EventTime time,  String? plannedPlatform,  String? platform,  StopStatus status,  String? journeyRef,  String? operatingDay,  List<String> messageIds)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Location stop,  Line line,  String direction,  EventTime time,  String? plannedPlatform,  String? platform,  StopStatus status,  String? journeyRef,  String? operatingDay,  List<String> messageIds,  bool arrival)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Departure() when $default != null:
-return $default(_that.stop,_that.line,_that.direction,_that.time,_that.plannedPlatform,_that.platform,_that.status,_that.journeyRef,_that.operatingDay,_that.messageIds);case _:
+return $default(_that.stop,_that.line,_that.direction,_that.time,_that.plannedPlatform,_that.platform,_that.status,_that.journeyRef,_that.operatingDay,_that.messageIds,_that.arrival);case _:
   return orElse();
 
 }
@@ -2111,10 +2114,10 @@ return $default(_that.stop,_that.line,_that.direction,_that.time,_that.plannedPl
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Location stop,  Line line,  String direction,  EventTime time,  String? plannedPlatform,  String? platform,  StopStatus status,  String? journeyRef,  String? operatingDay,  List<String> messageIds)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Location stop,  Line line,  String direction,  EventTime time,  String? plannedPlatform,  String? platform,  StopStatus status,  String? journeyRef,  String? operatingDay,  List<String> messageIds,  bool arrival)  $default,) {final _that = this;
 switch (_that) {
 case _Departure():
-return $default(_that.stop,_that.line,_that.direction,_that.time,_that.plannedPlatform,_that.platform,_that.status,_that.journeyRef,_that.operatingDay,_that.messageIds);case _:
+return $default(_that.stop,_that.line,_that.direction,_that.time,_that.plannedPlatform,_that.platform,_that.status,_that.journeyRef,_that.operatingDay,_that.messageIds,_that.arrival);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2131,10 +2134,10 @@ return $default(_that.stop,_that.line,_that.direction,_that.time,_that.plannedPl
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Location stop,  Line line,  String direction,  EventTime time,  String? plannedPlatform,  String? platform,  StopStatus status,  String? journeyRef,  String? operatingDay,  List<String> messageIds)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Location stop,  Line line,  String direction,  EventTime time,  String? plannedPlatform,  String? platform,  StopStatus status,  String? journeyRef,  String? operatingDay,  List<String> messageIds,  bool arrival)?  $default,) {final _that = this;
 switch (_that) {
 case _Departure() when $default != null:
-return $default(_that.stop,_that.line,_that.direction,_that.time,_that.plannedPlatform,_that.platform,_that.status,_that.journeyRef,_that.operatingDay,_that.messageIds);case _:
+return $default(_that.stop,_that.line,_that.direction,_that.time,_that.plannedPlatform,_that.platform,_that.status,_that.journeyRef,_that.operatingDay,_that.messageIds,_that.arrival);case _:
   return null;
 
 }
@@ -2146,7 +2149,7 @@ return $default(_that.stop,_that.line,_that.direction,_that.time,_that.plannedPl
 @JsonSerializable()
 
 class _Departure implements Departure {
-  const _Departure({required this.stop, required this.line, required this.direction, required this.time, this.plannedPlatform, this.platform, this.status = StopStatus.normal, this.journeyRef, this.operatingDay,  List<String> messageIds = const <String>[]}): _messageIds = messageIds;
+  const _Departure({required this.stop, required this.line, required this.direction, required this.time, this.plannedPlatform, this.platform, this.status = StopStatus.normal, this.journeyRef, this.operatingDay,  List<String> messageIds = const <String>[], this.arrival = false}): _messageIds = messageIds;
   factory _Departure.fromJson(Map<String, dynamic> json) => _$DepartureFromJson(json);
 
 @override final  Location stop;
@@ -2165,6 +2168,9 @@ class _Departure implements Departure {
   return EqualUnmodifiableListView(_messageIds);
 }
 
+/// Ankunft statt Abfahrt: [time] ist die Ankunft, [direction] die
+/// Herkunft der Fahrt.
+@override@JsonKey() final  bool arrival;
 
 /// Create a copy of Departure
 /// with the given fields replaced by the non-null parameter values.
@@ -2179,18 +2185,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Departure&&(identical(other.stop, stop) || other.stop == stop)&&(identical(other.line, line) || other.line == line)&&(identical(other.direction, direction) || other.direction == direction)&&(identical(other.time, time) || other.time == time)&&(identical(other.plannedPlatform, plannedPlatform) || other.plannedPlatform == plannedPlatform)&&(identical(other.platform, platform) || other.platform == platform)&&(identical(other.status, status) || other.status == status)&&(identical(other.journeyRef, journeyRef) || other.journeyRef == journeyRef)&&(identical(other.operatingDay, operatingDay) || other.operatingDay == operatingDay)&&const DeepCollectionEquality().equals(other.messageIds, _messageIds));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Departure&&(identical(other.stop, stop) || other.stop == stop)&&(identical(other.line, line) || other.line == line)&&(identical(other.direction, direction) || other.direction == direction)&&(identical(other.time, time) || other.time == time)&&(identical(other.plannedPlatform, plannedPlatform) || other.plannedPlatform == plannedPlatform)&&(identical(other.platform, platform) || other.platform == platform)&&(identical(other.status, status) || other.status == status)&&(identical(other.journeyRef, journeyRef) || other.journeyRef == journeyRef)&&(identical(other.operatingDay, operatingDay) || other.operatingDay == operatingDay)&&const DeepCollectionEquality().equals(other.messageIds, _messageIds)&&(identical(other.arrival, arrival) || other.arrival == arrival));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,stop,line,direction,time,plannedPlatform,platform,status,journeyRef,operatingDay,const DeepCollectionEquality().hash(_messageIds));
+    return Object.hash(runtimeType,stop,line,direction,time,plannedPlatform,platform,status,journeyRef,operatingDay,const DeepCollectionEquality().hash(_messageIds),arrival);
 }
 
 @override
 String toString() {
-    return 'Departure(stop: $stop, line: $line, direction: $direction, time: $time, plannedPlatform: $plannedPlatform, platform: $platform, status: $status, journeyRef: $journeyRef, operatingDay: $operatingDay, messageIds: $messageIds)';
+    return 'Departure(stop: $stop, line: $line, direction: $direction, time: $time, plannedPlatform: $plannedPlatform, platform: $platform, status: $status, journeyRef: $journeyRef, operatingDay: $operatingDay, messageIds: $messageIds, arrival: $arrival)';
 }
 
 
@@ -2201,7 +2207,7 @@ abstract mixin class _$DepartureCopyWith<$Res> implements $DepartureCopyWith<$Re
   factory _$DepartureCopyWith(_Departure value, $Res Function(_Departure) _then) = __$DepartureCopyWithImpl;
 @override @useResult
 $Res call({
- Location stop, Line line, String direction, EventTime time, String? plannedPlatform, String? platform, StopStatus status, String? journeyRef, String? operatingDay, List<String> messageIds
+ Location stop, Line line, String direction, EventTime time, String? plannedPlatform, String? platform, StopStatus status, String? journeyRef, String? operatingDay, List<String> messageIds, bool arrival
 });
 
 
@@ -2218,7 +2224,7 @@ class __$DepartureCopyWithImpl<$Res>
 
 /// Create a copy of Departure
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? stop = null,Object? line = null,Object? direction = null,Object? time = null,Object? plannedPlatform = freezed,Object? platform = freezed,Object? status = null,Object? journeyRef = freezed,Object? operatingDay = freezed,Object? messageIds = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? stop = null,Object? line = null,Object? direction = null,Object? time = null,Object? plannedPlatform = freezed,Object? platform = freezed,Object? status = null,Object? journeyRef = freezed,Object? operatingDay = freezed,Object? messageIds = null,Object? arrival = null,}) {
   return _then(_Departure(
 stop: null == stop ? _self.stop : stop // ignore: cast_nullable_to_non_nullable
 as Location,line: null == line ? _self.line : line // ignore: cast_nullable_to_non_nullable
@@ -2230,7 +2236,8 @@ as String?,status: null == status ? _self.status : status // ignore: cast_nullab
 as StopStatus,journeyRef: freezed == journeyRef ? _self.journeyRef : journeyRef // ignore: cast_nullable_to_non_nullable
 as String?,operatingDay: freezed == operatingDay ? _self.operatingDay : operatingDay // ignore: cast_nullable_to_non_nullable
 as String?,messageIds: null == messageIds ? _self._messageIds : messageIds // ignore: cast_nullable_to_non_nullable
-as List<String>,
+as List<String>,arrival: null == arrival ? _self.arrival : arrival // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

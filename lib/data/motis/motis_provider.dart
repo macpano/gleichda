@@ -90,28 +90,36 @@ class MotisProvider implements TransitProvider {
   // --- Abfahrten ---
 
   @override
-  Future<DepartureBoard> departures(Location stop, {DateTime? time, int limit = 20}) async {
+  Future<DepartureBoard> departures(Location stop, {DateTime? time, int limit = 20, bool arrivals = false}) async {
     final data = await _get('stoptimes', {
       'stopId': stop.id,
       'n': limit,
+      // Ankünfte: Zeiten gelten dann für die Ankunft, Herkunft in „tripFrom“.
+      if (arrivals) 'arriveBy': true,
       if (time != null) 'time': time.toUtc().toIso8601String(),
     });
     final out = <Departure>[];
     for (final s in ((data as Map?)?['stopTimes'] as List? ?? const [])) {
       if (s is! Map) continue;
       final place = (s['place'] as Map?) ?? const {};
-      final t = _time(place['scheduledDeparture'], place['departure'], s['realTime'] == true);
+      final t = arrivals
+          ? _time(place['scheduledArrival'], place['arrival'], s['realTime'] == true)
+          : _time(place['scheduledDeparture'], place['departure'], s['realTime'] == true);
       if (t == null) continue;
       final cancelled = s['cancelled'] == true || s['tripCancelled'] == true || place['cancelled'] == true;
       out.add(Departure(
         stop: stop,
         line: motisLine(s),
-        direction: (s['headsign'] as String?) ?? ((s['tripTo'] as Map?)?['name'] as String?) ?? '',
+        direction: (arrivals ? ((s['tripFrom'] as Map?)?['name'] as String?) : null) ??
+            (s['headsign'] as String?) ??
+            ((s['tripTo'] as Map?)?['name'] as String?) ??
+            '',
         time: t,
         plannedPlatform: place['scheduledTrack'] as String? ?? place['track'] as String?,
         platform: place['track'] as String?,
         status: cancelled ? StopStatus.cancelled : StopStatus.normal,
         journeyRef: s['tripId'] == null ? null : '$refPrefix${s['tripId']}',
+        arrival: arrivals,
       ));
     }
     out.sort((a, b) => a.time.best.compareTo(b.time.best));
@@ -207,6 +215,22 @@ class MotisProvider implements TransitProvider {
     if (full == null || full.rides.isEmpty) return null;
     final leg = full.rides.first;
     final stops = [leg.from, ...leg.intermediates, leg.to];
+    if (d.arrival) {
+      // Ankunft: die Fahrt vom Start bis hierher.
+      var j = stops.indexWhere((s) => s.stop.id == d.stop.id || s.arrival?.planned == d.time.planned);
+      if (j <= 0) j = stops.length - 1;
+      return Trip(
+        id: 'ankunft:$ref:${d.time.planned.toIso8601String()}',
+        legs: [
+          leg.copyWith(
+            from: stops.first.copyWith(arrival: null),
+            to: stops[j].copyWith(departure: null),
+            intermediates: stops.sublist(1, j),
+            line: d.line,
+          ),
+        ],
+      );
+    }
     var i = whole ? 0 : stops.indexWhere((s) => s.stop.id == d.stop.id || s.departure?.planned == d.time.planned);
     if (i < 0) i = 0;
     if (i >= stops.length - 1) return null;
@@ -231,7 +255,7 @@ class MotisProvider implements TransitProvider {
       const [];
 
   @override
-  Future<List<String>> regionsOf(GeoPoint near) async => const [];
+  Future<Map<String, String>> regionsOf(GeoPoint near, {int radiusMeters = 5000}) async => const {};
 
   @override
   Future<List<Platform>> platforms(Location stop) async => const [];
@@ -249,7 +273,7 @@ class MotisProvider implements TransitProvider {
   Future<List<Line>> linesNear(GeoPoint near) async => const [];
 
   @override
-  Future<List<Line>> linesAround(GeoPoint near) async => const [];
+  Future<List<Line>> linesAround(GeoPoint near, {int radiusMeters = 5000}) async => const [];
 
   @override
   Future<Map<String, String>> operatorDirectory() async => const {};

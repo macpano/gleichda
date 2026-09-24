@@ -13,6 +13,7 @@ import 'package:gleichda/data/repository.dart';
 import 'package:gleichda/data/transit_provider.dart';
 import 'package:gleichda/data/trias/trias_parser.dart';
 import 'package:gleichda/domain/companion.dart';
+import 'package:gleichda/domain/realtime_memory.dart';
 import 'package:gleichda/domain/connections.dart';
 import 'package:gleichda/domain/models.dart';
 import 'package:gleichda/domain/settings.dart';
@@ -48,6 +49,45 @@ Leg ride(String from, EventTime dep, String to, EventTime arr, {List<StopTime> v
     );
 
 void main() {
+  test('Ankünfte aus TRIAS: Ankunftszeit und Herkunft', () {
+    const hbf = Location(id: 'de:05124:11376', providerId: 'vrr', name: 'Wuppertal Hbf', type: LocationType.stop);
+    final xml = File('test/fixtures/trias_se_ankuenfte.xml').readAsStringSync();
+    final arr = parseStopEvents(xml, hbf, arrivals: true).departures;
+    expect(arr, isNotEmpty);
+    expect(arr.every((d) => d.arrival), isTrue);
+    // Richtung ist die Herkunft, nicht das Ziel (das hieße ja Wuppertal Hbf).
+    expect(arr.any((d) => d.direction.contains('Hbf') && d.direction.startsWith('Wuppertal')), isFalse);
+    expect(arr.every((d) => d.direction.isNotEmpty), isTrue);
+  });
+
+  test('Ist-Zeiten vergangener Halte bleiben, wenn die Auskunft sie nicht mehr kennt', () {
+    final t0 = DateTime(2026, 9, 24, 4, 37);
+    StopTime st(String id, int min, {int? late}) => StopTime(
+          stop: Location(id: id, providerId: 'x', name: id),
+          arrival: EventTime(
+              planned: t0.add(Duration(minutes: min)),
+              estimated: late == null ? null : t0.add(Duration(minutes: min + late)),
+              quality: late == null ? TimeQuality.planned : TimeQuality.realtime),
+          departure: EventTime(
+              planned: t0.add(Duration(minutes: min)),
+              estimated: late == null ? null : t0.add(Duration(minutes: min + late)),
+              quality: late == null ? TimeQuality.planned : TimeQuality.realtime),
+        );
+    Trip trip(List<StopTime> s) => Trip(id: 't', legs: [
+          Leg(type: LegType.ride, from: s.first, to: s.last, intermediates: s.sublist(1, s.length - 1)),
+        ]);
+    final old = trip([st('de:1:1:1', 0, late: 3), st('de:1:2', 5, late: 3), st('de:1:3', 30, late: 2)]);
+    final fresh = trip([st('de:1:1:2', 0), st('de:1:2', 5), st('de:1:3', 30)]);
+    // Um 04:50: die ersten beiden Halte liegen zurück, der letzte nicht.
+    final r = keepKnownRealtime(old, fresh, DateTime(2026, 9, 24, 4, 50)).legs.single;
+    expect(r.from.departure!.delayMinutes, 3, reason: 'anderer Steig, gleiche Haltestelle');
+    expect(r.intermediates.single.arrival!.delayMinutes, 3);
+    expect(r.to.arrival!.hasRealtime, isFalse, reason: 'künftige Prognosen werden nicht festgehalten');
+    // Neue Echtzeit hat Vorrang.
+    final fresher = trip([st('de:1:1:1', 0, late: 4), st('de:1:2', 5), st('de:1:3', 30)]);
+    expect(keepKnownRealtime(old, fresher, DateTime(2026, 9, 24, 4, 50)).legs.single.from.departure!.delayMinutes, 4);
+  });
+
   test('Verkehrsunternehmen des Verbunds aus allen Meldungen', () {
     Map<String, dynamic> j(String f) => jsonDecode(File('test/fixtures/$f').readAsStringSync()) as Map<String, dynamic>;
     final a = parseOperators(j('efa_addinfo.json'));

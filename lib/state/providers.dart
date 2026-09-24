@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -16,6 +17,7 @@ import '../data/trias/trias_parser.dart' show stopAreaId;
 import '../data/trias/trias_provider.dart';
 import '../data/vrr_provider.dart';
 import '../domain/models.dart';
+import '../domain/realtime_memory.dart';
 import '../domain/settings.dart';
 import 'location.dart';
 
@@ -215,8 +217,10 @@ class LastTripController extends AsyncNotifier<LastTripState?> {
       }
       // Die Kennung der gespeicherten Fahrt bleibt, auch wenn die Suche eine
       // neue vergibt.
-      final trip = fresh.copyWith(id: cur.trip.id);
+      // Ist-Zeiten vergangener Halte bleiben, auch wenn die Auskunft sie
+      // nicht mehr kennt.
       final now = DateTime.now();
+      final trip = keepKnownRealtime(cur.trip, fresh, now).copyWith(id: cur.trip.id);
       state = AsyncData(LastTripState(trip: trip, updatedAt: now));
       await ref.read(repositoryProvider).saveLastTrip(trip, updatedAt: now);
     } on ProviderException catch (e) {
@@ -313,7 +317,9 @@ class MessagesState {
       this.nearLines = const {},
       this.homeRegion,
       this.areaNetworks = const {},
-      this.operators = const {}});
+      this.operators = const {},
+      this.regionNames = const {},
+      this.radius = defaultMessagesRadius});
 
   final List<Message> messages;
   final DateTime at;
@@ -331,6 +337,22 @@ class MessagesState {
 
   /// Name je Netzkürzel („hst“ → „Hagener Straßenbahn“).
   final Map<String, String> operators;
+
+  /// Orte (Gemeinden) im Umkreis: Gemeindeschlüssel → Name, der eigene zuerst.
+  final Map<String, String> regionNames;
+
+  /// Gewählter Umkreis in Metern.
+  final int radius;
+
+  MessagesState copyWith({bool? failed, String? error}) => MessagesState(messages, at,
+      failed: failed ?? this.failed,
+      error: error ?? this.error,
+      nearLines: nearLines,
+      homeRegion: homeRegion,
+      areaNetworks: areaNetworks,
+      operators: operators,
+      regionNames: regionNames,
+      radius: radius);
 
   /// Betrifft eine Linie, die in der Nähe hält.
   bool isNear(Message m) => m.lineIds.any(nearLines.contains);
@@ -355,6 +377,12 @@ class MessagesState {
   }
 }
 
+/// Umkreis der Meldungen, wenn nichts gewählt ist.
+const defaultMessagesRadius = 5000;
+
+/// Wählbare Umkreise der Meldungen in Metern.
+const messagesRadii = [2000, 5000, 10000, 20000];
+
 /// Zuletzt genutzte Gebiete für Meldungen (auch für die Hintergrundprüfung).
 Future<List<String>> savedMessageRegions(Repository repo) async {
   final s = await repo.setting('messagesRegions');
@@ -372,28 +400,54 @@ class MessagesController extends AsyncNotifier<MessagesState> {
     final p = ref.read(transitProvider);
     final repo = ref.read(repositoryProvider);
     var regions = <String>[];
+    var names = <String, String>{};
+    final radius = int.tryParse(await repo.setting('messagesRadius') ?? '') ?? defaultMessagesRadius;
     var near = <String>{};
     final networks = <String>{};
     final operators = <String, String>{};
     try {
       final here = await ref.read(locationServiceProvider).current(preferRecent: true);
       final at = (lat: here.lat, lon: here.lon);
-      final results = await Future.wait([p.regionsOf(at), p.linesNear(at), p.linesAround(at)]);
-      regions = results[0] as List<String>;
+      final results = await Future.wait([
+        p.regionsOf(at, radiusMeters: radius),
+        p.linesNear(at),
+        p.linesAround(at, radiusMeters: radius),
+      ]);
+      names = results[0] as Map<String, String>;
+      regions = names.keys.toList();
       near = {for (final l in results[1] as List<Line>) lineKey(l.id)};
       for (final l in [...results[1] as List<Line>, ...results[2] as List<Line>]) {
         final net = lineKey(l.id).split(':').first;
         networks.add(net);
         operators.putIfAbsent(net, () => net == 'ddb' ? 'Deutsche Bahn' : (l.operator ?? net.toUpperCase()));
       }
-      if (regions.isNotEmpty) await repo.setSetting('messagesRegions', regions.join(','));
+      if (regions.isNotEmpty) {
+        await repo.setSetting('messagesRegions', regions.join(','));
+        await repo.setSetting('messagesRegionNames', jsonEncode(names));
+      }
     } catch (_) {
       // Ohne Standort: zuletzt genutzte Gebiete.
     }
-    if (regions.isEmpty) regions = await savedMessageRegions(repo);
+    if (regions.isEmpty) {
+      regions = await savedMessageRegions(repo);
+      try {
+        names = (jsonDecode(await repo.setting('messagesRegionNames') ?? '{}') as Map).cast<String, String>();
+      } catch (_) {}
+    }
     final list = await p.messages(regions: regions);
     return MessagesState(list, DateTime.now(),
-        nearLines: near, homeRegion: regions.firstOrNull, areaNetworks: networks, operators: operators);
+        nearLines: near,
+        homeRegion: regions.firstOrNull,
+        areaNetworks: networks,
+        operators: operators,
+        regionNames: {for (final r in regions) r: names[r] ?? r},
+        radius: radius);
+  }
+
+  /// Umkreis ändern: gemerkt und sofort neu geladen.
+  Future<void> setRadius(int meters) async {
+    await ref.read(repositoryProvider).setSetting('messagesRadius', '$meters');
+    await refresh();
   }
 
   Future<void> refresh() async {
@@ -403,13 +457,7 @@ class MessagesController extends AsyncNotifier<MessagesState> {
     } on ProviderException catch (e) {
       state = old == null
           ? AsyncError(e, StackTrace.current)
-          : AsyncData(MessagesState(old.messages, old.at,
-              failed: true,
-              error: e.message,
-              nearLines: old.nearLines,
-              homeRegion: old.homeRegion,
-              areaNetworks: old.areaNetworks,
-              operators: old.operators));
+          : AsyncData(old.copyWith(failed: true, error: e.message));
     }
   }
 }

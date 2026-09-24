@@ -72,10 +72,11 @@ class FakeProvider implements TransitProvider {
   String get id => 'fake';
 
   @override
-  Future<DepartureBoard> departures(Location stop, {DateTime? time, int limit = 20}) async => board;
+  Future<DepartureBoard> departures(Location stop, {DateTime? time, int limit = 20, bool arrivals = false}) async =>
+      arrivals ? DepartureBoard([for (final d in board.departures) d.copyWith(arrival: true)], board.messages) : board;
 
   @override
-  Future<List<String>> regionsOf(GeoPoint near) async => const [];
+  Future<Map<String, String>> regionsOf(GeoPoint near, {int radiusMeters = 5000}) async => const {};
 
   @override
   Future<List<Message>> messages({List<String> lineIds = const [], List<String> regions = const []}) async =>
@@ -115,7 +116,7 @@ class FakeProvider implements TransitProvider {
       ];
 
   @override
-  Future<List<Line>> linesAround(GeoPoint near) async => const [];
+  Future<List<Line>> linesAround(GeoPoint near, {int radiusMeters = 5000}) async => const [];
 
   @override
   Future<Map<String, String>> operatorDirectory() async => const {'wsw': 'WSW', 'sws': 'Stadtwerke Solingen'};
@@ -325,6 +326,19 @@ void main() {
   testWidgets('Fahrt dunkel',
       (t) => shot(t, 'fahrt_dunkel', const TripScreen(), brightness: Brightness.dark, seed: seedHome));
   testWidgets('Abfahrten', (t) => shot(t, 'abfahrten', Scaffold(body: DeparturesScreen(initialStop: hbf))));
+  testWidgets('Ankünfte', (t) => shot(t, 'ankuenfte', Scaffold(body: DeparturesScreen(initialStop: hbf)),
+      act: (t) async {
+        await t.tap(find.text('Jetzt'));
+        for (var i = 0; i < 4; i++) {
+          await t.pump(const Duration(milliseconds: 150));
+        }
+        await t.tap(find.text('Ankünfte'));
+        await t.pump();
+        await t.tap(find.text('Fertig'));
+        for (var i = 0; i < 4; i++) {
+          await t.pump(const Duration(milliseconds: 150));
+        }
+      }));
   testWidgets('Zeitraster', (t) => shot(t, 'zeitraster',
       ConnectionsScreen(from: trips.first.origin, to: trips.first.destination, time: null, arriveBy: false),
       seed: (r) => r.setSetting('settings', const AppSettings(connectionsGrid: true).encode())));
@@ -334,11 +348,27 @@ void main() {
   testWidgets('Meldungen nach Unternehmen', (t) => shot(t, 'meldungen_unternehmen', const Scaffold(body: MessagesScreen()),
       overrides: [messagesProvider.overrideWith(_AreaMessages.new)],
       act: (t) async {
-        await t.tap(find.byIcon(Icons.apartment));
+        await t.tap(find.byIcon(Icons.tune));
         for (var i = 0; i < 4; i++) {
           await t.pump(const Duration(milliseconds: 150));
         }
-        await t.tap(find.widgetWithText(MenuItemButton, 'VER'));
+        await t.tap(find.text('Wuppertal'));
+        await t.tap(find.text('VER'));
+        await t.pump();
+        await t.tap(find.text('Fertig'));
+        for (var i = 0; i < 4; i++) {
+          await t.pump(const Duration(milliseconds: 150));
+        }
+      }));
+  testWidgets('Meldungen: Filter', (t) => shot(t, 'meldungen_filter', const Scaffold(body: MessagesScreen()),
+      overrides: [messagesProvider.overrideWith(_AreaMessages.new)],
+      act: (t) async {
+        await t.tap(find.byIcon(Icons.tune));
+        for (var i = 0; i < 4; i++) {
+          await t.pump(const Duration(milliseconds: 150));
+        }
+        await t.tap(find.text('Herdecke'));
+        await t.pump(const Duration(milliseconds: 200));
       }));
   testWidgets('Mehr', (t) => shot(t, 'mehr', const Scaffold(body: MoreScreen())));
   testWidgets('Unterwegs', (t) {
@@ -479,7 +509,9 @@ class _AreaMessages extends MessagesController {
   Future<MessagesState> build() async {
     final list = parseAddInfo(jsonDecode(File('test/fixtures/efa_addinfo_wuppertal.json').readAsStringSync())
         as Map<String, dynamic>);
-    return MessagesState(list, DateTime.now(),
-        areaNetworks: const {'wsw', 'ver'}, operators: const {'wsw': 'WSW', 'ver': 'VER'});
+    return MessagesState([for (final m in list) m.copyWith(regions: const ['5124000'])], DateTime.now(),
+        areaNetworks: const {'wsw', 'ver'},
+        operators: const {'wsw': 'WSW', 'ver': 'VER'},
+        regionNames: const {'5124000': 'Wuppertal', '5122000': 'Solingen', '5120000': 'Remscheid', '5954020': 'Herdecke'});
   }
 }
