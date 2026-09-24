@@ -44,7 +44,8 @@ class FeedbackSender {
           'App und Gerät': ?device,
         },
         // FormSubmit nimmt nur Anfragen „von einer Webseite“ an; die Freischaltung
-        // gilt für diese Herkunft (eingerichtet 24.09.2026).
+        // gilt für diese Herkunft (eingerichtet 24.09.2026). Es sind nur Kopfzeilen –
+        // sie wirken auch, wenn das GitHub-Repository nicht mehr existiert.
         options: Options(headers: {
           'Accept': 'application/json',
           'Origin': 'https://github.com',

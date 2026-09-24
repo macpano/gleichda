@@ -109,13 +109,24 @@ class MoreScreen extends ConsumerWidget {
             color: null,
             onTap: () => push(const UpdateScreen()),
           ),
+          _Row(
+            icon: Icons.share_outlined,
+            label: 'App weitergeben',
+            chevron: false,
+            onTap: () async {
+              final err = await ref.read(updateProvider.notifier).shareApp();
+              if (err != null && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+              }
+            },
+          ),
           _Row(icon: Icons.format_paint_outlined, label: 'Farben und Schriften', onTap: () => push(const DesignDemoScreen())),
         ]),
         const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
-            'Fahrplandaten: VRR, DELFI e. V., Transitous (transitous.org/sources). Alle Angaben ohne Gewähr. '
+            'Fahrplandaten: VRR, DELFI e. V. Alle Angaben ohne Gewähr. '
             'Version ${update.current}',
             style: TextStyle(fontSize: 12, height: 1.5, color: c.muted),
           ),
@@ -284,9 +295,6 @@ class _TextScreen extends StatelessWidget {
               'Aktualisierung einer gespeicherten Fahrt, Steigpositionen und Störungsmeldungen. CC BY 4.0.'),
           ('OpenStreetMap', 'Karte beim Weg zum Steig. © OpenStreetMap-Mitwirkende (ODbL), Kacheln: FOSSGIS e. V.'),
           ('DELFI e. V.', 'Deutschlandweite Soll-Fahrplandaten, auf denen die Auskunft beruht.'),
-          ('Transitous',
-              'Verbindungen, Abfahrten und Echtzeit außerhalb des VRR. Gemeinschaftlich betriebene, offene Auskunft; '
-                  'Quellen der Daten: transitous.org/sources'),
         ];
 
   const _TextScreen.privacy()
@@ -318,7 +326,7 @@ class _TextScreen extends StatelessWidget {
       : title = 'Impressum',
         items = const [
           ('Angaben folgen', 'Diese Testfassung wird nicht öffentlich angeboten. Vor einer Veröffentlichung steht hier das Impressum.'),
-          ('Haftung', 'Alle Angaben ohne Gewähr. Fahrplandaten: VRR, DELFI e. V., Transitous.'),
+          ('Haftung', 'Alle Angaben ohne Gewähr. Fahrplandaten: VRR, DELFI e. V.'),
         ];
 
   final String title;

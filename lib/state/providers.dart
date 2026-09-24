@@ -6,9 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart' show Geolocator;
 
-import '../data/auto_provider.dart';
 import '../data/db/database.dart';
-import '../data/motis/motis_provider.dart';
 import '../data/efa/efa_client.dart';
 import '../data/repository.dart';
 import '../data/transit_provider.dart';
@@ -30,7 +28,7 @@ final dioProvider = Provider((ref) {
   final dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 25),
-    headers: {'User-Agent': 'Gleich.da (+https://github.com/macpano/gleich.da)'},
+    headers: {'User-Agent': 'Gleich.da (macpano)'},
   ));
   ref.onDispose(dio.close);
   return dio;
@@ -40,8 +38,9 @@ final dioProvider = Provider((ref) {
 /// nur hier eingehängt.
 final transitProvider = Provider<TransitProvider>((ref) {
   final dio = ref.watch(dioProvider);
-  // Im VRR-Land der VRR, sonst Transitous (lib/data/auto_provider.dart).
-  return AutoProvider(VrrProvider(TriasProvider(dio), EfaClient(dio)), MotisProvider(dio));
+  // Nur der VRR: Transitous ist entfernt (24.09.2026) – es setzt ein öffentliches, quelloffenes
+  // Projekt voraus, Gleich.da wird aber nicht mehr öffentlich angeboten.
+  return VrrProvider(TriasProvider(dio), EfaClient(dio));
 });
 
 /// Sekundentakt für Countdown und „vor 12 s“.

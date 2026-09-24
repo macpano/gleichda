@@ -176,7 +176,7 @@ class UpdateScreen extends ConsumerWidget {
           ],
           const SizedBox(height: 16),
           Text(
-            'Die App fragt die neueste Veröffentlichung auf GitHub ab (github.com/macpano/gleich.da) und lädt sie '
+            'Die App fragt die neueste Veröffentlichung in einem privaten Speicher ab und lädt sie '
             'im Hintergrund. Installiert wird erst auf Tipp; Android fragt beim ersten Mal, ob Gleich.da Apps '
             'installieren darf, und bestätigt jede Installation selbst. Die Daten in der App bleiben erhalten.',
             style: context.t.secondary.copyWith(color: c.muted, height: 1.4),

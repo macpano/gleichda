@@ -108,9 +108,42 @@ class MainActivity : FlutterActivity() {
                             result.success("started")
                         }
                     }
+                    // App weitergeben: die eigene APK über das Teilen-Menü (WhatsApp, Signal, E-Mail …).
+                    // Erstinstallation ohne Download-Link (Nutzerwunsch 24.09.2026).
+                    "share" -> {
+                        val text = call.argument<String>("text") ?: ""
+                        Thread {
+                            try {
+                                shareSelf(text)
+                                runOnUiThread { result.success(null) }
+                            } catch (e: Exception) {
+                                runOnUiThread { result.error("share", e.message, null) }
+                            }
+                        }.start()
+                    }
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    private fun shareSelf(text: String) {
+        val version = packageManager.getPackageInfo(packageName, 0).versionName ?: ""
+        // Unter files/updates, weil nur dieser Ordner im FileProvider freigegeben ist (res/xml/filepaths.xml).
+        val dir = File(filesDir, "updates/weitergeben").apply { mkdirs() }
+        dir.listFiles()?.forEach { it.delete() }
+        val out = File(dir, "Gleich.da-$version.apk")
+        File(applicationInfo.sourceDir).copyTo(out, overwrite = true)
+        val uri = FileProvider.getUriForFile(this, "$packageName.updates", out)
+        val send = Intent(Intent.ACTION_SEND)
+            .setType("application/vnd.android.package-archive")
+            .putExtra(Intent.EXTRA_STREAM, uri)
+            .putExtra(Intent.EXTRA_TEXT, text)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        send.clipData = android.content.ClipData.newRawUri("", uri)
+        startActivity(
+            Intent.createChooser(send, "Gleich.da weitergeben")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        )
     }
 
     private fun canInstall(): Boolean =

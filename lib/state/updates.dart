@@ -9,12 +9,18 @@ import 'package:path_provider/path_provider.dart';
 
 import 'providers.dart';
 
-/// Neueste Veröffentlichung auf GitHub (öffentliches Repository, kein Token).
-const releasesUrl = 'https://api.github.com/repos/macpano/gleich.da/releases/latest';
+/// Versteckter Update-Speicher (Netlify, Team macpano, seit 0.5.0): Zufallsadresse ohne Startseite
+/// und Dateiliste, für Suchmaschinen gesperrt. Ersetzt GitHub (Nutzerwunsch 24.09.2026: nichts
+/// öffentlich, nur Download). Befüllt von tool/release.sh über Dropbox/Projekte/Gleich.da.
+const updateStore = 'https://9p0j39vwzuwpj9jvo7.netlify.app/Gleich.da';
+
+/// Neueste reguläre Veröffentlichung – im Format eines GitHub-Releases, damit
+/// [UpdateInfo.fromRelease] unverändert bleibt.
+const releasesUrl = '$updateStore/release.json';
 
 /// Alle Veröffentlichungen, auch Vorabversionen (Schalter „Vorabversionen
-/// erhalten“).
-const allReleasesUrl = 'https://api.github.com/repos/macpano/gleich.da/releases?per_page=15';
+/// erhalten“) – eine Liste im selben Format.
+const allReleasesUrl = '$updateStore/releases.json';
 
 /// Übergabe an den Android-Installer (MainActivity.kt).
 const _channel = MethodChannel('de.gleichda/update');
@@ -189,7 +195,7 @@ class UpdateController extends Notifier<UpdateState> {
     }
     state = state.copyWith(phase: UpdatePhase.checking);
     try {
-      final opts = Options(headers: {'Accept': 'application/vnd.github+json'});
+      final opts = Options(headers: {'Cache-Control': 'no-cache'});
       final dio = ref.read(dioProvider);
       final UpdateInfo? info;
       if (await ref.read(repositoryProvider).setting('updatePrerelease') == 'true') {
@@ -202,7 +208,7 @@ class UpdateController extends Notifier<UpdateState> {
       final next = state.copyWith(latest: info, checkedAt: DateTime.now());
       state = next.copyWith(phase: next.hasUpdate ? UpdatePhase.available : UpdatePhase.upToDate);
     } catch (_) {
-      state = state.copyWith(phase: UpdatePhase.failed, error: 'Keine Verbindung zu GitHub', checkedAt: DateTime.now());
+      state = state.copyWith(phase: UpdatePhase.failed, error: 'Keine Verbindung zur Aktualisierung', checkedAt: DateTime.now());
       return;
     }
     await _cleanup();
@@ -292,6 +298,19 @@ class UpdateController extends Notifier<UpdateState> {
           : state.copyWith(phase: UpdatePhase.installing);
     } on PlatformException catch (e) {
       state = state.copyWith(phase: UpdatePhase.failed, error: 'Installation nicht möglich (${e.message}).');
+    }
+  }
+
+  /// Gibt die installierte App als Datei weiter (Teilen-Menü) – Erstinstallation ohne Link.
+  Future<String?> shareApp() async {
+    try {
+      await _channel.invokeMethod<void>('share', {
+        'text': 'Gleich.da – zum Installieren antippen. Android fragt einmal, ob Apps aus dieser Quelle '
+            'erlaubt sind. Updates kommen danach von selbst.',
+      });
+      return null;
+    } on PlatformException catch (e) {
+      return 'Weitergeben nicht möglich (${e.message}).';
     }
   }
 

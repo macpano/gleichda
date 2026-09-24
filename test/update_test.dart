@@ -44,4 +44,23 @@ void main() {
     expect(s.ready, isFalse);
     expect(s.copyWith(apkPath: '/x/gleichda-0.3.0.apk').ready, isTrue);
   });
+
+  test('Versteckter Speicher: keine GitHub-Adresse, Liste wie tool/release.sh sie schreibt', () {
+    expect(releasesUrl, '$updateStore/release.json');
+    expect(allReleasesUrl, '$updateStore/releases.json');
+    expect(updateStore.contains('github'), isFalse);
+    final liste = [
+      {
+        'tag_name': 'v0.5.0', 'draft': false, 'prerelease': false, 'body': 'Neu',
+        'assets': [{'name': 'Gleich.da.apk', 'browser_download_url': '$updateStore/Gleich.da.apk', 'size': 70000000}],
+      },
+      {
+        'tag_name': 'v0.5.1-vorab.1', 'draft': false, 'prerelease': true, 'body': 'Vorab',
+        'assets': [{'name': 'Gleich.da-vorab.apk', 'browser_download_url': '$updateStore/Gleich.da-vorab.apk', 'size': 70000001}],
+      },
+    ];
+    expect(newestRelease(liste, prerelease: false)!.version, '0.5.0');
+    expect(newestRelease(liste, prerelease: true)!.version, '0.5.1-vorab.1');
+    expect(newestRelease(liste, prerelease: true)!.size, 70000001);
+  });
 }

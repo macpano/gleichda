@@ -34,7 +34,7 @@ class BaseMapLayer extends StatefulWidget {
   static Future<vt.Style> _style(String uri) {
     final f = _styles[uri] ??= vt.StyleReader(
       uri: uri,
-      headers: const {'User-Agent': 'Gleich.da (+https://github.com/macpano/gleich.da)'},
+      headers: const {'User-Agent': 'Gleich.da (macpano)'},
     ).read();
     // Gescheitert: beim nächsten Öffnen erneut versuchen.
     f.then((_) {}, onError: (Object _) {
