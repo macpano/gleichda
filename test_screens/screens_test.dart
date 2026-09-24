@@ -362,6 +362,16 @@ void main() {
   testWidgets('Zeitraster', (t) => shot(t, 'zeitraster',
       ConnectionsScreen(from: trips.first.origin, to: trips.first.destination, time: null, arriveBy: false),
       seed: (r) => r.setSetting('settings', const AppSettings(connectionsGrid: true).encode())));
+  // Seitlich gerollt: Die Zeitachse gleitet zu den nun sichtbaren Fahrten.
+  testWidgets('Zeitraster seitlich gerollt', (t) => shot(t, 'zeitraster_gerollt',
+      ConnectionsScreen(from: trips.first.origin, to: trips.first.destination, time: null, arriveBy: false),
+      seed: (r) => r.setSetting('settings', const AppSettings(connectionsGrid: true).encode()),
+      act: (t) async {
+        await t.drag(find.byType(SingleChildScrollView).last, const Offset(-300, 0));
+        for (var i = 0; i < 6; i++) {
+          await t.pump(const Duration(milliseconds: 100));
+        }
+      }));
   testWidgets('Meldungen', (t) => shot(t, 'meldungen', const Scaffold(body: MessagesScreen())));
   testWidgets('Meldungen mit Umgebung', (t) => shot(t, 'meldungen_umgebung', const Scaffold(body: MessagesScreen()),
       overrides: [messagesProvider.overrideWith(_AreaMessages.new)]));
