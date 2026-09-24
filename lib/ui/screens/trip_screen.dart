@@ -242,13 +242,17 @@ class _TripScreenState extends ConsumerState<TripScreen> {
         TransferState.guaranteed => ('Anschluss wartet', c.green),
         null => ('', c.muted),
       };
+      // Mit Anschlussangabe zweizeilig: „16 min Umstieg“ und darunter
+      // „Anschluss sicher“ – in einer Zeile wurde das bei großer Schrift gekürzt.
       return _Row(
-        height: 40,
+        height: state.isEmpty ? 40 : 58,
         rail: _Rail(color: walkColor, dotted: true),
         child: Row(children: [
           Expanded(
-            child: OneLine(state.isEmpty ? text : '$text · $state',
-                style: TextStyle(fontSize: 14, color: state.isEmpty ? c.muted : color)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              OneLine(text, style: TextStyle(fontSize: 14, height: 1.3, color: state.isEmpty ? c.muted : color)),
+              if (state.isNotEmpty) OneLine(state, style: TextStyle(fontSize: 13, height: 1.3, color: color)),
+            ]),
           ),
           // Weg zum Steig – dasselbe Symbol wie in der Unterwegs-Leiste.
           if (target != null)
@@ -350,22 +354,38 @@ class _TripScreenState extends ConsumerState<TripScreen> {
             : () => setState(() => open ? _expanded.remove(i) : _expanded.add(i)),
         // Zwei Zeilen: Linie und volles Ziel, darunter Zwischenhalte und
         // Echtzeit – vorher in einer Zeile, das Ziel wurde abgeschnitten.
+        // Oben Linie und Richtung, darunter über die ganze Breite Zwischenhalte
+        // und Echtzeit – vorher teilten sich beide Zeilen den Platz neben dem
+        // Schild, bei großer Schrift wurden Richtung und „pünktlich“ gekürzt.
         child: _Row(
           height: 56,
           rail: _Rail(color: color),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Tipp auf die Linie: ganzer Linienverlauf des Fahrzeugs.
-            GestureDetector(
-              onTap: () => pushOnce(Navigator.of(context), 'linie:${l.journeyRef}',
-                  (_) => LineRunScreen(leg: l)),
-              child: Padding(padding: const EdgeInsets.only(top: 1), child: LineBadge(l.line, slot: 56)),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                OneLine('Richtung ${l.direction ?? ''}', style: TextStyle(fontSize: 15, color: c.ink2, height: 1.3)),
-                const SizedBox(height: 2),
-                Text.rich(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              // Tipp auf die Linie: ganzer Linienverlauf des Fahrzeugs.
+              GestureDetector(
+                onTap: () => pushOnce(Navigator.of(context), 'linie:${l.journeyRef}',
+                    (_) => LineRunScreen(leg: l)),
+                child: LineBadge(l.line),
+              ),
+              const SizedBox(width: 6),
+              // Pfeil statt „Richtung“: neun Zeichen mehr für das Ziel.
+              ExcludeSemantics(child: Icon(Icons.arrow_forward, size: 16, color: c.muted)),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Semantics(
+                  label: 'Richtung ${l.direction ?? ''}',
+                  excludeSemantics: true,
+                  child: OneLine(l.direction ?? '', style: TextStyle(fontSize: 15, color: c.ink2, height: 1.3)),
+                ),
+              ),
+              if (l.intermediates.isNotEmpty) ...[
+                const SizedBox(width: 4),
+                Icon(open ? Icons.expand_less : Icons.expand_more, size: 20, color: c.muted),
+              ],
+            ]),
+            const SizedBox(height: 2),
+            Text.rich(
                   TextSpan(children: [
                     if (l.intermediates.isNotEmpty)
                       TextSpan(
@@ -377,12 +397,6 @@ class _TripScreenState extends ConsumerState<TripScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 13, height: 1.3),
                 ),
-              ]),
-            ),
-            if (l.intermediates.isNotEmpty) ...[
-              const SizedBox(width: 4),
-              Icon(open ? Icons.expand_less : Icons.expand_more, size: 20, color: c.muted),
-            ],
           ]),
         ),
       ));
