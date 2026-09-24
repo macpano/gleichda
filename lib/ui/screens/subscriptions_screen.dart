@@ -79,7 +79,7 @@ class SubscriptionsScreen extends ConsumerWidget {
                         child: Row(children: [
                           isOperatorSub(s)
                               ? _OperatorBadge(name: s.lineName)
-                              : LineBadge(Line(id: s.lineId, name: s.lineName, mode: guessProduct(s.lineName).mode)),
+                              : LineBadge(Line(id: s.lineId, name: s.lineName, mode: guessProduct(s.lineName).mode), slot: 56),
                           const SizedBox(width: 12),
                           Expanded(child: OneLine(windowLabel(s.window), style: TextStyle(fontSize: 15, color: c.muted))),
                           IconButton(

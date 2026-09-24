@@ -586,9 +586,11 @@ class _StopSheetState extends ConsumerState<_StopSheet> {
     final c = context.c;
     final now = ref.watch(clockProvider).value ?? DateTime.now();
     final board = _board;
+    // Feste Höhe: Beim Laden erscheinen Platzhalterzeilen, danach die
+    // Abfahrten – das Blatt wächst nicht nachträglich.
     return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.6),
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.6,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -604,14 +606,30 @@ class _StopSheetState extends ConsumerState<_StopSheet> {
             ),
             Flexible(
               child: board == null
-                  ? Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Center(
-                        child: _error != null
-                            ? Text(_error!, style: TextStyle(color: c.muted))
-                            : const CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    )
+                  ? (_error != null
+                      ? Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(_error!, style: TextStyle(color: c.muted)),
+                        )
+                      : ListView(
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: [
+                            for (var i = 0; i < 6; i++)
+                              const SizedBox(
+                                height: 56,
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 16),
+                                  child: Row(children: [
+                                    SkeletonBlock(height: 24, width: 40),
+                                    SizedBox(width: 12),
+                                    Expanded(child: SkeletonBlock(height: 16)),
+                                    SizedBox(width: 24),
+                                    SkeletonBlock(height: 16, width: 44),
+                                  ]),
+                                ),
+                              ),
+                          ],
+                        ))
                   : board.departures.isEmpty
                   ? Padding(
                       padding: const EdgeInsets.all(24),

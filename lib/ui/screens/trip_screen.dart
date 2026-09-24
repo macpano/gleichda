@@ -358,7 +358,7 @@ class _TripScreenState extends ConsumerState<TripScreen> {
             GestureDetector(
               onTap: () => pushOnce(Navigator.of(context), 'linie:${l.journeyRef}',
                   (_) => LineRunScreen(leg: l)),
-              child: Padding(padding: const EdgeInsets.only(top: 1), child: LineBadge(l.line)),
+              child: Padding(padding: const EdgeInsets.only(top: 1), child: LineBadge(l.line, slot: 56)),
             ),
             const SizedBox(width: 8),
             Expanded(

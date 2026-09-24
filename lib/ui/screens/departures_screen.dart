@@ -437,7 +437,7 @@ class DepartureRowState extends ConsumerState<DepartureRow> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(children: [
-            LineBadge(d.line, width: 40, height: 24),
+            LineBadge(d.line, width: 40, height: 24, slot: 60),
             const SizedBox(width: 12),
             Expanded(
               child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [

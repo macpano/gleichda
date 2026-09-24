@@ -418,3 +418,9 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Steignummern: Die App nahm das letzte Stück der Kennung („B“, „Buch“, „An“, „SEV2“, „S1“, „A.1“). Die Auskunft
   nennt dort keinen bzw. einen anderen Steig (TRIAS PlannedBay für „…:0:A.1“ ist „1“). `platformLabel` nimmt
   `STOP_POINT_LONGNAME`, sonst nur echte Nummern; ohne Nummer zeigt die Karte einen Punkt
+
+## nach 0.4.17 (24.09.2026) – nichts springt
+- ✅ Linienschilder in Listen (Abfahrten, Fahrtverlauf, Liniensuche, Abos) in fester Spalte (`LineBadge.slot`):
+  „ICE 557“ und „RB48“ schoben das Ziel nach rechts, jede Zeile begann woanders. Lange Namen werden kleiner
+  statt breiter; die Spalte wächst mit großer Schrift
+- ✅ Haltestellenblatt auf der Karte hat feste Höhe mit Platzhalterzeilen statt Ladekreis – es wuchs nach dem Laden
