@@ -283,18 +283,48 @@ class TripTimeline extends StatelessWidget {
 
 /// Zeitraster wie in Öffi: Zeit von oben nach unten, je Verbindung eine
 /// Spalte, Fahrten als Balken, Fußwege und Umstiege gepunktet.
-class ConnectionGrid extends StatelessWidget {
-  const ConnectionGrid({super.key, required this.items, required this.onTap});
+///
+/// Passt sich der Bildschirmhöhe an: Das Raster misst, wo es beginnt, und
+/// verteilt die Zeitspanne auf den Platz bis zum unteren Rand (abzüglich
+/// [reserveBelow] für das, was darunter steht) – senkrecht scrollen muss man
+/// nur bei sehr langen Zeitspannen.
+class ConnectionGrid extends StatefulWidget {
+  const ConnectionGrid({super.key, required this.items, required this.onTap, this.reserveBelow = 110});
 
   final List<ConnectionItem> items;
   final ValueChanged<ConnectionItem> onTap;
 
-  static const _colWidth = 58.0;
-  static const _pxPerMinute = 6.0;
+  /// Platz unter dem Raster (Hinweis, „Früher | Später“, Rand).
+  final double reserveBelow;
+
+  static const colWidth = 58.0;
+
+  /// Kopf jeder Spalte (Abfahrt, Dauer) – fest, damit die Zeitachse links
+  /// immer auf Höhe der Balken steht.
+  static const headHeight = 40.0;
+
+  @override
+  State<ConnectionGrid> createState() => _ConnectionGridState();
+}
+
+class _ConnectionGridState extends State<ConnectionGrid> {
+  /// Oberkante des Rasters im Inhalt der Seite (ohne Scrollversatz).
+  double? _top;
+
+  void _measure() {
+    if (!mounted) return;
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    final scrolled = Scrollable.maybeOf(context)?.position.pixels ?? 0;
+    final top = box.localToGlobal(Offset.zero).dy + scrolled;
+    if (_top == null || (top - _top!).abs() > 1) setState(() => _top = top);
+  }
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
     final c = context.c;
+    final items = widget.items;
     if (items.isEmpty) return const SizedBox.shrink();
     DateTime startOf(Trip t) => (t.legs.first.from.departure ?? t.legs.first.from.arrival)!.best;
     final t0 = items.map((i) => startOf(i.trip)).reduce((a, b) => a.isBefore(b) ? a : b).toLocal();
@@ -302,16 +332,26 @@ class ConnectionGrid extends StatelessWidget {
     // Skala in Ortszeit, auf 5 Minuten abgerundet.
     final base = DateTime(t0.year, t0.month, t0.day, t0.hour, t0.minute - t0.minute % 5);
     final minutes = t1.difference(base).inMinutes + 5;
-    final height = minutes * _pxPerMinute;
-    double y(DateTime t) => t.difference(base).inSeconds / 60 * _pxPerMinute;
 
+    // Verfügbare Höhe: Bildschirm minus Beginn des Rasters, Kopf, Innenrand
+    // und was darunter steht. Vor der ersten Messung eine Schätzung.
+    final mq = MediaQuery.of(context);
+    final top = _top ?? mq.size.height * 0.4;
+    final avail = mq.size.height - top - mq.padding.bottom - widget.reserveBelow - ConnectionGrid.headHeight - 6 - 20;
+    final perMinute = (avail / minutes).clamp(1.2, 6.0);
+    final height = minutes * perMinute;
+    double y(DateTime t) => t.difference(base).inSeconds / 60 * perMinute;
+
+    // Beschriftung der Zeitachse ausdünnen, damit sie nicht übereinanderliegt.
+    final step = [5, 10, 15, 30, 60].firstWhere((m) => m * perMinute >= 20, orElse: () => 60);
     final ticks = <Widget>[];
     for (var m = 0; m <= minutes; m += 5) {
       final t = base.add(Duration(minutes: m));
+      if ((t.hour * 60 + t.minute) % step != 0) continue;
       ticks.add(Positioned(
-        top: m * _pxPerMinute - 7,
+        top: m * perMinute - 7,
         right: 6,
-        child: Text(hm(t), style: context.t.number(11).copyWith(color: c.muted)),
+        child: Text(hm(t), textScaler: TextScaler.noScaling, style: context.t.number(11).copyWith(color: c.muted)),
       ));
     }
 
@@ -334,18 +374,25 @@ class ConnectionGrid extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.only(top: 4),
               alignment: Alignment.topCenter,
+              clipBehavior: Clip.hardEdge,
               decoration: BoxDecoration(
                 color: lineColor(context, l.line),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Text(l.line?.name ?? '',
-                  maxLines: 1, overflow: TextOverflow.clip, style: context.t.lineNumber.copyWith(fontSize: 12)),
+              // Name nur, wenn der Balken hoch genug ist.
+              child: h < 20
+                  ? null
+                  : Text(l.line?.name ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.clip,
+                      textScaler: TextScaler.noScaling,
+                      style: context.t.lineNumber.copyWith(fontSize: 12)),
             ),
           ));
         } else {
           segs.add(Positioned(
             top: top,
-            left: _colWidth / 2 - 1.5,
+            left: ConnectionGrid.colWidth / 2 - 1.5,
             width: 3,
             height: h,
             child: CustomPaint(painter: _DottedLine(c.muted)),
@@ -359,7 +406,7 @@ class ConnectionGrid extends StatelessWidget {
         if (a == null || b == null || !b.isAfter(a)) continue;
         segs.add(Positioned(
           top: y(a),
-          left: _colWidth / 2 - 1.5,
+          left: ConnectionGrid.colWidth / 2 - 1.5,
           width: 3,
           height: y(b) - y(a),
           child: CustomPaint(painter: _DottedLine(c.muted)),
@@ -368,13 +415,27 @@ class ConnectionGrid extends StatelessWidget {
       return Opacity(
         opacity: item.reachable ? 1 : 0.45,
         child: InkWell(
-          onTap: () => onTap(item),
+          onTap: () => widget.onTap(item),
           child: SizedBox(
-            width: _colWidth,
+            width: ConnectionGrid.colWidth,
             child: Column(children: [
-              Text(hm(dep.best),
-                  style: context.t.time(14).copyWith(color: timeColor(context, dep, neutral: c.ink))),
-              Text(durationText(trip.duration), style: context.t.number(11).copyWith(color: c.muted)),
+              // Fester Kopf, einzeilig: „1 Std 18 min“ wird kleiner statt umzubrechen.
+              SizedBox(
+                height: ConnectionGrid.headHeight,
+                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Text(hm(dep.best),
+                      maxLines: 1,
+                      textScaler: TextScaler.noScaling,
+                      style: context.t.time(14).copyWith(color: timeColor(context, dep, neutral: c.ink))),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(durationText(trip.duration),
+                        maxLines: 1,
+                        textScaler: TextScaler.noScaling,
+                        style: context.t.number(11).copyWith(color: c.muted)),
+                  ),
+                ]),
+              ),
               const SizedBox(height: 6),
               SizedBox(height: height, child: Stack(children: segs)),
             ]),
@@ -390,8 +451,11 @@ class ConnectionGrid extends StatelessWidget {
         SizedBox(
           width: 44,
           child: Padding(
-            padding: const EdgeInsets.only(top: 38),
-            child: SizedBox(height: height, child: Stack(clipBehavior: Clip.none, children: ticks)),
+            padding: const EdgeInsets.only(top: ConnectionGrid.headHeight + 6),
+            child: SizedBox(
+              height: height,
+              child: Stack(clipBehavior: Clip.none, children: ticks),
+            ),
           ),
         ),
         Expanded(

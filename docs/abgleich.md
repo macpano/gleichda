@@ -432,3 +432,8 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   gestapelten Schalterreihen und abgeschnittenem „Morgen f…“
 - ✅ „Zuletzt gesucht“: Ein Tipp übernimmt Start und Ziel nur in die Suchfelder und rollt nach oben (`fillSearch`);
   Zeit und Optionen lassen sich vor „Suchen“ einstellen. Favoriten-Verbindungen suchen weiter sofort
+- ✅ Zeitraster ohne senkrechtes Scrollen: Das Raster misst seine Oberkante und verteilt die Zeitspanne auf die
+  Höhe bis zum unteren Rand (1,2–6 px je Minute); Zeitachse dünnt sich aus (5/10/15/30/60 min), Spaltenkopf fest
+  40 px und einzeilig – vorher brach „1 Std 18 min“ um und die Achse stand neben den Balken
+- ✅ Fußweg zum Steig: zuerst der genaue Haltepunkt der Fahrt (`de:05124:11376:98:4`), erst dann die Nummer.
+  Am Hbf führte „Steig 4“ zu Bussteig 4 (Richtung Lüttringhausen) statt zu Gleis 4 der S8
