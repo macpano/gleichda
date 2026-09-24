@@ -452,3 +452,6 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Laufweg: Ging der erste Weg von der zuletzt bekannten, alten oder ungenauen Position aus (älter als 30 s oder
   ungenauer als 40 m), wird beim ersten guten Standort sofort neu gerechnet statt nach der 10-Sekunden-Sperre.
   Sonst wie bisher: neu, sobald man mehr als 25 m vom Weg abweicht (höchstens alle 10 s)
+- ✅ Fahrtansicht bei großer Schrift nicht mehr abgeschnitten: Linienschild dort wieder in eigener Breite (die
+  feste Spalte wuchs mit der Schrift), Pfeil statt „Richtung“, Zwischenhalte und Echtzeit über die ganze Breite
+  darunter; Umstieg zweizeilig („16 min Umstieg“ / „Anschluss sicher“)
