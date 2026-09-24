@@ -297,6 +297,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         FlutterMap(
           mapController: _map,
           options: MapOptions(
+            maxZoom: mapMaxZoom,
             initialCenter: _me ?? _fallback,
             initialZoom: 15.5,
             // Mit zwei Fingern drehbar; die Vektorkarte hält die Schrift aufrecht.

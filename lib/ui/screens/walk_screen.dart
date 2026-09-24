@@ -397,6 +397,7 @@ class _WalkScreenState extends ConsumerState<WalkScreen> {
                   : FlutterMap(
                       mapController: _map,
                       options: MapOptions(
+                        maxZoom: mapMaxZoom,
                         initialCenter: LatLng(t.lat, t.lon),
                         initialZoom: 17,
                         onMapReady: _fit,

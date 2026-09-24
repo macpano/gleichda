@@ -165,6 +165,7 @@ class _TripMapState extends ConsumerState<TripMap> {
     return FlutterMap(
       mapController: _map,
       options: MapOptions(
+        maxZoom: mapMaxZoom,
         initialCameraFit: CameraFit.coordinates(coordinates: pts, padding: const EdgeInsets.all(40), maxZoom: 16),
         // Mit zwei Fingern drehbar; die Vektorkarte hält die Schrift aufrecht.
         interactionOptions: InteractionOptions(
