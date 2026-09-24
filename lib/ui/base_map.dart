@@ -14,10 +14,21 @@ import 'screens/walk_screen.dart' show tileUrl;
 class BaseMapLayer extends StatefulWidget {
   const BaseMapLayer({super.key});
 
-  static const _light = 'https://tiles.openfreemap.org/styles/liberty';
-  static const _dark = 'https://tiles.openfreemap.org/styles/dark';
+  static const _styleUri = 'https://tiles.openfreemap.org/styles/liberty';
 
-  /// Ein Stil je Hell/Dunkel für die ganze App – nicht je Karte neu laden.
+  /// Nachtkarte aus dem hellen Stil: Helligkeit umkehren und den Farbton
+  /// zurückdrehen, leicht angehoben. Fluss bleibt blau, Hauptstraßen gelb,
+  /// Grün grün, Beschriftung hell auf dunkel. Der eigene dunkle Stil von
+  /// OpenFreeMap war zu dunkel und zeigte kaum mehr als Straßennamen
+  /// (Nutzerbefund 24.09.2026).
+  static const _night = ColorFilter.matrix(<double>[
+    0.4592, -1.1440, -0.1152, 0, 244, //
+    -0.3408, -0.3440, -0.1152, 0, 244,
+    -0.3408, -1.1440, 0.6848, 0, 244,
+    0, 0, 0, 1, 0,
+  ]);
+
+  /// Ein Stil für die ganze App – nicht je Karte neu laden.
   static final _styles = <String, Future<vt.Style>>{};
 
   static Future<vt.Style> _style(String uri) {
@@ -54,7 +65,7 @@ class _BaseMapLayerState extends State<BaseMapLayer> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    _load(dark ? BaseMapLayer._dark : BaseMapLayer._light);
+    _load(BaseMapLayer._styleUri);
     final s = _loaded;
     if (s == null) {
       // Bis der Stil da ist: nichts (Kartenhintergrund); scheitert er, Raster.
@@ -62,12 +73,13 @@ class _BaseMapLayerState extends State<BaseMapLayer> {
           ? TileLayer(urlTemplate: tileUrl, userAgentPackageName: 'de.gleichda.app', maxZoom: 19)
           : const SizedBox.shrink();
     }
-    return vt.VectorTileLayer(
+    final layer = vt.VectorTileLayer(
       theme: _withoutTransit(s.theme),
       tileProviders: s.providers,
       rasterSources: s.rasterSources,
       sprites: s.sprites,
     );
+    return dark ? ColorFiltered(colorFilter: BaseMapLayer._night, child: layer) : layer;
   }
 }
 
