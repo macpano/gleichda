@@ -409,3 +409,6 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
   und Unternehmen; wirkt zusätzlich zu Alle/Abos/Haltestellen. Ringe bei 5 km, halbem und ganzem Umkreis
   (nur ein Ring bei 10 km ließ bei 20 km Herdecke und Wetter aus), höchstens 20 Orte, höchstens sechs Abfragen
   gleichzeitig. Live Hagen-Boele: 2 km 2 Orte/12 Meldungen, 5 km 6/105, 10 km 8/105, 20 km 14/195, je unter 1 s
+- ✅ Meldungsfilter mit Mehrfachauswahl: mehrere Orte und mehrere Unternehmen zugleich („Alle“ hebt auf); der
+  Knopf zeigt die Zahl der Haken, darunter „Nur Hagen, Herdecke · VER, WSW“. Die Auswahl wird beim Tippen frisch
+  gelesen – bei schnellem Tippen ging sonst ein Haken verloren

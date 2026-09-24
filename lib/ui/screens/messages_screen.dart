@@ -61,18 +61,19 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
 
   /// Zusätzlich eingeschränkt auf ein Verkehrsunternehmen (Netzkürzel) und
   /// einen Ort (Gemeindeschlüssel) – beides über „Filter“.
-  String? _operator;
-  String? _place;
+  /// Mehrere möglich; leer heißt alle.
+  Set<String> _operators = {};
+  Set<String> _places = {};
 
   Future<void> _openFilter() => showModalBottomSheet<void>(
         context: context,
         showDragHandle: true,
         isScrollControlled: true,
         builder: (_) => _FilterSheet(
-          place: _place,
-          operator: _operator,
-          onPlace: (p) => setState(() => _place = p),
-          onOperator: (o) => setState(() => _operator = o),
+          places: _places,
+          operators: _operators,
+          onPlaces: (p) => setState(() => _places = p),
+          onOperators: (o) => setState(() => _operators = o),
         ),
       );
 
@@ -111,8 +112,11 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
     final subKeys = subs.map((s) => s.lineId).toSet();
     final stopKeys = _myStops();
     // Ein Ort, der nach Änderung des Umkreises nicht mehr dazugehört, fällt weg.
-    final place = state != null && state.regionNames.containsKey(_place) ? _place : null;
-    final narrowed = place != null || _operator != null;
+    final places = {
+      for (final p in _places)
+        if (state != null && state.regionNames.containsKey(p)) p,
+    };
+    final narrowed = places.isNotEmpty || _operators.isNotEmpty;
     final list = (state?.messages ?? const <Message>[])
         .where(
           (m) => switch (_filter) {
@@ -123,13 +127,17 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
             _Filter.myStops => m.stopIds.map(stopAreaId).any(stopKeys.contains),
           },
         )
-        .where((m) => place == null || m.regions.contains(place))
-        .where((m) => _operator == null || m.lineIds.any((k) => networkOf(k) == _operator))
+        .where((m) => places.isEmpty || m.regions.any(places.contains))
+        .where((m) => _operators.isEmpty || m.lineIds.any((k) => _operators.contains(networkOf(k))))
         .toList();
+    // Je Gruppe durch Komma getrennt, Gruppen durch Punkt: „Hagen, Herdecke · VER“.
+    final placeNames = [for (final p in places) state!.regionNames[p]!];
+    final operatorNames = [for (final o in _operators) state?.operators[o] ?? o.toUpperCase()];
     final active = [
-      if (place != null) state!.regionNames[place]!,
-      if (_operator != null) state?.operators[_operator] ?? _operator!.toUpperCase(),
+      if (placeNames.isNotEmpty) placeNames.join(', '),
+      if (operatorNames.isNotEmpty) operatorNames.join(', '),
     ];
+    final count = placeNames.length + operatorNames.length;
     return RefreshIndicator(
       edgeOffset: MediaQuery.paddingOf(context).top,
       onRefresh: () => ref.read(messagesProvider.notifier).refresh(),
@@ -164,7 +172,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                 Flexible(
                   child: ChoiceChipX(
                     icon: Icons.tune,
-                    label: active.isEmpty ? '' : '${active.length}',
+                    label: count == 0 ? '' : '$count',
                     tooltip: 'Filter',
                     selected: active.isNotEmpty,
                     dropdown: true,
@@ -186,8 +194,8 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                   ),
                   TextButton(
                     onPressed: () => setState(() {
-                      _place = null;
-                      _operator = null;
+                      _places = {};
+                      _operators = {};
                     }),
                     child: const Text('Aufheben'),
                   ),
@@ -440,22 +448,28 @@ Future<void> showMessageSheet(BuildContext context, WidgetRef ref, Message m) =>
   ),
 );
 
-/// Filter der Meldungen: Umkreis, Ort und Verkehrsunternehmen.
+/// Filter der Meldungen: Umkreis, Orte und Verkehrsunternehmen – bei Orten
+/// und Unternehmen mehrere zugleich.
 class _FilterSheet extends ConsumerStatefulWidget {
-  const _FilterSheet({required this.place, required this.operator, required this.onPlace, required this.onOperator});
+  const _FilterSheet({
+    required this.places,
+    required this.operators,
+    required this.onPlaces,
+    required this.onOperators,
+  });
 
-  final String? place;
-  final String? operator;
-  final ValueChanged<String?> onPlace;
-  final ValueChanged<String?> onOperator;
+  final Set<String> places;
+  final Set<String> operators;
+  final ValueChanged<Set<String>> onPlaces;
+  final ValueChanged<Set<String>> onOperators;
 
   @override
   ConsumerState<_FilterSheet> createState() => _FilterSheetState();
 }
 
 class _FilterSheetState extends ConsumerState<_FilterSheet> {
-  late String? _place = widget.place;
-  late String? _operator = widget.operator;
+  late Set<String> _places = {...widget.places};
+  late Set<String> _operators = {...widget.operators};
   int? _loadingRadius;
 
   Future<void> _setRadius(int m) async {
@@ -474,14 +488,29 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
           padding: const EdgeInsets.only(top: 16, bottom: 8),
           child: Text(t, style: context.t.section),
         );
-    Widget chips(List<(String?, String)> items, String? selected, ValueChanged<String?> pick) => Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final (key, label) in items)
-              ChoiceChipX(label: label, selected: selected == key, onTap: () => pick(key)),
-          ],
-        );
+    // „Alle“ leert die Auswahl, jeder andere Chip schaltet sich selbst um.
+    // Die Auswahl wird beim Tippen frisch gelesen, nicht beim Aufbau – sonst
+    // ginge bei schnellem Tippen ein Haken verloren.
+    Widget chips(String all, Map<String, String> items, Set<String> Function() current, ValueChanged<Set<String>> set) {
+      Set<String> chosen() => current().where(items.containsKey).toSet();
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          ChoiceChipX(label: all, selected: chosen().isEmpty, onTap: () => set({})),
+          for (final e in items.entries)
+            ChoiceChipX(
+              label: e.value,
+              selected: chosen().contains(e.key),
+              onTap: () {
+                final c = chosen();
+                set(c.contains(e.key) ? ({...c}..remove(e.key)) : {...c, e.key});
+              },
+            ),
+        ],
+      );
+    }
+
     return SafeArea(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
@@ -513,26 +542,18 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                 ),
               ),
               if (places.isNotEmpty) ...[
-                title('Ort'),
-                chips(
-                  [(null, 'Alle Orte'), for (final e in places.entries) (e.key, e.value)],
-                  places.containsKey(_place) ? _place : null,
-                  (p) {
-                    setState(() => _place = p);
-                    widget.onPlace(p);
-                  },
-                ),
+                title('Orte'),
+                chips('Alle Orte', places, () => _places, (p) {
+                  setState(() => _places = p);
+                  widget.onPlaces(p);
+                }),
               ],
               if (operators.isNotEmpty) ...[
                 title('Unternehmen'),
-                chips(
-                  [(null, 'Alle'), for (final o in operators) (o.key, o.value)],
-                  _operator,
-                  (o) {
-                    setState(() => _operator = o);
-                    widget.onOperator(o);
-                  },
-                ),
+                chips('Alle', {for (final o in operators) o.key: o.value}, () => _operators, (o) {
+                  setState(() => _operators = o);
+                  widget.onOperators(o);
+                }),
               ],
             ],
           ),
