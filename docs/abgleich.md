@@ -460,3 +460,4 @@ Quelle: geteilter Chat (`docs/chat-verlauf.txt`), Klick-Prototyp, `docs/konzept.
 - ✅ Eigener Standort auf der Karte wird laufend nachgeführt: Reiter „Karte“ holte ihn nur einmal beim Öffnen; jetzt
   Positionsstrom, solange die Karte sichtbar ist (im Hintergrund ruht das GPS). Fahrtkarte verfolgt sofort nach der
   Erlaubnis (vorher erst nach einem frischen Fix, bis zu 12 s)
+- ✅ Meldungsfilter (Reiter, Orte, Unternehmen) übersteht das Beenden der App: gespeichert in `messagesFilter`
